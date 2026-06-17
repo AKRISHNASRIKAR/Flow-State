@@ -1,0 +1,182 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WorkflowStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum ExecutionStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  TOKEN_REFRESH
+  WORKFLOW_RUN
+}
+
+model User {
+  id            String         @id @default(uuid()) @db.Uuid
+  email         String         @unique
+  passwordHash  String         @map("password_hash")
+  name          String?
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  workflows     Workflow[]
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id                 String    @id @default(uuid()) @db.Uuid
+  tokenHash          String    @map("token_hash")
+  userId             String    @map("user_id") @db.Uuid
+  expiresAt          DateTime  @map("expires_at")
+  revokedAt          DateTime? @map("revoked_at")
+  replacedByTokenId  String?   @map("replaced_by_token_id") @db.Uuid
+  createdAt          DateTime  @default(now()) @map("created_at")
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replacedByToken    RefreshToken? @relation("RefreshTokenRotation", fields: [replacedByTokenId], references: [id])
+  replacedToken      RefreshToken[] @relation("RefreshTokenRotation")
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Workflow {
+  id          String       @id @default(uuid()) @db.Uuid
+  userId      String       @map("user_id") @db.Uuid
+  name        String
+  description String?
+  status      WorkflowStatus @default(DRAFT)
+  version     Int          @default(1)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  triggers    Trigger[]
+  conditions  Condition[]
+  actions     Action[]
+  executions  WorkflowExecution[]
+
+  @@index([userId])
+  @@map("workflows")
+}
+
+model Trigger {
+  id          String     @id @default(uuid()) @db.Uuid
+  workflowId  String     @map("workflow_id") @db.Uuid
+  type        String
+  config      Json
+  enabled     Boolean    @default(true)
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  workflow    Workflow   @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  executions  WorkflowExecution[]
+
+  @@index([workflowId])
+  @@map("triggers")
+}
+
+model Condition {
+  id          String    @id @default(uuid()) @db.Uuid
+  workflowId  String    @map("workflow_id") @db.Uuid
+  type        String
+  expression  Json
+  position    Int       @default(0)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  workflow    Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@map("conditions")
+}
+
+model Action {
+  id                String            @id @default(uuid()) @db.Uuid
+  workflowId        String            @map("workflow_id") @db.Uuid
+  type              String
+  config            Json
+  position          Int               @default(0)
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+  workflow          Workflow          @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  actionExecutions  ActionExecution[]
+
+  @@index([workflowId])
+  @@map("actions")
+}
+
+model WorkflowExecution {
+  id                String            @id @default(uuid()) @db.Uuid
+  workflowId        String            @map("workflow_id") @db.Uuid
+  triggerId         String?           @map("trigger_id") @db.Uuid
+  status            ExecutionStatus   @default(PENDING)
+  input             Json?
+  output            Json?
+  error             String?
+  startedAt         DateTime?         @map("started_at")
+  finishedAt        DateTime?         @map("finished_at")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  workflow          Workflow          @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  trigger           Trigger?          @relation(fields: [triggerId], references: [id], onDelete: SetNull)
+  actionExecutions  ActionExecution[]
+
+  @@index([workflowId])
+  @@index([triggerId])
+  @@map("workflow_executions")
+}
+
+model ActionExecution {
+  id                   String            @id @default(uuid()) @db.Uuid
+  workflowExecutionId  String            @map("workflow_execution_id") @db.Uuid
+  actionId             String            @map("action_id") @db.Uuid
+  status               ExecutionStatus   @default(PENDING)
+  input                Json?
+  output               Json?
+  error                String?
+  startedAt            DateTime?         @map("started_at")
+  finishedAt           DateTime?         @map("finished_at")
+  createdAt            DateTime          @default(now()) @map("created_at")
+  workflowExecution    WorkflowExecution @relation(fields: [workflowExecutionId], references: [id], onDelete: Cascade)
+  action               Action            @relation(fields: [actionId], references: [id], onDelete: Cascade)
+
+  @@index([workflowExecutionId])
+  @@index([actionId])
+  @@map("action_executions")
+}
+
+model AuditLog {
+  id          String      @id @default(uuid()) @db.Uuid
+  userId      String?     @map("user_id") @db.Uuid
+  action      AuditAction
+  entityType  String      @map("entity_type")
+  entityId    String?     @map("entity_id") @db.Uuid
+  metadata    Json?
+  ipAddress   String?     @map("ip_address")
+  userAgent   String?     @map("user_agent")
+  createdAt   DateTime    @default(now()) @map("created_at")
+  user        User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
