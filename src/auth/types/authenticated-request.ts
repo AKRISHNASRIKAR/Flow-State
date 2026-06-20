@@ -1,6 +1,7 @@
 import { Request } from 'express';
 
 export interface AuthenticatedUser {
+  id: string;
   sub: string;
   email: string;
 }

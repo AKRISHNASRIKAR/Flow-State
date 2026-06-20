@@ -4,6 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { PrismaModule } from './prisma/prisma.module';
+import { WorkflowsModule } from './workflows/workflows.module';
 
 @Module({
   imports: [
@@ -12,6 +13,7 @@ import { PrismaModule } from './prisma/prisma.module';
     }),
     PrismaModule,
     AuthModule,
+    WorkflowsModule,
   ],
   providers: [
     {
