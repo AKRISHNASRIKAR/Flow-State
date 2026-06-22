@@ -120,6 +120,13 @@ export class WorkflowsService {
       data: { status: WorkflowStatus.PAUSED },
     });
 
+    await this.auditLog.log(userId, AuditAction.UPDATE, {
+      entityType: 'workflows',
+      entityId: workflow.id,
+      event: 'workflow.paused',
+      workflowId: workflow.id,
+    });
+
     return this.serializeWorkflow(workflow);
   }
 

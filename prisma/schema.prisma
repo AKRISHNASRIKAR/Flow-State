@@ -30,6 +30,13 @@ enum AuditAction {
   LOGOUT
   TOKEN_REFRESH
   WORKFLOW_RUN
+  WEBHOOK_RECEIVED
+}
+
+enum TriggerType {
+  WEBHOOK
+  MANUAL
+  SCHEDULED
 }
 
 model User {
@@ -63,37 +70,53 @@ model RefreshToken {
 }
 
 model Workflow {
-  id          String       @id @default(uuid()) @db.Uuid
-  userId      String       @map("user_id") @db.Uuid
-  name        String
-  description String?
-  status      WorkflowStatus @default(DRAFT)
-  version     Int          @default(1)
-  createdAt   DateTime     @default(now()) @map("created_at")
-  updatedAt   DateTime     @updatedAt @map("updated_at")
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  triggers    Trigger[]
-  conditions  Condition[]
-  actions     Action[]
-  executions  WorkflowExecution[]
+  id            String            @id @default(uuid()) @db.Uuid
+  userId        String            @map("user_id") @db.Uuid
+  name          String
+  description   String?
+  status        WorkflowStatus    @default(DRAFT)
+  version       Int               @default(1)
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  triggers      Trigger[]
+  conditions    Condition[]
+  actions       Action[]
+  executions    WorkflowExecution[]
+  webhookEvents WebhookEvent[]
 
   @@index([userId])
   @@map("workflows")
 }
 
 model Trigger {
-  id          String     @id @default(uuid()) @db.Uuid
-  workflowId  String     @map("workflow_id") @db.Uuid
-  type        String
-  config      Json
-  enabled     Boolean    @default(true)
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
-  workflow    Workflow   @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  id          String      @id @default(uuid()) @db.Uuid
+  workflowId  String      @unique @map("workflow_id") @db.Uuid
+  type        TriggerType
+  config      Json        @default("{}")
+  secret      String?
+  enabled     Boolean     @default(true)
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+  workflow    Workflow    @relation(fields: [workflowId], references: [id], onDelete: Cascade)
   executions  WorkflowExecution[]
 
   @@index([workflowId])
   @@map("triggers")
+}
+
+model WebhookEvent {
+  id          String    @id @default(uuid()) @db.Uuid
+  workflowId  String    @map("workflow_id") @db.Uuid
+  payload     Json
+  receivedAt  DateTime  @default(now()) @map("received_at")
+  status      String    @default("RECEIVED")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  workflow    Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+  @@index([status])
+  @@map("webhook_events")
 }
 
 model Condition {

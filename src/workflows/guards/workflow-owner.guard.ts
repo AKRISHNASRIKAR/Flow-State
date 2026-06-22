@@ -1,10 +1,12 @@
 import {
+  BadRequestException,
   CanActivate,
   ExecutionContext,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { isUUID } from 'class-validator';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AuthenticatedRequest } from '../../auth/types/authenticated-request';
 
@@ -18,6 +20,10 @@ export class WorkflowOwnerGuard implements CanActivate {
 
     if (!workflowId || Array.isArray(workflowId)) {
       throw new NotFoundException('Workflow not found');
+    }
+
+    if (!isUUID(workflowId)) {
+      throw new BadRequestException('Invalid workflow ID format');
     }
 
     const workflow = await this.prisma.workflow.findUnique({
