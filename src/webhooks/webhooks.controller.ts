@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   DefaultValuePipe,
@@ -30,7 +31,7 @@ import { WebhooksService } from './webhooks.service';
 
 /**
  * Extend Express Request type to include rawBody.
- * NestJS populates this when { rawBody: true } is passed to NestFactory.create().
+ * main.ts populates this before JSON parsing for HMAC verification.
  */
 interface RawBodyRequest extends Request {
   rawBody?: Buffer;
@@ -61,7 +62,10 @@ export class WebhooksController {
   })
   @ApiBody({
     description: 'Arbitrary JSON payload from the external service',
-    schema: { type: 'object', example: { event: 'push', ref: 'refs/heads/main' } },
+    schema: {
+      type: 'object',
+      example: { event: 'push', ref: 'refs/heads/main' },
+    },
   })
   @ApiResponse({ status: 200, description: 'Webhook received' })
   @ApiResponse({ status: 401, description: 'Invalid HMAC signature' })
@@ -70,10 +74,19 @@ export class WebhooksController {
     @Param('workflowId') workflowId: string,
     @Req() req: RawBodyRequest,
     @Headers('x-flowforge-signature') signature: string | undefined,
+    @Headers('x-idempotency-key') idempotencyKey: string | undefined,
     @Body() body: Record<string, unknown>,
   ) {
-    const rawBody = req.rawBody ?? Buffer.from(JSON.stringify(body));
-    return this.webhooksService.handleWebhook(workflowId, rawBody, signature, body);
+    const rawBody = req.rawBody ?? Buffer.alloc(0);
+    const parsedBody = this.parseRawJson(rawBody, body);
+
+    return this.webhooksService.handleWebhook(
+      workflowId,
+      rawBody,
+      signature,
+      idempotencyKey,
+      parsedBody,
+    );
   }
 
   // ─── Authenticated: manual fire ──────────────────────────────────────
@@ -95,13 +108,16 @@ export class WebhooksController {
   })
   @ApiResponse({ status: 200, description: 'Manual trigger fired' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden — not the workflow owner' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden — not the workflow owner',
+  })
   @ApiResponse({ status: 404, description: 'Workflow or trigger not found' })
   manualFire(
     @Param('id') workflowId: string,
-    @Body() body: Record<string, unknown>,
+    @Body() body?: { payload?: Record<string, unknown> },
   ) {
-    return this.webhooksService.manualFire(workflowId, body);
+    return this.webhooksService.manualFire(workflowId, body?.payload ?? {});
   }
 
   // ─── Authenticated: event history ────────────────────────────────────
@@ -111,15 +127,24 @@ export class WebhooksController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'List webhook events',
-    description: 'Paginated list of webhook events received for this workflow. Useful for debugging.',
+    description:
+      'Paginated list of webhook events received for this workflow. Useful for debugging.',
   })
   @ApiParam({ name: 'id', description: 'Workflow ID (UUID)' })
   @ApiQuery({ name: 'page', required: false, example: 1, type: Number })
   @ApiQuery({ name: 'limit', required: false, example: 20, type: Number })
-  @ApiQuery({ name: 'status', required: false, example: 'RECEIVED', type: String })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    example: 'RECEIVED',
+    type: String,
+  })
   @ApiResponse({ status: 200, description: 'Paginated event list' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden — not the workflow owner' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden — not the workflow owner',
+  })
   listEvents(
     @Param('id') workflowId: string,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
@@ -127,5 +152,24 @@ export class WebhooksController {
     @Query('status') status?: string,
   ) {
     return this.webhooksService.listEvents(workflowId, page, limit, status);
+  }
+
+  private parseRawJson(
+    rawBody: Buffer,
+    parsedBody: Record<string, unknown> | undefined,
+  ) {
+    if (rawBody.length === 0) {
+      return {};
+    }
+
+    try {
+      return JSON.parse(rawBody.toString('utf8')) as Record<string, unknown>;
+    } catch {
+      if (parsedBody && Object.keys(parsedBody).length > 0) {
+        return parsedBody;
+      }
+
+      throw new BadRequestException('Invalid JSON payload');
+    }
   }
 }

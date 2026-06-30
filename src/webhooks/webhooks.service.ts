@@ -1,14 +1,14 @@
 import {
+  BadRequestException,
   Injectable,
   Logger,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Prisma, WorkflowStatus } from '@prisma/client';
-import { createHmac, timingSafeEqual } from 'crypto';
+import { Prisma, TriggerType, WorkflowStatus } from '@prisma/client';
+import { createHash, createHmac, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
-import { WorkflowTriggeredEvent } from '../events/workflow-triggered.event';
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
@@ -36,6 +36,7 @@ export class WebhooksService {
     workflowId: string,
     rawBody: Buffer,
     signature: string | undefined,
+    idempotencyKeyHeader: string | undefined,
     parsedBody: Record<string, unknown>,
   ) {
     // Step 1: Load workflow + its trigger
@@ -50,8 +51,8 @@ export class WebhooksService {
 
     // A workflow has at most one trigger (enforced by @@unique)
     const trigger = workflow.triggers[0];
-    if (!trigger) {
-      throw new NotFoundException('No trigger configured for this workflow');
+    if (!trigger || trigger.type !== TriggerType.WEBHOOK) {
+      throw new BadRequestException('Workflow does not have a webhook trigger');
     }
 
     // Step 2: HMAC verification if the trigger has a secret
@@ -59,22 +60,63 @@ export class WebhooksService {
       this.verifyHmac(rawBody, trigger.secret, signature);
     }
 
-    // Step 3: Log the event
-    const event = await this.prisma.webhookEvent.create({
-      data: {
-        workflowId,
-        payload: parsedBody as Prisma.InputJsonObject,
-        status: 'RECEIVED',
+    const idempotencyKey =
+      idempotencyKeyHeader?.trim() ||
+      this.buildFingerprint(workflowId, parsedBody);
+
+    const existingEvent = await this.prisma.webhookEvent.findUnique({
+      where: {
+        workflowId_idempotencyKey: {
+          workflowId,
+          idempotencyKey,
+        },
       },
     });
 
-    // Step 4: Fire-and-forget event emission
-    this.eventEmitter.emit(
-      'workflow.triggered',
-      new WorkflowTriggeredEvent(workflowId, parsedBody, 'webhook'),
-    );
+    if (existingEvent) {
+      return {
+        received: true,
+        duplicate: true,
+        eventId: existingEvent.id,
+      };
+    }
 
-    this.logger.log(`Webhook received for workflow ${workflowId}, event ${event.id}`);
+    // Step 3: Log the event — handle the race where two identical requests
+    // arrive simultaneously and both pass the duplicate check above.
+    let event: Awaited<ReturnType<typeof this.prisma.webhookEvent.create>>;
+    try {
+      event = await this.prisma.webhookEvent.create({
+        data: {
+          workflowId,
+          payload: parsedBody as Prisma.InputJsonObject,
+          status: 'RECEIVED',
+          idempotencyKey,
+        },
+      });
+    } catch (err) {
+      if (
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+      ) {
+        const dup = await this.prisma.webhookEvent.findUnique({
+          where: { workflowId_idempotencyKey: { workflowId, idempotencyKey } },
+        });
+        return { received: true, duplicate: true, eventId: dup?.id ?? '' };
+      }
+      throw err;
+    }
+
+    // Step 4: Fire-and-forget event emission
+    this.eventEmitter.emit('workflow.triggered', {
+      workflowId,
+      executionPayload: parsedBody,
+      source: 'webhook',
+      webhookEventId: event.id,
+    });
+
+    this.logger.log(
+      `Webhook received for workflow ${workflowId}, event ${event.id}`,
+    );
 
     // Step 5: Return immediately
     return { received: true, eventId: event.id };
@@ -92,13 +134,8 @@ export class WebhooksService {
       include: { triggers: true },
     });
 
-    if (!workflow) {
-      throw new NotFoundException('Workflow not found');
-    }
-
-    const trigger = workflow.triggers[0];
-    if (!trigger) {
-      throw new NotFoundException('No trigger configured for this workflow');
+    if (!workflow || workflow.status !== WorkflowStatus.ACTIVE) {
+      throw new NotFoundException('Workflow not found or not active');
     }
 
     const event = await this.prisma.webhookEvent.create({
@@ -109,14 +146,18 @@ export class WebhooksService {
       },
     });
 
-    this.eventEmitter.emit(
-      'workflow.triggered',
-      new WorkflowTriggeredEvent(workflowId, body, 'manual'),
+    this.eventEmitter.emit('workflow.triggered', {
+      workflowId,
+      executionPayload: body,
+      source: 'manual',
+      webhookEventId: event.id,
+    });
+
+    this.logger.log(
+      `Manual fire for workflow ${workflowId}, event ${event.id}`,
     );
 
-    this.logger.log(`Manual fire for workflow ${workflowId}, event ${event.id}`);
-
-    return { received: true, eventId: event.id };
+    return { fired: true, eventId: event.id };
   }
 
   /**
@@ -174,32 +215,33 @@ export class WebhooksService {
     signature: string | undefined,
   ) {
     if (!signature) {
-      throw new UnauthorizedException('Missing X-FlowForge-Signature header');
+      throw new UnauthorizedException({ error: 'Missing signature' });
     }
 
-    // Expected format: "sha256=abc123..."
-    const expectedPrefix = 'sha256=';
-    if (!signature.startsWith(expectedPrefix)) {
-      throw new UnauthorizedException('Invalid signature format');
+    const expected =
+      'sha256=' + createHmac('sha256', secret).update(rawBody).digest('hex');
+
+    const expectedBuffer = Buffer.from(expected);
+    const receivedBuffer = Buffer.from(signature);
+
+    if (
+      expectedBuffer.length !== receivedBuffer.length ||
+      !timingSafeEqual(expectedBuffer, receivedBuffer)
+    ) {
+      throw new UnauthorizedException({ error: 'Invalid signature' });
     }
+  }
 
-    const receivedHex = signature.slice(expectedPrefix.length);
-
-    const computedHmac = createHmac('sha256', secret)
-      .update(rawBody)
+  private buildFingerprint(
+    workflowId: string,
+    parsedBody: Record<string, unknown>,
+  ) {
+    // Deterministic hash — no timestamp. Two identical payloads sent at any
+    // interval map to the same key, enabling dedup across real retry windows
+    // (GitHub retries at 60s, Stripe at 30-90s). Senders with legitimately
+    // identical payloads must supply an explicit X-Idempotency-Key header.
+    return createHash('sha256')
+      .update(workflowId + JSON.stringify(parsedBody))
       .digest('hex');
-
-    // Convert both to Buffers for timingSafeEqual
-    const receivedBuffer = Buffer.from(receivedHex, 'hex');
-    const computedBuffer = Buffer.from(computedHmac, 'hex');
-
-    // timingSafeEqual requires same length — if different, reject
-    if (receivedBuffer.length !== computedBuffer.length) {
-      throw new UnauthorizedException('Invalid webhook signature');
-    }
-
-    if (!timingSafeEqual(receivedBuffer, computedBuffer)) {
-      throw new UnauthorizedException('Invalid webhook signature');
-    }
   }
 }

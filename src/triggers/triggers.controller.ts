@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Param,
   Post,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import {
@@ -16,6 +17,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { AuthenticatedRequest } from '../auth/types/authenticated-request';
 import { WorkflowOwnerGuard } from '../workflows/guards/workflow-owner.guard';
 import { CreateTriggerDto } from './dto/create-trigger.dto';
 import { TriggersService } from './triggers.service';
@@ -38,7 +40,10 @@ export class TriggersController {
   @ApiResponse({ status: 201, description: 'Trigger created/updated' })
   @ApiResponse({ status: 400, description: 'Validation failed' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden — not the workflow owner' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden — not the workflow owner',
+  })
   @ApiResponse({ status: 404, description: 'Workflow not found' })
   upsert(@Param('id') workflowId: string, @Body() dto: CreateTriggerDto) {
     return this.triggersService.upsert(workflowId, dto);
@@ -48,12 +53,16 @@ export class TriggersController {
   @UseGuards(WorkflowOwnerGuard)
   @ApiOperation({
     summary: 'Get trigger configuration',
-    description: 'Returns the trigger config for this workflow. The secret is masked (first 8 chars only).',
+    description:
+      'Returns the trigger config for this workflow. The secret is masked (first 8 chars only).',
   })
   @ApiParam({ name: 'id', description: 'Workflow ID (UUID)' })
   @ApiResponse({ status: 200, description: 'Trigger found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden — not the workflow owner' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden — not the workflow owner',
+  })
   @ApiResponse({ status: 404, description: 'Trigger not found' })
   findOne(@Param('id') workflowId: string) {
     return this.triggersService.findOne(workflowId);
@@ -69,9 +78,12 @@ export class TriggersController {
   @ApiParam({ name: 'id', description: 'Workflow ID (UUID)' })
   @ApiResponse({ status: 200, description: 'Trigger deleted' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden — not the workflow owner' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden — not the workflow owner',
+  })
   @ApiResponse({ status: 404, description: 'Trigger not found' })
-  remove(@Param('id') workflowId: string) {
-    return this.triggersService.remove(workflowId);
+  remove(@Param('id') workflowId: string, @Req() req: AuthenticatedRequest) {
+    return this.triggersService.remove(workflowId, req.user.id);
   }
 }

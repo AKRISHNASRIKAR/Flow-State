@@ -5,6 +5,7 @@ import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { EventsModule } from './events/events.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { SchedulerModule } from './scheduler/scheduler.module';
 import { TriggersModule } from './triggers/triggers.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { WorkflowsModule } from './workflows/workflows.module';
@@ -17,6 +18,7 @@ import { WorkflowsModule } from './workflows/workflows.module';
     PrismaModule,
     AuthModule,
     EventsModule,
+    SchedulerModule,
     WorkflowsModule,
     TriggersModule,
     WebhooksModule,

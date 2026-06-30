@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { SchedulerModule } from '../scheduler/scheduler.module';
 import { SharedModule } from '../shared/shared.module';
 import { ActionsController } from './actions/actions.controller';
 import { ActionsService } from './actions/actions.service';
@@ -7,7 +8,7 @@ import { WorkflowsController } from './workflows.controller';
 import { WorkflowsService } from './workflows.service';
 
 @Module({
-  imports: [SharedModule],
+  imports: [SchedulerModule, SharedModule],
   controllers: [WorkflowsController, ActionsController],
   providers: [WorkflowsService, WorkflowOwnerGuard, ActionsService],
   exports: [WorkflowsService, WorkflowOwnerGuard],

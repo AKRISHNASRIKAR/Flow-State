@@ -99,23 +99,40 @@ model Trigger {
   createdAt   DateTime    @default(now()) @map("created_at")
   updatedAt   DateTime    @updatedAt @map("updated_at")
   workflow    Workflow    @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  executions  WorkflowExecution[]
+  executions     WorkflowExecution[]
+  pollingEvents  PollingEvent[]
 
   @@index([workflowId])
   @@map("triggers")
 }
 
+model PollingEvent {
+  id                String    @id @default(uuid()) @db.Uuid
+  triggerId         String    @map("trigger_id") @db.Uuid
+  trigger           Trigger   @relation(fields: [triggerId], references: [id], onDelete: Cascade)
+  polledAt          DateTime  @default(now()) @map("polled_at")
+  changed           Boolean
+  responseSnapshot  Json?     @map("response_snapshot")
+  error             String?
+
+  @@index([triggerId])
+  @@index([polledAt])
+  @@map("polling_events")
+}
+
 model WebhookEvent {
-  id          String    @id @default(uuid()) @db.Uuid
-  workflowId  String    @map("workflow_id") @db.Uuid
-  payload     Json
-  receivedAt  DateTime  @default(now()) @map("received_at")
-  status      String    @default("RECEIVED")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  workflow    Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  id              String    @id @default(uuid()) @db.Uuid
+  workflowId      String    @map("workflow_id") @db.Uuid
+  payload         Json
+  receivedAt      DateTime  @default(now()) @map("received_at")
+  status          String    @default("RECEIVED")
+  idempotencyKey  String?   @map("idempotency_key")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  workflow        Workflow  @relation(fields: [workflowId], references: [id], onDelete: Cascade)
 
   @@index([workflowId])
   @@index([status])
+  @@unique([workflowId, idempotencyKey])
   @@map("webhook_events")
 }
 
@@ -190,7 +207,7 @@ model ActionExecution {
 model AuditLog {
   id          String      @id @default(uuid()) @db.Uuid
   userId      String?     @map("user_id") @db.Uuid
-  action      AuditAction
+  action      String
   entityType  String      @map("entity_type")
   entityId    String?     @map("entity_id") @db.Uuid
   metadata    Json?

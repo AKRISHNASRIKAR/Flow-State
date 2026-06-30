@@ -1,6 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { AuditAction, Prisma, Workflow, WorkflowStatus } from '@prisma/client';
+import {
+  AuditAction,
+  Prisma,
+  TriggerType,
+  Workflow,
+  WorkflowStatus,
+} from '@prisma/client';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { SchedulerService } from '../scheduler/scheduler.service';
 import { AuditLogService } from '../shared/audit-log.service';
 import { CreateWorkflowDto } from './dto/create-workflow.dto';
 import { UpdateWorkflowDto } from './dto/update-workflow.dto';
@@ -14,6 +22,7 @@ export class WorkflowsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditLog: AuditLogService,
+    private readonly scheduler: SchedulerService,
   ) {}
 
   async create(userId: string, dto: CreateWorkflowDto) {
@@ -90,6 +99,19 @@ export class WorkflowsService {
       },
     });
 
+    await this.auditLog.log(userId, AuditAction.UPDATE, {
+      entityType: 'workflows',
+      entityId: workflow.id,
+      event: 'workflow.updated',
+      workflowId: workflow.id,
+    });
+
+    if (dto.enabled === false) {
+      await this.scheduler.unregisterWorkflowPoller(id);
+    } else if (dto.enabled === true) {
+      await this.scheduler.registerWorkflowPoller(id);
+    }
+
     return this.serializeWorkflow(workflow);
   }
 
@@ -109,6 +131,8 @@ export class WorkflowsService {
       deleteType: 'soft',
     });
 
+    await this.scheduler.unregisterWorkflowPoller(id);
+
     return this.serializeWorkflow(workflow);
   }
 
@@ -127,6 +151,8 @@ export class WorkflowsService {
       workflowId: workflow.id,
     });
 
+    await this.scheduler.unregisterWorkflowPoller(id);
+
     return this.serializeWorkflow(workflow);
   }
 
@@ -137,6 +163,15 @@ export class WorkflowsService {
       where: { id },
       data: { status: WorkflowStatus.ACTIVE },
     });
+
+    await this.auditLog.log(userId, AuditAction.UPDATE, {
+      entityType: 'workflows',
+      entityId: workflow.id,
+      event: 'workflow.resumed',
+      workflowId: workflow.id,
+    });
+
+    await this.scheduler.registerWorkflowPoller(id);
 
     return this.serializeWorkflow(workflow);
   }
@@ -160,13 +195,19 @@ export class WorkflowsService {
         userId,
         name: `Copy of ${source.name}`,
         description: source.description,
-        status: source.status,
+        status: WorkflowStatus.DRAFT, // Always DRAFT — user must activate intentionally
         version: 1,
         triggers: {
           create: source.triggers.map((trigger) => ({
             type: trigger.type,
             config: trigger.config as Prisma.InputJsonValue,
             enabled: trigger.enabled,
+            // Each cloned workflow gets its own fresh WEBHOOK secret so the
+            // source and clone never share an HMAC key.
+            secret:
+              trigger.type === TriggerType.WEBHOOK
+                ? randomBytes(32).toString('hex')
+                : null,
           })),
         },
         conditions: {
@@ -195,6 +236,34 @@ export class WorkflowsService {
     });
 
     return this.serializeWorkflow(workflow);
+  }
+
+  async pollHistory(userId: string, id: string) {
+    await this.findVisibleOwnedWorkflow(userId, id);
+
+    const trigger = await this.prisma.trigger.findUnique({
+      where: { workflowId: id },
+      select: { id: true },
+    });
+
+    if (!trigger) {
+      return { data: [] };
+    }
+
+    const events = await this.prisma.pollingEvent.findMany({
+      where: { triggerId: trigger.id },
+      orderBy: { polledAt: 'desc' },
+      take: 50,
+      select: {
+        id: true,
+        polledAt: true,
+        changed: true,
+        error: true,
+        responseSnapshot: true,
+      },
+    });
+
+    return { data: events };
   }
 
   private async findVisibleOwnedWorkflow(userId: string, id: string) {

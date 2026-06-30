@@ -62,7 +62,8 @@ export class WorkflowsController {
   @Get()
   @ApiOperation({
     summary: 'List workflows',
-    description: 'Returns a paginated list of all workflows owned by the authenticated user.',
+    description:
+      'Returns a paginated list of all workflows owned by the authenticated user.',
   })
   @ApiQuery({
     name: 'page',
@@ -92,11 +93,19 @@ export class WorkflowsController {
   @UseGuards(WorkflowOwnerGuard)
   @ApiOperation({
     summary: 'Get a workflow by ID',
-    description: 'Returns the full details of a single workflow. The authenticated user must be the owner.',
+    description:
+      'Returns the full details of a single workflow. The authenticated user must be the owner.',
   })
-  @ApiParam({ name: 'id', description: 'Workflow ID (CUID)', example: 'clx1abc23def0000ghi1jklm' })
+  @ApiParam({
+    name: 'id',
+    description: 'Workflow ID (CUID)',
+    example: 'clx1abc23def0000ghi1jklm',
+  })
   @ApiResponse({ status: 200, description: 'Workflow found' })
-  @ApiResponse({ status: 403, description: 'Forbidden — not the workflow owner' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden — not the workflow owner',
+  })
   @ApiResponse({ status: 404, description: 'Workflow not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   getOne(@CurrentUser('id') userId: string, @Param('id') id: string) {
@@ -107,12 +116,20 @@ export class WorkflowsController {
   @UseGuards(WorkflowOwnerGuard)
   @ApiOperation({
     summary: 'Update a workflow',
-    description: 'Partially updates a workflow. All fields are optional. The authenticated user must be the owner.',
+    description:
+      'Partially updates a workflow. All fields are optional. The authenticated user must be the owner.',
   })
-  @ApiParam({ name: 'id', description: 'Workflow ID', example: 'clx1abc23def0000ghi1jklm' })
+  @ApiParam({
+    name: 'id',
+    description: 'Workflow ID',
+    example: 'clx1abc23def0000ghi1jklm',
+  })
   @ApiResponse({ status: 200, description: 'Workflow updated successfully' })
   @ApiResponse({ status: 400, description: 'Validation failed' })
-  @ApiResponse({ status: 403, description: 'Forbidden — not the workflow owner' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden — not the workflow owner',
+  })
   @ApiResponse({ status: 404, description: 'Workflow not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   update(
@@ -128,11 +145,19 @@ export class WorkflowsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Delete a workflow',
-    description: 'Permanently deletes a workflow. The authenticated user must be the owner.',
+    description:
+      'Permanently deletes a workflow. The authenticated user must be the owner.',
   })
-  @ApiParam({ name: 'id', description: 'Workflow ID', example: 'clx1abc23def0000ghi1jklm' })
+  @ApiParam({
+    name: 'id',
+    description: 'Workflow ID',
+    example: 'clx1abc23def0000ghi1jklm',
+  })
   @ApiResponse({ status: 200, description: 'Workflow deleted successfully' })
-  @ApiResponse({ status: 403, description: 'Forbidden — not the workflow owner' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden — not the workflow owner',
+  })
   @ApiResponse({ status: 404, description: 'Workflow not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   remove(@CurrentUser('id') userId: string, @Param('id') id: string) {
@@ -144,11 +169,19 @@ export class WorkflowsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Pause a workflow',
-    description: 'Disables a workflow so it no longer runs. The authenticated user must be the owner.',
+    description:
+      'Disables a workflow so it no longer runs. The authenticated user must be the owner.',
   })
-  @ApiParam({ name: 'id', description: 'Workflow ID', example: 'clx1abc23def0000ghi1jklm' })
+  @ApiParam({
+    name: 'id',
+    description: 'Workflow ID',
+    example: 'clx1abc23def0000ghi1jklm',
+  })
   @ApiResponse({ status: 200, description: 'Workflow paused' })
-  @ApiResponse({ status: 403, description: 'Forbidden — not the workflow owner' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden — not the workflow owner',
+  })
   @ApiResponse({ status: 404, description: 'Workflow not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   pause(@CurrentUser('id') userId: string, @Param('id') id: string) {
@@ -160,26 +193,65 @@ export class WorkflowsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Resume a workflow',
-    description: 'Re-enables a previously paused workflow. The authenticated user must be the owner.',
+    description:
+      'Re-enables a previously paused workflow. The authenticated user must be the owner.',
   })
-  @ApiParam({ name: 'id', description: 'Workflow ID', example: 'clx1abc23def0000ghi1jklm' })
+  @ApiParam({
+    name: 'id',
+    description: 'Workflow ID',
+    example: 'clx1abc23def0000ghi1jklm',
+  })
   @ApiResponse({ status: 200, description: 'Workflow resumed' })
-  @ApiResponse({ status: 403, description: 'Forbidden — not the workflow owner' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden — not the workflow owner',
+  })
   @ApiResponse({ status: 404, description: 'Workflow not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   resume(@CurrentUser('id') userId: string, @Param('id') id: string) {
     return this.workflowsService.resume(userId, id);
   }
 
+  @Get(':id/poll-history')
+  @UseGuards(WorkflowOwnerGuard)
+  @ApiOperation({
+    summary: 'List polling history',
+    description:
+      'Returns the last 50 polling events for this workflow trigger for debugging.',
+  })
+  @ApiParam({
+    name: 'id',
+    description: 'Workflow ID',
+    example: 'clx1abc23def0000ghi1jklm',
+  })
+  @ApiResponse({ status: 200, description: 'Polling history list' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden — not the workflow owner',
+  })
+  @ApiResponse({ status: 404, description: 'Workflow not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  pollHistory(@CurrentUser('id') userId: string, @Param('id') id: string) {
+    return this.workflowsService.pollHistory(userId, id);
+  }
+
   @Post(':id/clone')
   @UseGuards(WorkflowOwnerGuard)
   @ApiOperation({
     summary: 'Clone a workflow',
-    description: 'Creates a copy of an existing workflow. The clone is owned by the authenticated user.',
+    description:
+      'Creates a copy of an existing workflow. The clone is owned by the authenticated user.',
   })
-  @ApiParam({ name: 'id', description: 'Workflow ID to clone', example: 'clx1abc23def0000ghi1jklm' })
+  @ApiParam({
+    name: 'id',
+    description: 'Workflow ID to clone',
+    example: 'clx1abc23def0000ghi1jklm',
+  })
   @ApiResponse({ status: 201, description: 'Workflow cloned successfully' })
-  @ApiResponse({ status: 403, description: 'Forbidden — not the workflow owner' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden — not the workflow owner',
+  })
   @ApiResponse({ status: 404, description: 'Workflow not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   clone(@CurrentUser('id') userId: string, @Param('id') id: string) {
