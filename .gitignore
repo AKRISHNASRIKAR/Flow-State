@@ -53,8 +53,5 @@ testem.log
 *.env.local
 *.env.*.local
 
-# Personal/internal docs — keep public-facing docs in git
-/docs/interview/
-/docs/FLOWSTATE_INTERVIEW_PREPARATION.md
-/docs/FLOWSTATE_FRONTEND_BUILD_PROMPT.md
-/docs/flowstate-02-build-prompts*
+# Docs — not committed
+/docs/
