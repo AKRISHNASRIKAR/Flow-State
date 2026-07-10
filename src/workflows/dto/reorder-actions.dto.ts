@@ -3,7 +3,8 @@ import { ArrayNotEmpty, IsArray, IsUUID } from 'class-validator';
 
 export class ReorderActionsDto {
   @ApiProperty({
-    description: 'Action IDs in the desired execution order. All action IDs for this workflow must be included.',
+    description:
+      'Action IDs in the desired execution order. All action IDs for this workflow must be included.',
     example: ['uuid-1', 'uuid-2', 'uuid-3'],
     type: [String],
   })

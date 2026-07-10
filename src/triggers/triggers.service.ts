@@ -114,7 +114,7 @@ export class TriggersService {
     }
 
     await this.prisma.trigger.delete({ where: { workflowId } });
-    await this.auditLog.log(userId, 'trigger.deleted', {
+    this.auditLog.log(userId, 'trigger.deleted', {
       entityType: 'triggers',
       entityId: trigger.id,
       workflowId,

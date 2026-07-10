@@ -9,10 +9,6 @@ import { CreateActionDto } from '../dto/create-action.dto';
 import { ReorderActionsDto } from '../dto/reorder-actions.dto';
 import { UpdateActionDto } from '../dto/update-action.dto';
 
-const DEFAULT_PAGE = 1;
-const DEFAULT_LIMIT = 50;
-const MAX_LIMIT = 100;
-
 @Injectable()
 export class ActionsService {
   constructor(private readonly prisma: PrismaService) {}

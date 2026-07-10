@@ -21,7 +21,8 @@ export class CreateWorkflowDto {
 
   @ApiPropertyOptional({
     description: 'Optional description of what this workflow does',
-    example: 'Syncs data from Source A to Destination B every night at midnight',
+    example:
+      'Syncs data from Source A to Destination B every night at midnight',
     maxLength: 1000,
   })
   @IsOptional()

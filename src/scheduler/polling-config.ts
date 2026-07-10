@@ -47,12 +47,21 @@ export function normalizePollingConfig(config: unknown): PollingConfig {
     throw new Error('Polling endpoint must be a valid URL');
   }
 
-  const method = String(config.method ?? 'GET').toUpperCase();
+  if (config.method !== undefined && typeof config.method !== 'string') {
+    throw new Error('Polling method must be a string');
+  }
+  const method = (config.method ?? 'GET').toUpperCase();
   if (!ALLOWED_METHODS.has(method)) {
     throw new Error(`Unsupported polling method: ${method}`);
   }
 
-  const changeMode = String(config.changeMode ?? 'any') as PollingChangeMode;
+  if (
+    config.changeMode !== undefined &&
+    typeof config.changeMode !== 'string'
+  ) {
+    throw new Error('Polling changeMode must be a string');
+  }
+  const changeMode = (config.changeMode ?? 'any') as PollingChangeMode;
   if (!CHANGE_MODES.has(changeMode)) {
     throw new Error(
       'Polling changeMode must be any, specific_field, or array_length',
@@ -85,8 +94,10 @@ function normalizeHeaders(headers: unknown) {
 
   return Object.entries(headers).reduce<Record<string, string>>(
     (result, [key, value]) => {
-      if (value !== undefined && value !== null) {
+      if (typeof value === 'string' || typeof value === 'number') {
         result[key] = String(value);
+      } else if (typeof value === 'boolean') {
+        result[key] = value ? 'true' : 'false';
       }
 
       return result;

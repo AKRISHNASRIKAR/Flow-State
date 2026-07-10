@@ -142,7 +142,7 @@ export class PollingWorker extends WorkerHost implements OnModuleDestroy {
     await this.redis.quit();
   }
 
-  private async fetchEndpoint(config: PollingConfig) {
+  private async fetchEndpoint(config: PollingConfig): Promise<unknown> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), POLLING_TIMEOUT_MS);
 
@@ -159,7 +159,7 @@ export class PollingWorker extends WorkerHost implements OnModuleDestroy {
 
       const contentType = response.headers.get('content-type') ?? '';
       if (contentType.includes('application/json')) {
-        return await response.json();
+        return (await response.json()) as unknown;
       }
 
       return await response.text();
@@ -234,15 +234,15 @@ export class PollingWorker extends WorkerHost implements OnModuleDestroy {
     return currentItems.filter((item) => !previous.has(JSON.stringify(item)));
   }
 
-  private extractArray(responseBody: unknown, stateKey?: string) {
-    const value = stateKey
+  private extractArray(responseBody: unknown, stateKey?: string): unknown[] {
+    const value: unknown = stateKey
       ? this.extractStateValue(responseBody, stateKey)
       : responseBody;
 
     return Array.isArray(value) ? value : [];
   }
 
-  private extractStateValue(responseBody: unknown, stateKey?: string) {
+  private extractStateValue(responseBody: unknown, stateKey?: string): unknown {
     if (!stateKey) {
       return responseBody;
     }

@@ -23,11 +23,17 @@ export class AuditLogService {
    */
   log(
     userId: string,
-    event: AuditAction | string,
+
+    event: AuditAction | (string & {}),
     metadata: AuditLogMetadata = {},
   ): void {
-    const { entityType = 'system', entityId, ipAddress, userAgent, ...rest } =
-      metadata;
+    const {
+      entityType = 'system',
+      entityId,
+      ipAddress,
+      userAgent,
+      ...rest
+    } = metadata;
 
     this.prisma.auditLog
       .create({

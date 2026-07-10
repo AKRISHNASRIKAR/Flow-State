@@ -35,7 +35,7 @@ export class WorkflowsService {
       },
     });
 
-    await this.auditLog.log(userId, AuditAction.CREATE, {
+    this.auditLog.log(userId, AuditAction.CREATE, {
       entityType: 'workflows',
       entityId: workflow.id,
       event: 'workflow.created',
@@ -99,7 +99,7 @@ export class WorkflowsService {
       },
     });
 
-    await this.auditLog.log(userId, AuditAction.UPDATE, {
+    this.auditLog.log(userId, AuditAction.UPDATE, {
       entityType: 'workflows',
       entityId: workflow.id,
       event: 'workflow.updated',
@@ -123,7 +123,7 @@ export class WorkflowsService {
       data: { status: WorkflowStatus.ARCHIVED },
     });
 
-    await this.auditLog.log(userId, AuditAction.DELETE, {
+    this.auditLog.log(userId, AuditAction.DELETE, {
       entityType: 'workflows',
       entityId: workflow.id,
       event: 'workflow.deleted',
@@ -144,7 +144,7 @@ export class WorkflowsService {
       data: { status: WorkflowStatus.PAUSED },
     });
 
-    await this.auditLog.log(userId, AuditAction.UPDATE, {
+    this.auditLog.log(userId, AuditAction.UPDATE, {
       entityType: 'workflows',
       entityId: workflow.id,
       event: 'workflow.paused',
@@ -164,7 +164,7 @@ export class WorkflowsService {
       data: { status: WorkflowStatus.ACTIVE },
     });
 
-    await this.auditLog.log(userId, AuditAction.UPDATE, {
+    this.auditLog.log(userId, AuditAction.UPDATE, {
       entityType: 'workflows',
       entityId: workflow.id,
       event: 'workflow.resumed',
@@ -227,7 +227,7 @@ export class WorkflowsService {
       },
     });
 
-    await this.auditLog.log(userId, AuditAction.CREATE, {
+    this.auditLog.log(userId, AuditAction.CREATE, {
       entityType: 'workflows',
       entityId: workflow.id,
       event: 'workflow.cloned',

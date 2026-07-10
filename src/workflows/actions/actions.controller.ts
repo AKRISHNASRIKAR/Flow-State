@@ -40,24 +40,28 @@ export class ActionsController {
   @ApiResponse({ status: 201, description: 'Action created' })
   @ApiResponse({ status: 400, description: 'Validation failed' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden — not the workflow owner' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden — not the workflow owner',
+  })
   @ApiResponse({ status: 404, description: 'Workflow not found' })
-  create(
-    @Param('id') workflowId: string,
-    @Body() dto: CreateActionDto,
-  ) {
+  create(@Param('id') workflowId: string, @Body() dto: CreateActionDto) {
     return this.actionsService.create(workflowId, dto);
   }
 
   @Get()
   @ApiOperation({
     summary: 'List actions for a workflow',
-    description: 'Returns all actions ordered by their execution order (position ascending).',
+    description:
+      'Returns all actions ordered by their execution order (position ascending).',
   })
   @ApiParam({ name: 'id', description: 'Workflow ID (UUID)' })
   @ApiResponse({ status: 200, description: 'List of actions' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden — not the workflow owner' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden — not the workflow owner',
+  })
   list(@Param('id') workflowId: string) {
     return this.actionsService.list(workflowId);
   }
@@ -72,7 +76,10 @@ export class ActionsController {
   @ApiResponse({ status: 200, description: 'Action updated' })
   @ApiResponse({ status: 400, description: 'Validation failed' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden — not the workflow owner' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden — not the workflow owner',
+  })
   @ApiResponse({ status: 404, description: 'Action not found' })
   update(
     @Param('id') workflowId: string,
@@ -92,12 +99,12 @@ export class ActionsController {
   @ApiParam({ name: 'aid', description: 'Action ID (UUID)' })
   @ApiResponse({ status: 200, description: 'Action deleted' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden — not the workflow owner' })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden — not the workflow owner',
+  })
   @ApiResponse({ status: 404, description: 'Action not found' })
-  remove(
-    @Param('id') workflowId: string,
-    @Param('aid') actionId: string,
-  ) {
+  remove(@Param('id') workflowId: string, @Param('aid') actionId: string) {
     return this.actionsService.remove(workflowId, actionId);
   }
 
@@ -113,11 +120,11 @@ export class ActionsController {
   @ApiResponse({ status: 200, description: 'Actions reordered' })
   @ApiResponse({ status: 400, description: 'Invalid IDs or missing actions' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden — not the workflow owner' })
-  reorder(
-    @Param('id') workflowId: string,
-    @Body() dto: ReorderActionsDto,
-  ) {
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden — not the workflow owner',
+  })
+  reorder(@Param('id') workflowId: string, @Body() dto: ReorderActionsDto) {
     return this.actionsService.reorder(workflowId, dto);
   }
 }

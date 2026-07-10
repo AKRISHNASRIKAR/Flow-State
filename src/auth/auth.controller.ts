@@ -1,4 +1,11 @@
-import { Body, Controller, HttpCode, HttpStatus, Post, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  HttpStatus,
+  Post,
+  Req,
+} from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOperation,
@@ -47,7 +54,8 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Log in with email and password',
-    description: 'Authenticates a user and returns a JWT access token and refresh token.',
+    description:
+      'Authenticates a user and returns a JWT access token and refresh token.',
   })
   @ApiResponse({
     status: 200,
@@ -103,7 +111,10 @@ export class AuthController {
     description: 'Logout successful',
     schema: { example: { success: true } },
   })
-  @ApiResponse({ status: 401, description: 'Unauthorized — missing or invalid access token' })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized — missing or invalid access token',
+  })
   logout(@Req() request: AuthenticatedRequest, @Body() dto: RefreshTokenDto) {
     return this.authService.logout(request.user.sub, dto.refreshToken);
   }
