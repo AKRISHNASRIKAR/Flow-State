@@ -1,9 +1,8 @@
 {
-  "name": "flowforge",
+  "name": "flowstate",
   "version": "0.1.0",
-  "private": true,
-  "description": "FlowForge workflow automation API",
-  "license": "UNLICENSED",
+  "description": "A scalable workflow automation API built with NestJS, PostgreSQL, and Redis",
+  "license": "MIT",
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\" \"docs/**/*.md\"",

@@ -1,0 +1,116 @@
+# Contributing to FlowState
+
+Thank you for taking the time to contribute! This document explains how to get the project running locally and what to keep in mind when opening a pull request.
+
+---
+
+## Table of Contents
+
+- [Getting Started](#getting-started)
+- [Development Workflow](#development-workflow)
+- [Code Style](#code-style)
+- [Submitting a Pull Request](#submitting-a-pull-request)
+- [Reporting Issues](#reporting-issues)
+- [Security Vulnerabilities](#security-vulnerabilities)
+
+---
+
+## Getting Started
+
+1. **Fork** the repository on GitHub and clone your fork:
+
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/flowstate.git
+   cd flowstate
+   npm install
+   ```
+
+2. **Copy the environment file** and fill in the required values:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   At minimum you need `DATABASE_URL`, `REDIS_URL`, `JWT_ACCESS_SECRET`, and `JWT_REFRESH_SECRET`. Everything else is optional.
+
+3. **Spin up the local infrastructure:**
+
+   ```bash
+   docker compose up -d
+   ```
+
+4. **Run migrations and start the dev server:**
+
+   ```bash
+   npm run prisma:migrate
+   npm run start:dev
+   ```
+
+   The API will be at `http://localhost:3000` and Swagger UI at `http://localhost:3000/api/docs`.
+
+---
+
+## Development Workflow
+
+- Work on a feature branch: `git checkout -b feat/your-feature-name`
+- Commit messages should be descriptive and in the imperative mood: `Add HTTP timeout to polling worker`, not `added timeout`.
+- If your change is user-facing (new action type, new endpoint, new env var), update the relevant section in `README.md`.
+
+### Adding a New Action Type
+
+1. Create a new executor in `src/actions/executors/` implementing `IActionExecutor`.
+2. Register it in `ActionExecutorService`'s constructor map in `src/actions/action-executor.service.ts`.
+3. Add the new type to the **Action Types** table in `README.md`.
+4. If the executor requires a new env var, add it to `.env.example` with a comment.
+
+---
+
+## Code Style
+
+This project uses ESLint and Prettier. Before pushing, run:
+
+```bash
+npm run lint
+npm run format
+```
+
+Both commands auto-fix most issues. The CI pipeline will reject code that fails linting.
+
+---
+
+## Submitting a Pull Request
+
+1. Make sure your branch is up to date with `main`:
+
+   ```bash
+   git fetch upstream
+   git rebase upstream/main
+   ```
+
+2. Open a PR with a clear title and description covering:
+   - **What** the change does
+   - **Why** it's needed
+   - Any **known limitations** or follow-up work
+
+3. Link any related issues using GitHub's `Closes #123` keyword in the PR body.
+
+PRs are reviewed on a best-effort basis. Small, focused changes are much easier to review than large, multi-concern ones.
+
+---
+
+## Reporting Issues
+
+Use GitHub Issues. Please include:
+
+- A clear description of the problem
+- Steps to reproduce
+- Expected vs. actual behaviour
+- Your Node.js version, OS, and any relevant logs
+
+---
+
+## Security Vulnerabilities
+
+**Do not open a public GitHub issue for security vulnerabilities.**
+
+Please report them privately via GitHub's [Security Advisories](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing/privately-reporting-a-security-vulnerability) feature on this repository. We will acknowledge the report within 48 hours and provide a fix timeline.
