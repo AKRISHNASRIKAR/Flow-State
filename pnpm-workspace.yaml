@@ -1,0 +1,13 @@
+packages:
+  - backend
+  - frontend
+  - packages/*
+
+onlyBuiltDependencies:
+  - argon2
+  - prisma
+  - '@prisma/client'
+  - '@prisma/engines'
+  - esbuild
+  - '@tailwindcss/oxide'
+  - '@nestjs/core'

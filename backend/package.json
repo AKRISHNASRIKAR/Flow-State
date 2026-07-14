@@ -1,10 +1,12 @@
 {
-  "name": "flowstate",
+  "name": "api",
   "version": "0.1.0",
+  "private": true,
   "description": "A scalable workflow automation API built with NestJS, PostgreSQL, and Redis",
   "license": "MIT",
   "scripts": {
-    "build": "nest build",
+    "build": "prisma generate && nest build",
+    "dev": "nest start --watch",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\" \"docs/**/*.md\"",
     "start": "nest start",
     "start:dev": "nest start --watch",

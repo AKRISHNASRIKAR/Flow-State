@@ -1,6 +1,9 @@
 # compiled output
-/dist
-/node_modules
+dist/
+node_modules/
+
+# Turborepo
+.turbo/
 
 # Logs
 logs
@@ -16,7 +19,7 @@ pnpm-debug.log*
 Thumbs.db
 
 # Tests
-/coverage
+coverage/
 /.nyc_output
 
 # IDEs and editors

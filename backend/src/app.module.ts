@@ -18,6 +18,7 @@ import { WorkflowsModule } from './workflows/workflows.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: ['.env', '../.env'],
     }),
     PrismaModule,
     AuthModule,
