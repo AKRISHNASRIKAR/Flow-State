@@ -1,8 +1,10 @@
+'use client';
+
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { workflowsApi } from '../../lib/api';
 import { ApiError } from '../../lib/api-client';
@@ -16,7 +18,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export function CreateWorkflowModal({ onClose }: { onClose: () => void }) {
-  const navigate = useNavigate();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const [apiErrors, setApiErrors] = useState<string[]>([]);
 
@@ -34,7 +36,7 @@ export function CreateWorkflowModal({ onClose }: { onClose: () => void }) {
         description: values.description?.trim() ? values.description.trim() : undefined,
       });
       await queryClient.invalidateQueries({ queryKey: ['workflows'] });
-      navigate(`/workflows/${wf.id}`);
+      router.push(`/workflows/${wf.id}`);
     } catch (err) {
       setApiErrors(err instanceof ApiError ? err.messages : ['Failed to create workflow']);
     }

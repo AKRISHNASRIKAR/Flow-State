@@ -30,6 +30,8 @@ export function decodeAccessToken(token: string): AuthUser | null {
 }
 
 export function getStoredRefreshToken(): string | null {
+  // Guard for Next.js prerendering — there is no localStorage on the server.
+  if (typeof window === 'undefined') return null;
   return localStorage.getItem(REFRESH_TOKEN_KEY);
 }
 
@@ -38,6 +40,7 @@ export function getStoredRefreshToken(): string | null {
 // server-side (BFF) or to a same-site cookie once API and frontend share a
 // domain.
 function storeRefreshToken(token: string | null) {
+  if (typeof window === 'undefined') return;
   if (token === null) {
     localStorage.removeItem(REFRESH_TOKEN_KEY);
   } else {

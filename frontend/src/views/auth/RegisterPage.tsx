@@ -1,7 +1,10 @@
+'use client';
+
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { authApi } from '../../lib/api';
 import { ApiError } from '../../lib/api-client';
@@ -20,16 +23,18 @@ type FormValues = z.infer<typeof schema>;
 
 export function RegisterPage() {
   const accessToken = useAuthStore((s) => s.accessToken);
-  const navigate = useNavigate();
+  const router = useRouter();
   const [apiErrors, setApiErrors] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (accessToken !== null) router.replace('/workflows');
+  }, [accessToken, router]);
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
-
-  if (accessToken !== null) return <Navigate to="/workflows" replace />;
 
   const onSubmit = async (values: FormValues) => {
     setApiErrors([]);
@@ -39,7 +44,7 @@ export function RegisterPage() {
         password: values.password,
         name: values.name?.trim() ? values.name.trim() : undefined,
       });
-      navigate('/workflows', { replace: true });
+      router.replace('/workflows');
     } catch (err) {
       setApiErrors(err instanceof ApiError ? err.messages : ['Something went wrong. Is the API running?']);
     }
@@ -81,7 +86,7 @@ export function RegisterPage() {
       </form>
       <p className="mt-4 text-center text-sm text-slate-500">
         Already have an account?{' '}
-        <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
+        <Link href="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
           Sign in
         </Link>
       </p>

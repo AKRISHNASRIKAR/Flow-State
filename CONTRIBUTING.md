@@ -22,8 +22,11 @@ Thank you for taking the time to contribute! This document explains how to get t
    ```bash
    git clone https://github.com/YOUR_USERNAME/flowstate.git
    cd flowstate
-   npm install
+   pnpm install
    ```
+
+   This is a pnpm + Turborepo monorepo — the API lives in `backend/`, the web
+   dashboard in `frontend/`, shared types in `packages/api-types`.
 
 2. **Copy the environment file** and fill in the required values:
 
@@ -39,14 +42,14 @@ Thank you for taking the time to contribute! This document explains how to get t
    docker compose up -d
    ```
 
-4. **Run migrations and start the dev server:**
+4. **Run migrations and start the dev servers:**
 
    ```bash
-   npm run prisma:migrate
-   npm run start:dev
+   pnpm --filter api prisma:migrate
+   pnpm dev            # API + web dashboard, or dev:api / dev:web for one
    ```
 
-   The API will be at `http://localhost:3000` and Swagger UI at `http://localhost:3000/api/docs`.
+   The API will be at `http://localhost:3000` (Swagger UI at `/api/docs`) and the dashboard at `http://localhost:5173`.
 
 ---
 
@@ -58,10 +61,11 @@ Thank you for taking the time to contribute! This document explains how to get t
 
 ### Adding a New Action Type
 
-1. Create a new executor in `src/actions/executors/` implementing `IActionExecutor`.
-2. Register it in `ActionExecutorService`'s constructor map in `src/actions/action-executor.service.ts`.
+1. Create a new executor in `backend/src/actions/executors/` implementing `IActionExecutor`.
+2. Register it in `ActionExecutorService`'s constructor map in `backend/src/actions/action-executor.service.ts`.
 3. Add the new type to the **Action Types** table in `README.md`.
 4. If the executor requires a new env var, add it to `.env.example` with a comment.
+5. Add its config type to `packages/api-types` and a form + metadata entry in `frontend/src/features/flow/action-meta.ts` so the dashboard can configure it.
 
 ---
 
@@ -70,8 +74,8 @@ Thank you for taking the time to contribute! This document explains how to get t
 This project uses ESLint and Prettier. Before pushing, run:
 
 ```bash
-npm run lint
-npm run format
+pnpm lint
+pnpm --filter api format
 ```
 
 Both commands auto-fix most issues. The CI pipeline will reject code that fails linting.

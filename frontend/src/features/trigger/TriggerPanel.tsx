@@ -199,9 +199,9 @@ function WebhookConfig({
         </code>
         <div className="mt-2 space-y-1 rounded-md bg-amber-50 p-3 text-xs text-amber-800 ring-1 ring-amber-200">
           <p>
-            <strong>The full secret was only visible when the trigger was created</strong> — the API never returns
-            it again, and rotating it isn't supported yet, so changing it means deleting and recreating this
-            trigger (which invalidates the URL's existing senders).
+            <strong>The API never returns the full secret</strong> — not even at creation time — so don't expect
+            to retrieve it here later. Rotating it isn't supported yet either: changing the secret means deleting
+            and recreating this trigger, which breaks the URL's existing senders.
           </p>
           <p>
             Senders must sign each request body with HMAC-SHA256 using this secret and send it as{' '}

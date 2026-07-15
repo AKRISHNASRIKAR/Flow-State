@@ -128,17 +128,20 @@ Think of it as the engine behind something like Zapier or n8n, except it's open 
 
 - **Node.js** ≥ 20
 - **Docker** & Docker Compose (for Postgres and Redis)
-- **npm**
+- **pnpm** ≥ 9 (`corepack enable` or `npm i -g pnpm`)
 
 ### Installation
+
+This is a pnpm + Turborepo monorepo: the NestJS API lives in `backend/`, the
+React dashboard in `frontend/`, and shared API types in `packages/api-types`.
 
 ```bash
 # Clone the repository
 git clone https://github.com/your-username/flowstate.git
 cd flowstate
 
-# Install dependencies
-npm install
+# Install all workspace dependencies
+pnpm install
 ```
 
 ### Environment Variables
@@ -175,13 +178,15 @@ docker compose up -d
 **2. Run database migrations:**
 
 ```bash
-npm run prisma:migrate
+pnpm --filter api prisma:migrate
 ```
 
-**3. Start the development server:**
+**3. Start the development servers (API + web via Turborepo):**
 
 ```bash
-npm run start:dev
+pnpm dev            # both apps
+pnpm dev:api        # API only (NestJS on :3000)
+pnpm dev:web        # dashboard only (Next.js on :5173)
 ```
 
 | URL | Description |
@@ -189,6 +194,11 @@ npm run start:dev
 | `http://localhost:3000` | REST API |
 | `http://localhost:3000/api/docs` | Swagger UI |
 | `http://localhost:3000/health` | Health check |
+| `http://localhost:5173` | Web dashboard |
+
+The frontend reads `NEXT_PUBLIC_API_URL` from `frontend/.env` (defaults to
+`http://localhost:3000`); the API allows the dashboard origin via `CORS_ORIGIN`
+(defaults to `http://localhost:5173`).
 
 ---
 
@@ -433,8 +443,28 @@ Admin routes are completely **disabled** if `ADMIN_SECRET` is not set in the env
 ## Project Structure
 
 ```
-flowstate/
-├── src/
+flowstate/                      # pnpm workspace root (Turborepo)
+├── backend/                    # NestJS API (workspace: "api")
+│   ├── src/                    # (see below)
+│   └── prisma/
+│       └── schema.prisma       # Full data model
+├── frontend/                   # Next.js dashboard (workspace: "web")
+│   └── src/
+│       ├── app/                # App Router routes (thin client wrappers)
+│       ├── components/         # Shell, UI primitives, status badges
+│       ├── features/
+│       │   ├── flow/           # React Flow linear canvas + action config forms
+│       │   ├── trigger/        # Trigger config, test-fire, webhook events
+│       │   └── executions/     # Runs tables, stats widget
+│       ├── lib/                # API client (auth refresh), stores, helpers
+│       └── views/              # Page components (login/register, workflows, executions, admin)
+├── packages/
+│   └── api-types/              # Shared TS types mirroring the API surface
+├── pnpm-workspace.yaml
+├── turbo.json
+└── docker-compose.yml          # Postgres + Redis for local development
+
+backend/src/
 │   ├── actions/
 │   │   ├── executors/          # One file per action type
 │   │   │   ├── delay.executor.ts
@@ -458,12 +488,6 @@ flowstate/
 │   ├── triggers/               # Trigger CRUD, HMAC secret management
 │   ├── webhooks/               # Webhook ingestion, dedup, manual fire
 │   └── workflows/              # Workflow CRUD, pagination, clone, pause/resume
-├── prisma/
-│   └── schema.prisma           # Full data model
-├── .env.example                # Environment variable reference
-├── docker-compose.yml          # Postgres + Redis for local development
-├── CONTRIBUTING.md
-└── LICENSE
 ```
 
 ---
@@ -475,7 +499,7 @@ These are intentional simplifications. They are documented here rather than pape
 | Limitation | Detail |
 |---|---|
 | **`DELAY` blocks the worker** | The delay executor uses `setTimeout` inline, holding a BullMQ worker slot for the full duration. A production system would split remaining actions into a new delayed job so the worker is not held hostage. |
-| **No frontend** | FlowState is a pure REST API. There is no UI. Pair it with any frontend. |
+| **SPA token storage** | The dashboard keeps the refresh token in `localStorage` (access token stays in memory). Fine for local/dev; a production deployment should move refresh-token storage behind a BFF or a same-site cookie once API and frontend share a domain. |
 | **No per-endpoint rate limiting** | There are no request-rate guards on the API. |
 | **Single-region** | No built-in support for multi-region Redis or Postgres failover. |
 | **Polling minimum: 30 seconds** | Sub-30s intervals are rejected at the API layer to prevent runaway polling. |
@@ -490,7 +514,7 @@ Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before
 
 In brief:
 1. Fork → branch → change → test → PR
-2. Run `npm run lint && npm run format` before pushing
+2. Run `pnpm lint` (and `pnpm --filter api format`) before pushing
 3. Keep PRs focused — one concern per PR
 
 ---

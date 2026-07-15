@@ -1,7 +1,10 @@
+'use client';
+
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Workflow } from '@flowstate/api-types';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { WorkflowStatusBadge } from '../../components/StatusBadge';
 import { Button, ConfirmDialog, EmptyState, Pagination, Spinner } from '../../components/ui';
 import { workflowsApi } from '../../lib/api';
@@ -10,12 +13,12 @@ import { toast } from '../../lib/toast';
 import { CreateWorkflowModal } from './CreateWorkflowModal';
 
 export function WorkflowsListPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const searchParams = useSearchParams();
   const page = Math.max(1, Number(searchParams.get('page') ?? '1') || 1);
   const [showCreate, setShowCreate] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Workflow | null>(null);
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
+  const router = useRouter();
 
   const { data, isPending, isError } = useQuery({
     queryKey: ['workflows', page],
@@ -39,7 +42,7 @@ export function WorkflowsListPage() {
     onSuccess: (created) => {
       void invalidate();
       toast.success(`Cloned as “${created.name}” (draft)`);
-      navigate(`/workflows/${created.id}`);
+      router.push(`/workflows/${created.id}`);
     },
     onError: (e) => toast.error(e.message),
   });
@@ -87,7 +90,7 @@ export function WorkflowsListPage() {
               >
                 <div className="flex items-start justify-between gap-2">
                   <Link
-                    to={`/workflows/${wf.id}`}
+                    href={`/workflows/${wf.id}`}
                     className="truncate text-sm font-semibold text-slate-900 hover:text-indigo-600"
                     title={wf.name}
                   >
@@ -124,7 +127,7 @@ export function WorkflowsListPage() {
             page={data.meta.page}
             totalPages={data.meta.totalPages}
             total={data.meta.total}
-            onPage={(p) => setSearchParams({ page: String(p) })}
+            onPage={(p) => router.replace(`/workflows?page=${p}`)}
           />
         </>
       )}

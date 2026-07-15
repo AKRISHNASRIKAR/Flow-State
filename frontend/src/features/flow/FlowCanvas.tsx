@@ -1,8 +1,11 @@
+'use client';
+
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Action, Trigger } from '@flowstate/api-types';
 import { ReactFlow, useNodesState, type Edge, type Node } from '@xyflow/react';
+import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import '@xyflow/react/dist/style.css';
 import { Button, ConfirmDialog, EmptyState, Spinner } from '../../components/ui';
 import { actionsApi, triggersApi } from '../../lib/api';
 import { ApiError } from '../../lib/api-client';
@@ -22,7 +25,12 @@ const actionY = (index: number) => (index + 1) * GAP_Y;
 
 export function FlowCanvas({ workflowId }: { workflowId: string }) {
   const queryClient = useQueryClient();
-  const [, setSearchParams] = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const goToTriggerTab = useCallback(
+    () => router.replace(`${pathname}?tab=trigger`),
+    [router, pathname],
+  );
   const [editing, setEditing] = useState<Action | 'new' | null>(null);
   const [deleting, setDeleting] = useState<Action | null>(null);
 
@@ -87,9 +95,11 @@ export function FlowCanvas({ workflowId }: { workflowId: string }) {
         id: 'trigger',
         type: 'trigger',
         position: { x: 0, y: 0 },
+        // draggable stays off, but selectable must stay on — React Flow gives
+        // fully non-interactive nodes pointer-events:none, which would swallow
+        // the node's own buttons.
         draggable: false,
-        selectable: false,
-        data: { trigger, onEdit: () => setSearchParams({ tab: 'trigger' }) },
+        data: { trigger, onEdit: goToTriggerTab },
       },
       ...sorted.map<Node>((action, index) => ({
         id: action.id,
@@ -114,7 +124,6 @@ export function FlowCanvas({ workflowId }: { workflowId: string }) {
         type: 'add',
         position: { x: 0, y: actionY(sorted.length) },
         draggable: false,
-        selectable: false,
         data: { onAdd: () => setEditing('new'), isFirst: sorted.length === 0 },
       },
     ];
@@ -189,7 +198,7 @@ export function FlowCanvas({ workflowId }: { workflowId: string }) {
         title="Configure a trigger to get started"
         body="Every workflow starts with exactly one trigger — a webhook, a schedule, or a manual test button. Actions run in order after it fires."
         action={
-          <Button variant="primary" onClick={() => setSearchParams({ tab: 'trigger' })}>
+          <Button variant="primary" onClick={goToTriggerTab}>
             Configure trigger
           </Button>
         }

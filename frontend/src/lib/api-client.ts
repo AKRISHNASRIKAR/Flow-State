@@ -1,8 +1,7 @@
 import type { ApiErrorResponse, RefreshResponse } from '@flowstate/api-types';
 import { getStoredRefreshToken, useAuthStore } from './auth-store';
 
-export const API_URL: string =
-  (import.meta.env.VITE_API_URL as string | undefined) ?? 'http://localhost:3000';
+export const API_URL: string = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
 export class ApiError extends Error {
   readonly statusCode: number;

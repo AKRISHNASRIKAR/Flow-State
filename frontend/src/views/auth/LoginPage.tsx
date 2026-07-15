@@ -1,7 +1,10 @@
+'use client';
+
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { authApi } from '../../lib/api';
 import { ApiError } from '../../lib/api-client';
@@ -17,9 +20,14 @@ type FormValues = z.infer<typeof schema>;
 
 export function LoginPage() {
   const accessToken = useAuthStore((s) => s.accessToken);
-  const navigate = useNavigate();
-  const location = useLocation();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [apiErrors, setApiErrors] = useState<string[]>([]);
+
+  // Already signed in (e.g. session restored while sitting on /login) → leave.
+  useEffect(() => {
+    if (accessToken !== null) router.replace('/workflows');
+  }, [accessToken, router]);
 
   const {
     register,
@@ -27,14 +35,12 @@ export function LoginPage() {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
-  if (accessToken !== null) return <Navigate to="/workflows" replace />;
-
   const onSubmit = async (values: FormValues) => {
     setApiErrors([]);
     try {
       await authApi.login(values);
-      const from = (location.state as { from?: string } | null)?.from;
-      navigate(from ?? '/workflows', { replace: true });
+      const from = searchParams.get('from');
+      router.replace(from && from.startsWith('/') ? from : '/workflows');
     } catch (err) {
       setApiErrors(err instanceof ApiError ? err.messages : ['Something went wrong. Is the API running?']);
     }
@@ -70,7 +76,7 @@ export function LoginPage() {
       </form>
       <p className="mt-4 text-center text-sm text-slate-500">
         No account yet?{' '}
-        <Link to="/register" className="font-medium text-indigo-600 hover:text-indigo-500">
+        <Link href="/register" className="font-medium text-indigo-600 hover:text-indigo-500">
           Register
         </Link>
       </p>

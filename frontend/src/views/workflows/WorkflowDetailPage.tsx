@@ -1,6 +1,8 @@
+'use client';
+
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useParams, usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { WorkflowStatusBadge } from '../../components/StatusBadge';
 import { Button, ConfirmDialog, Spinner } from '../../components/ui';
 import { FlowCanvas } from '../../features/flow/FlowCanvas';
@@ -15,10 +17,12 @@ type Tab = (typeof TABS)[number];
 
 export function WorkflowDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const workflowId = id!;
-  const navigate = useNavigate();
+  const workflowId = id;
+  const router = useRouter();
+  const pathname = usePathname();
   const queryClient = useQueryClient();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const searchParams = useSearchParams();
+  const setTab = (t: Tab) => router.replace(`${pathname}?tab=${t}`);
   const tabParam = searchParams.get('tab');
   const tab: Tab = TABS.includes(tabParam as Tab) ? (tabParam as Tab) : 'flow';
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -35,9 +39,9 @@ export function WorkflowDetailPage() {
   useEffect(() => {
     if (error instanceof ApiError && error.statusCode === 404) {
       toast.error('Workflow not found');
-      navigate('/workflows', { replace: true });
+      router.replace('/workflows');
     }
-  }, [error, navigate]);
+  }, [error, router]);
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ['workflow', workflowId] });
@@ -66,7 +70,7 @@ export function WorkflowDetailPage() {
     mutationFn: () => workflowsApi.clone(workflowId),
     onSuccess: (created) => {
       toast.success(`Cloned as “${created.name}” (draft)`);
-      navigate(`/workflows/${created.id}`);
+      router.push(`/workflows/${created.id}`);
     },
     onError: (e) => toast.error(e.message),
   });
@@ -74,7 +78,7 @@ export function WorkflowDetailPage() {
     mutationFn: () => workflowsApi.remove(workflowId),
     onSuccess: () => {
       toast.success('Workflow deleted');
-      navigate('/workflows');
+      router.push('/workflows');
     },
     onError: (e) => toast.error(e.message),
   });
@@ -146,7 +150,7 @@ export function WorkflowDetailPage() {
           <button
             key={t}
             type="button"
-            onClick={() => setSearchParams({ tab: t })}
+            onClick={() => setTab(t)}
             className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium capitalize ${
               tab === t
                 ? 'border-indigo-600 text-indigo-600'
