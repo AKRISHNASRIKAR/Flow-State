@@ -13,6 +13,7 @@ import { SchedulerModule } from './scheduler/scheduler.module';
 import { TriggersModule } from './triggers/triggers.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { WorkflowsModule } from './workflows/workflows.module';
+import { TelegramModule } from './telegram/telegram.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { WorkflowsModule } from './workflows/workflows.module';
     ExecutionsModule,
     HealthModule,
     AdminModule,
+    TelegramModule,
   ],
   providers: [
     {

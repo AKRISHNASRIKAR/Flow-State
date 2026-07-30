@@ -220,3 +220,19 @@ model AuditLog {
   @@index([entityType, entityId])
   @@map("audit_logs")
 }
+
+model TelegramUser {
+  id            String    @id @default(uuid()) @db.Uuid
+  telegramId    BigInt    @unique @map("telegram_id")
+  chatId        BigInt    @unique @map("chat_id")
+  username      String?
+  firstName     String?   @map("first_name")
+  lastName      String?   @map("last_name")
+  languageCode  String?   @map("language_code")
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([telegramId])
+  @@map("telegram_users")
+}
