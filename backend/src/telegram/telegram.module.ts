@@ -15,9 +15,14 @@ import { TelegramUpdate } from './telegram.update';
     TelegrafModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        token: config.getOrThrow<string>('TELEGRAM_BOT_TOKEN'),
-      }),
+      useFactory: (config: ConfigService) => {
+        const token = config.get<string>('TELEGRAM_BOT_TOKEN');
+        const isValid = Boolean(token && !token.includes('dummy') && !token.includes('123456789'));
+        return {
+          token: token || '000000000:AAA_dummy_telegram_token_for_startup',
+          launch: isValid ? {} : false,
+        };
+      },
     }),
     PrismaModule,
   ],
