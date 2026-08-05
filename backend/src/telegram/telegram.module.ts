@@ -17,10 +17,15 @@ import { TelegramUpdate } from './telegram.update';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
         const token = config.get<string>('TELEGRAM_BOT_TOKEN');
-        const isValid = Boolean(token && !token.includes('dummy') && !token.includes('123456789'));
+        const isValid = Boolean(
+          token &&
+            token.trim().length > 0 &&
+            !token.includes('dummy') &&
+            !token.includes('123456789'),
+        );
         return {
-          token: token || '000000000:AAA_dummy_telegram_token_for_startup',
-          launch: isValid ? {} : false,
+          token: isValid ? token! : '000000000:AAA_dummy_telegram_token_for_startup',
+          launchOptions: isValid ? {} : false,
         };
       },
     }),
