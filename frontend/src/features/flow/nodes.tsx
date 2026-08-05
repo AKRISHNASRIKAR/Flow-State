@@ -43,7 +43,7 @@ export function TriggerNode({ data }: NodeProps) {
       type="button"
       onClick={onEdit}
       style={{ width: NODE_WIDTH }}
-      className="rounded-xl bg-indigo-950 p-4 text-left text-white shadow-[0_0_20px_-5px_rgba(99,102,241,0.4)] ring-1 ring-indigo-500/50 transition hover:bg-indigo-900"
+      className="cursor-pointer rounded-xl bg-indigo-950 p-4 text-left text-white shadow-[0_0_20px_-5px_rgba(99,102,241,0.4)] ring-1 ring-indigo-500/50 transition hover:bg-indigo-900"
       title="Open trigger configuration"
     >
       <div className="flex items-center gap-2.5">
@@ -104,7 +104,7 @@ export function ActionNode({ data, dragging }: NodeProps) {
           type="button"
           onClick={onDelete}
           aria-label="Delete action"
-          className="rounded-md p-1 text-neutral-500 opacity-0 transition group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-400"
+          className="cursor-pointer rounded-md p-1 text-neutral-500 opacity-0 transition group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-400"
         >
           <svg viewBox="0 0 20 20" fill="currentColor" className="size-4">
             <path
@@ -134,7 +134,7 @@ export function AddActionNode({ data }: NodeProps) {
       <button
         type="button"
         onClick={onAdd}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-neutral-700 bg-neutral-900/50 py-4 text-sm font-medium text-neutral-300 transition-all hover:border-indigo-500/50 hover:bg-neutral-800 hover:text-indigo-400"
+        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-neutral-700 bg-neutral-900/50 py-4 text-sm font-medium text-neutral-300 transition-all hover:border-indigo-500/50 hover:bg-neutral-800 hover:text-indigo-400"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden className="size-4">
           <path strokeLinecap="round" strokeLinejoin="round" d={PLUS_PATH} />
