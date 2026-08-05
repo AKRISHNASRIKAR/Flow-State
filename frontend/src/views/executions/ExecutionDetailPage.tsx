@@ -1,7 +1,7 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Action, ActionExecution } from '@flowstate/api-types';
+import type { Action, ActionExecution, ExecutionStatus } from '@flowstate/api-types';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useState } from 'react';
@@ -65,14 +65,14 @@ export function ExecutionDetailPage() {
   return (
     <div>
       <div className="mb-1 text-sm">
-        <Link href="/executions" className="text-indigo-600 hover:text-indigo-500">
+        <Link href="/executions" className="text-indigo-400 hover:text-indigo-300">
           ← All executions
         </Link>
       </div>
       <div className="mb-6 flex flex-wrap items-center gap-3">
-        <h1 className="text-xl font-semibold text-slate-900">
+        <h1 className="text-xl font-semibold text-white">
           {execution.workflowName ?? 'Execution'}{' '}
-          <span className="font-mono text-sm font-normal text-slate-400">{execution.id.slice(0, 8)}</span>
+          <span className="font-mono text-sm font-normal text-neutral-400">{execution.id.slice(0, 8)}</span>
         </h1>
         <ExecutionStatusBadge status={execution.status} />
         {execution.status === 'PENDING' && (
@@ -82,29 +82,29 @@ export function ExecutionDetailPage() {
         )}
         <Link
           href={`/workflows/${execution.workflowId}?tab=runs`}
-          className="ml-auto text-sm font-medium text-indigo-600 hover:text-indigo-500"
+          className="ml-auto text-sm font-medium text-indigo-400 hover:text-indigo-300"
         >
           View workflow →
         </Link>
       </div>
 
-      <div className="mb-6 grid gap-4 rounded-xl bg-white p-5 text-sm shadow-sm ring-1 ring-slate-200 sm:grid-cols-3">
+      <div className="mb-6 grid gap-4 rounded-2xl bg-neutral-900 p-5 text-sm shadow-xl ring-1 ring-neutral-800 sm:grid-cols-3">
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Started</p>
-          <p className="mt-0.5 text-slate-700">{formatDateTime(execution.startedAt)}</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-neutral-400">Started</p>
+          <p className="mt-0.5 text-neutral-100">{formatDateTime(execution.startedAt)}</p>
         </div>
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Finished</p>
-          <p className="mt-0.5 text-slate-700">{formatDateTime(execution.finishedAt)}</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-neutral-400">Finished</p>
+          <p className="mt-0.5 text-neutral-100">{formatDateTime(execution.finishedAt)}</p>
         </div>
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Duration</p>
-          <p className="mt-0.5 tabular-nums text-slate-700">{formatDuration(execution.startedAt, execution.finishedAt)}</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-neutral-400">Duration</p>
+          <p className="mt-0.5 tabular-nums text-neutral-100">{formatDuration(execution.startedAt, execution.finishedAt)}</p>
         </div>
         {execution.error && (
           <div className="sm:col-span-3">
             <p className="text-xs font-medium uppercase tracking-wide text-red-400">Error</p>
-            <p className="mt-0.5 whitespace-pre-wrap font-mono text-xs text-red-700">{execution.error}</p>
+            <p className="mt-0.5 whitespace-pre-wrap font-mono text-xs text-red-300">{execution.error}</p>
           </div>
         )}
       </div>
@@ -116,16 +116,25 @@ export function ExecutionDetailPage() {
           {attempts.map((attempt, i) => (
             <section key={i}>
               {attempts.length > 1 && (
-                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
                   Attempt {i + 1} of {attempts.length}
                   {i < attempts.length - 1 && ' — retried from the first action'}
                 </h2>
               )}
-              <ol className="space-y-3">
-                {attempt.map((ae, stepIndex) => (
-                  <ActionStep key={ae.id} actionExecution={ae} action={actionById.get(ae.actionId)} index={stepIndex} />
-                ))}
-              </ol>
+              {/* The rail is drawn on the wrapper, not between items, so it stays
+                  continuous when a step is expanded. */}
+              <div className="relative pl-14 before:absolute before:bottom-7 before:left-[27px] before:top-7 before:w-0.5 before:bg-neutral-800">
+                <ol className="space-y-3">
+                  {attempt.map((ae, stepIndex) => (
+                    <ActionStep
+                      key={ae.id}
+                      actionExecution={ae}
+                      action={actionById.get(ae.actionId)}
+                      index={stepIndex}
+                    />
+                  ))}
+                </ol>
+              </div>
             </section>
           ))}
         </div>
@@ -163,6 +172,16 @@ function groupIntoAttempts(actionExecutions: ActionExecution[]): ActionExecution
   return attempts;
 }
 
+// Marker colors on the timeline rail. PENDING/RUNNING normally render a
+// spinner instead — their entries here only cover the exhaustive Record.
+const STEP_DOT: Record<ExecutionStatus, string> = {
+  PENDING: 'bg-neutral-600',
+  RUNNING: 'bg-blue-500',
+  SUCCEEDED: 'bg-emerald-500',
+  FAILED: 'bg-red-500',
+  CANCELLED: 'bg-neutral-600',
+};
+
 function ActionStep({
   actionExecution: ae,
   action,
@@ -176,30 +195,41 @@ function ActionStep({
   const meta = action ? ACTION_META[action.type as keyof typeof ACTION_META] : undefined;
   const label = meta?.label ?? action?.type ?? `Action ${ae.actionId.slice(0, 8)}…`;
 
+  const inFlight = ae.status === 'PENDING' || ae.status === 'RUNNING';
+
   return (
-    <li className="rounded-xl bg-white shadow-sm ring-1 ring-slate-200">
+    <li className="relative rounded-xl bg-neutral-900 shadow-lg ring-1 ring-neutral-800">
+      {/* Rail marker, centred on the rail at x=28px. Decorative — the row's
+          status badge carries the state. */}
+      <span aria-hidden className="absolute -left-9 top-5">
+        {inFlight ? (
+          <span className="block size-4 animate-spin rounded-full border-2 border-blue-500/30 border-t-blue-400 ring-4 ring-black" />
+        ) : (
+          <span className={`block size-4 rounded-full ring-4 ring-black ${STEP_DOT[ae.status]}`} />
+        )}
+      </span>
       <button
         type="button"
         onClick={() => setOpen(!open)}
         className="flex w-full items-center gap-3 p-4 text-left"
         aria-expanded={open}
       >
-        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-500">
+        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-neutral-800 text-xs font-semibold text-neutral-200 ring-1 ring-neutral-700">
           {index + 1}
         </span>
         <span className="text-lg">{meta?.icon ?? '⚙️'}</span>
         <span className="min-w-0 flex-1">
-          <span className="block text-sm font-medium text-slate-900">{label}</span>
-          {ae.error && <span className="block truncate text-xs text-red-600">{ae.error}</span>}
+          <span className="block text-sm font-medium text-white">{label}</span>
+          {ae.error && <span className="block truncate text-xs text-red-400">{ae.error}</span>}
         </span>
-        <span className="hidden text-xs tabular-nums text-slate-400 sm:block">
+        <span className="hidden text-xs tabular-nums text-neutral-400 sm:block">
           {formatDuration(ae.startedAt, ae.finishedAt)}
         </span>
         <ExecutionStatusBadge status={ae.status} />
         <svg
           viewBox="0 0 20 20"
           fill="currentColor"
-          className={`size-4 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`}
+          className={`size-4 text-neutral-400 transition-transform ${open ? 'rotate-180' : ''}`}
         >
           <path
             fillRule="evenodd"
@@ -209,18 +239,18 @@ function ActionStep({
         </svg>
       </button>
       {open && (
-        <div className="grid gap-3 border-t border-slate-100 p-4 lg:grid-cols-2">
+        <div className="grid gap-3 border-t border-neutral-800 p-4 lg:grid-cols-2">
           <JsonBlock label="Input" value={ae.input} />
           <JsonBlock label="Output" value={ae.output} />
           {ae.error && (
             <div className="lg:col-span-2">
               <p className="mb-1 text-xs font-medium uppercase tracking-wide text-red-400">Error</p>
-              <pre className="overflow-auto rounded-md bg-red-50 p-3 font-mono text-xs text-red-700 ring-1 ring-red-100">
+              <pre className="overflow-auto rounded-lg bg-red-500/10 p-4 font-mono text-xs text-red-300 ring-1 ring-red-500/20">
                 {ae.error}
               </pre>
             </div>
           )}
-          <p className="text-xs text-slate-400 lg:col-span-2">
+          <p className="text-xs text-neutral-400 lg:col-span-2">
             {formatDateTime(ae.startedAt)} → {formatDateTime(ae.finishedAt)}
           </p>
         </div>
@@ -231,9 +261,9 @@ function ActionStep({
 
 function JsonBlock({ label, value }: { label: string; value: unknown }) {
   return (
-    <div className="min-w-0">
-      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-400">{label}</p>
-      <pre className="max-h-56 overflow-auto rounded-md bg-slate-50 p-3 font-mono text-xs text-slate-700 ring-1 ring-slate-200">
+    <div className="flex min-w-0 flex-col">
+      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-neutral-400">{label}</p>
+      <pre className="max-h-56 flex-1 overflow-auto rounded-lg bg-black p-4 font-mono text-xs text-emerald-400 ring-1 ring-neutral-800">
         {value == null ? 'null' : formatJson(value)}
       </pre>
     </div>

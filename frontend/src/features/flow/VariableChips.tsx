@@ -18,9 +18,10 @@ export function VariableChips({ workflowId, onInsert }: { workflowId: string; on
   const paths = collectPaths(payload);
 
   return (
-    <div className="rounded-md bg-slate-50 p-2.5 text-xs text-slate-500 ring-1 ring-slate-200">
+    <div className="rounded-lg bg-black p-3 text-xs text-neutral-300 ring-1 ring-neutral-800">
       <p>
-        String fields support <code className="rounded bg-slate-200 px-1 font-mono">{'{{payload.field}}'}</code>{' '}
+        String fields support{' '}
+        <code className="rounded bg-neutral-800 px-1 font-mono text-neutral-100">{'{{payload.field}}'}</code>{' '}
         templates resolved against the trigger payload.
       </p>
       {paths.length > 0 ? (
@@ -31,7 +32,7 @@ export function VariableChips({ workflowId, onInsert }: { workflowId: string; on
               key={p}
               type="button"
               onClick={() => onInsert(`{{payload.${p}}}`)}
-              className="rounded bg-white px-1.5 py-0.5 font-mono text-indigo-700 ring-1 ring-indigo-200 hover:bg-indigo-50"
+              className="rounded bg-indigo-500/10 px-1.5 py-0.5 font-mono text-indigo-300 ring-1 ring-indigo-500/30 hover:bg-indigo-500/20"
               title={`Insert {{payload.${p}}} into the focused field`}
             >
               {p}

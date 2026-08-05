@@ -107,12 +107,12 @@ export function WorkflowDetailPage() {
               if (e.key === 'Enter') submitName();
               if (e.key === 'Escape') setEditingName(false);
             }}
-            className="rounded-md border-0 px-2 py-1 text-xl font-semibold ring-2 ring-indigo-500"
+            className="rounded-lg border-0 bg-neutral-900 px-2 py-1 text-xl font-semibold text-white ring-2 ring-indigo-500"
           />
         ) : (
           <button
             type="button"
-            className="rounded-md px-1 text-left text-xl font-semibold text-slate-900 hover:bg-slate-100"
+            className="rounded-lg px-1 text-left text-xl font-semibold text-white hover:bg-neutral-800"
             title="Click to rename"
             onClick={() => {
               setNameDraft(workflow.name);
@@ -143,18 +143,18 @@ export function WorkflowDetailPage() {
         </div>
       </div>
 
-      {workflow.description && <p className="-mt-3 mb-6 text-sm text-slate-500">{workflow.description}</p>}
+      {workflow.description && <p className="-mt-3 mb-6 text-sm text-neutral-300">{workflow.description}</p>}
 
-      <div className="mb-6 flex gap-1 border-b border-slate-200">
+      <div className="mb-6 flex gap-1 border-b border-neutral-800">
         {TABS.map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => setTab(t)}
-            className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium capitalize ${
+            className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium capitalize transition-colors ${
               tab === t
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                ? 'border-indigo-500 text-indigo-400'
+                : 'border-transparent text-neutral-400 hover:border-neutral-700 hover:text-neutral-200'
             }`}
           >
             {t}

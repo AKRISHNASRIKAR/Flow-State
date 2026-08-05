@@ -7,12 +7,14 @@ import { formatMs } from '../../lib/format';
 // steps are intentionally desaturated for the inert states, and every segment
 // is paired with a visible label + count so color never carries meaning alone).
 const STATUS_ORDER: ExecutionStatus[] = ['PENDING', 'RUNNING', 'SUCCEEDED', 'FAILED', 'CANCELLED'];
+// Lifted a step from the light-mode values so each segment stays vivid on the
+// neutral-900 card; the gray steps remain the desaturated pair.
 const STATUS_COLOR: Record<ExecutionStatus, string> = {
-  PENDING: '#64748b',
-  RUNNING: '#2563eb',
-  SUCCEEDED: '#059669',
-  FAILED: '#dc2626',
-  CANCELLED: '#94a3b8',
+  PENDING: '#94a3b8',
+  RUNNING: '#3b82f6',
+  SUCCEEDED: '#10b981',
+  FAILED: '#ef4444',
+  CANCELLED: '#64748b',
 };
 
 export function StatsWidget() {
@@ -30,8 +32,10 @@ export function StatsWidget() {
   }));
   const barTotal = byStatus.reduce((sum, s) => sum + s.count, 0);
 
+  const running = stats.byStatus?.RUNNING ?? 0;
+
   return (
-    <div className="mb-6 rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+    <div className="mb-6 space-y-4">
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         <StatTile label="Total runs" value={String(stats.total)} />
         <StatTile label="Last 24 h" value={String(stats.last24hTotal)} />
@@ -53,8 +57,8 @@ export function StatsWidget() {
       </div>
 
       {barTotal > 0 && (
-        <div className="mt-5">
-          <div className="flex h-3 w-full gap-0.5 overflow-hidden rounded-full" role="img" aria-label="Runs by status">
+        <div className="rounded-xl bg-neutral-900 p-5 shadow-lg ring-1 ring-neutral-800">
+          <div className="flex h-5 w-full gap-0.5 overflow-hidden rounded-lg" role="img" aria-label="Runs by status">
             {byStatus
               .filter((s) => s.count > 0)
               .map((s) => (
@@ -68,11 +72,18 @@ export function StatsWidget() {
                 />
               ))}
           </div>
-          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-300">
             {byStatus.map((s) => (
               <span key={s.status} className="inline-flex items-center gap-1.5">
                 <span className="size-2 rounded-full" style={{ backgroundColor: STATUS_COLOR[s.status] }} />
-                {s.status.toLowerCase()} <span className="font-medium tabular-nums">{s.count}</span>
+                {s.status.toLowerCase()}{' '}
+                <span
+                  className={`font-medium tabular-nums ${
+                    s.status === 'RUNNING' && running > 0 ? 'animate-pulse text-blue-400' : 'text-neutral-100'
+                  }`}
+                >
+                  {s.count}
+                </span>
               </span>
             ))}
           </div>
@@ -84,10 +95,12 @@ export function StatsWidget() {
 
 function StatTile({ label, value, alert }: { label: string; value: string; alert?: string }) {
   return (
-    <div>
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{label}</p>
-      <p className={`mt-1 text-2xl font-semibold ${alert ? 'text-red-600' : 'text-slate-900'}`}>{value}</p>
-      {alert && <p className="mt-0.5 text-xs text-red-600">⚠ {alert}</p>}
+    <div className="rounded-xl bg-neutral-900 p-5 shadow-lg ring-1 ring-neutral-800">
+      <p className="text-xs font-medium uppercase tracking-wide text-neutral-400">{label}</p>
+      <p className={`mt-1 text-2xl font-semibold tabular-nums ${alert ? 'text-red-400' : 'text-white'}`}>
+        {value}
+      </p>
+      {alert && <p className="mt-1 text-xs text-red-400">⚠ {alert}</p>}
     </div>
   );
 }

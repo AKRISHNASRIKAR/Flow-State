@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Action, Trigger } from '@flowstate/api-types';
-import { ReactFlow, useNodesState, type Edge, type Node } from '@xyflow/react';
+import { Background, BackgroundVariant, ReactFlow, useNodesState, type Edge, type Node } from '@xyflow/react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import '@xyflow/react/dist/style.css';
@@ -147,7 +147,7 @@ export function FlowCanvas({ workflowId }: { workflowId: string }) {
       target: chain[i + 1],
       type: 'straight',
       animated: chain[i + 1] === 'add',
-      style: { stroke: '#94a3b8', strokeWidth: 1.5 },
+      style: { stroke: '#525252', strokeWidth: 1.5 },
     }));
   }, [trigger, actions]);
 
@@ -211,7 +211,7 @@ export function FlowCanvas({ workflowId }: { workflowId: string }) {
   return (
     <>
       <div
-        className="rounded-xl bg-white ring-1 ring-slate-200"
+        className="overflow-hidden rounded-2xl bg-black ring-1 ring-neutral-800"
         style={{ height: Math.min(canvasHeight, 640) }}
       >
         <ReactFlow
@@ -227,9 +227,14 @@ export function FlowCanvas({ workflowId }: { workflowId: string }) {
           fitViewOptions={{ padding: 0.25, maxZoom: 1 }}
           minZoom={0.4}
           maxZoom={1.25}
-        />
+          // Repaints React Flow's own chrome (attribution, handles, selection
+          // ring) for a dark surface — its stylesheet defaults to light.
+          colorMode="dark"
+        >
+          <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#404040" />
+        </ReactFlow>
       </div>
-      <p className="mt-2 text-xs text-slate-400">
+      <p className="mt-2 text-xs text-neutral-400">
         Actions run top to bottom as a linear chain — drag a step vertically to reorder it.
       </p>
 

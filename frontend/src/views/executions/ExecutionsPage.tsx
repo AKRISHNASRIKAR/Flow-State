@@ -17,7 +17,12 @@ export function ExecutionsPage() {
 
   return (
     <div>
-      <h1 className="mb-6 text-xl font-semibold text-slate-900">Executions</h1>
+      <div className="mb-8">
+        <h1 className="text-2xl font-semibold tracking-tight text-white">Executions</h1>
+        <p className="mt-1.5 text-sm text-neutral-300">
+          Every run the engine has recorded, newest first. Open one to see its per-step input and output.
+        </p>
+      </div>
       <StatsWidget />
       <ExecutionsTable
         key={workflowId}

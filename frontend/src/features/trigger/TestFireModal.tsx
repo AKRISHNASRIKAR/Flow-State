@@ -54,18 +54,18 @@ export function TestFireModal({ workflowId, onClose }: { workflowId: string; onC
       <div className="space-y-4">
         <FormErrors messages={errors} />
         <div>
-          <label htmlFor="tf-payload" className="mb-1 block text-sm font-medium text-slate-700">
+          <label htmlFor="tf-payload" className="mb-1.5 block text-sm font-medium text-neutral-200">
             Test payload (JSON)
           </label>
           <textarea
             id="tf-payload"
             rows={6}
             spellCheck={false}
-            className="block w-full rounded-md border-0 px-3 py-2 font-mono text-xs text-slate-900 ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600"
+            className="block w-full rounded-lg border-0 bg-black px-3 py-2 font-mono text-xs text-emerald-400 ring-1 ring-inset ring-neutral-800 focus:ring-2 focus:ring-inset focus:ring-indigo-500"
             value={payloadText}
             onChange={(e) => setPayloadText(e.target.value)}
           />
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1.5 text-xs text-neutral-400">
             Actions can reference these fields with <code className="font-mono">{'{{payload.field}}'}</code>.
           </p>
         </div>

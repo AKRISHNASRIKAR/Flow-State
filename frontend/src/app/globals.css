@@ -1,5 +1,54 @@
 @import 'tailwindcss';
 
+/* Inter is self-hosted by next/font in app/layout.tsx, which exposes it as
+   --font-inter. Repointing Tailwind's font-sans at it makes every utility-styled
+   element inherit it without a per-element font class. */
+@theme {
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --animate-toast-in: toast-in 200ms ease-out;
+  --animate-grid-pan: grid-pan 24s linear infinite;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* One tile of travel, so the loop is seamless: the auth panel's grid is drawn
+   at 24px and pans exactly 24px before repeating. */
+@keyframes grid-pan {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 24px 24px;
+  }
+}
+
+/* The app is dark-only. Declaring it here makes the UA style native controls —
+   select popups, scrollbars, date pickers — to match instead of flashing white. */
+html {
+  color-scheme: dark;
+}
+
+/* Surface ladder, darkest first — `neutral` rather than `slate` so nothing in
+   the chrome carries a blue cast, leaving indigo as the only hue on screen:
+     #000000  page, canvas, inset fields          (bg-black)
+     #0a0a0a  sidebar                             (neutral-950)
+     #171717  cards, panels, modals               (neutral-900)
+     #262626  hairlines and rings                 (neutral-800) */
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  @apply bg-black text-neutral-100 antialiased;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-grid-pan {
+    animation: none;
+  }
 }

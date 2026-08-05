@@ -34,7 +34,7 @@ export function AdminPage() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">Admin · reliability</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-white">Admin · reliability</h1>
         <Button
           size="sm"
           onClick={() => {
@@ -61,9 +61,9 @@ export function AdminPage() {
 function SecretPrompt({ onSubmit }: { onSubmit: (secret: string) => void }) {
   const [value, setValue] = useState('');
   return (
-    <div className="mx-auto max-w-sm rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-      <h1 className="text-lg font-semibold text-slate-900">Operator access</h1>
-      <p className="mt-1 text-sm text-slate-500">
+    <div className="mx-auto max-w-sm rounded-2xl bg-neutral-900 p-6 shadow-xl ring-1 ring-neutral-800">
+      <h1 className="text-lg font-semibold text-white">Operator access</h1>
+      <p className="mt-1 text-sm text-neutral-300">
         This panel talks to the <code className="font-mono text-xs">/admin</code> endpoints, which are protected by
         the server's <code className="font-mono text-xs">ADMIN_SECRET</code> (the{' '}
         <code className="font-mono text-xs">X-Admin-Secret</code> header) — not your user account. The secret is
@@ -99,16 +99,16 @@ function HealthStrip() {
   });
 
   const indicator = (label: string, value: string, ok: boolean) => (
-    <span className="inline-flex items-center gap-1.5 text-sm text-slate-700">
+    <span className="inline-flex items-center gap-1.5 text-sm text-neutral-200">
       <span className={`size-2 rounded-full ${ok ? 'bg-emerald-500' : 'bg-red-500'}`} />
-      {label}: <span className="font-medium">{value}</span>
+      {label}: <span className="font-medium text-white">{value}</span>
     </span>
   );
 
   return (
-    <div className="mb-6 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200">
+    <div className="mb-6 flex flex-wrap items-center gap-x-6 gap-y-2 rounded-2xl bg-neutral-900 p-4 shadow-xl ring-1 ring-neutral-800">
       {isError || !health ? (
-        <span className="inline-flex items-center gap-1.5 text-sm text-red-600">
+        <span className="inline-flex items-center gap-1.5 text-sm text-red-400">
           <span className="size-2 rounded-full bg-red-500" />
           {isError ? 'API unreachable' : 'Checking health…'}
         </span>
@@ -117,10 +117,10 @@ function HealthStrip() {
           {indicator('API', health.status, health.status === 'ok')}
           {indicator('Postgres', health.db, health.db === 'up')}
           {indicator('Redis', health.redis, health.redis === 'up')}
-          <span className="text-sm text-slate-700">
+          <span className="text-sm text-neutral-200">
             Queue depth: <span className="font-medium tabular-nums">{health.queueDepth}</span>
           </span>
-          <span className="text-sm text-slate-700">
+          <span className="text-sm text-neutral-200">
             Workers: <span className="font-medium">{typeof health.workers === 'object' ? JSON.stringify(health.workers) : String(health.workers)}</span>
           </span>
         </>
@@ -157,11 +157,11 @@ function DlqTable({ secret, onUnauthorized }: { secret: string; onUnauthorized: 
   if (badSecret) return null;
 
   return (
-    <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+    <div className="rounded-2xl bg-neutral-900 p-5 shadow-xl ring-1 ring-neutral-800">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h2 className="text-sm font-semibold text-slate-900">Dead-letter queue</h2>
-          <p className="text-xs text-slate-500">Executions that exhausted their retries. Requeueing runs them again from action #1.</p>
+          <h2 className="text-sm font-semibold text-white">Dead-letter queue</h2>
+          <p className="text-xs text-neutral-300">Executions that exhausted their retries. Requeueing runs them again from action #1.</p>
         </div>
         <Button size="sm" onClick={() => void refetch()}>
           Refresh
@@ -173,9 +173,9 @@ function DlqTable({ secret, onUnauthorized }: { secret: string; onUnauthorized: 
       {jobs && jobs.length === 0 && <EmptyState title="DLQ is empty" body="No dead-lettered executions. All clear." />}
 
       {jobs && jobs.length > 0 && (
-        <table className="w-full text-left text-sm">
+        <table className="w-full text-left text-sm text-neutral-200">
           <thead>
-            <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-400">
+            <tr className="border-b border-neutral-800 text-xs uppercase tracking-wide text-neutral-400">
               <th className="py-2 pr-4 font-medium">Job</th>
               <th className="py-2 pr-4 font-medium">Execution</th>
               <th className="py-2 pr-4 font-medium">Error</th>
@@ -186,12 +186,12 @@ function DlqTable({ secret, onUnauthorized }: { secret: string; onUnauthorized: 
           </thead>
           <tbody>
             {jobs.map((job) => (
-              <tr key={job.jobId} className="border-b border-slate-100 align-top">
-                <td className="py-2.5 pr-4 font-mono text-xs text-slate-600">{job.jobId}</td>
-                <td className="py-2.5 pr-4 font-mono text-xs text-slate-600">{job.executionId.slice(0, 8)}…</td>
-                <td className="max-w-64 py-2.5 pr-4 text-xs text-red-700">{job.error}</td>
-                <td className="whitespace-nowrap py-2.5 pr-4 text-xs text-slate-600">{formatDateTime(job.failedAt)}</td>
-                <td className="py-2.5 pr-4 tabular-nums text-xs text-slate-600">{job.attemptsMade}</td>
+              <tr key={job.jobId} className="border-b border-neutral-800/70 align-top">
+                <td className="py-2.5 pr-4 font-mono text-xs text-neutral-300">{job.jobId}</td>
+                <td className="py-2.5 pr-4 font-mono text-xs text-neutral-300">{job.executionId.slice(0, 8)}…</td>
+                <td className="max-w-64 py-2.5 pr-4 text-xs text-red-400">{job.error}</td>
+                <td className="whitespace-nowrap py-2.5 pr-4 text-xs text-neutral-300">{formatDateTime(job.failedAt)}</td>
+                <td className="py-2.5 pr-4 text-xs tabular-nums text-neutral-300">{job.attemptsMade}</td>
                 <td className="py-2.5 text-right">
                   <Button size="sm" onClick={() => retry.mutate(job.jobId)} disabled={retry.isPending}>
                     Retry

@@ -11,6 +11,16 @@ import { formatDateTime, formatDuration } from '../../lib/format';
 
 const STATUSES: ExecutionStatus[] = ['PENDING', 'RUNNING', 'SUCCEEDED', 'FAILED', 'CANCELLED'];
 
+// Row accent — a redundant cue alongside the status badge in each row, so the
+// in-flight and failed rows are findable while scanning a long page.
+const ROW_ACCENT: Record<ExecutionStatus, string> = {
+  PENDING: 'border-l-amber-500',
+  RUNNING: 'border-l-blue-500',
+  SUCCEEDED: 'border-l-emerald-500',
+  FAILED: 'border-l-red-500',
+  CANCELLED: 'border-l-neutral-600',
+};
+
 interface ExecutionsTableProps {
   /** Pre-filter to one workflow (the per-workflow Runs tab). */
   workflowId?: string;
@@ -35,7 +45,7 @@ export function ExecutionsTable({ workflowId, extraFilters }: ExecutionsTablePro
   });
 
   return (
-    <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
+    <div className="rounded-2xl bg-neutral-900 p-5 shadow-xl ring-1 ring-neutral-800">
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="w-44">
           <select
@@ -69,10 +79,10 @@ export function ExecutionsTable({ workflowId, extraFilters }: ExecutionsTablePro
 
       {data && data.data.length > 0 && (
         <>
-          <table className="w-full text-left text-sm">
+          <table className="w-full text-left text-sm text-neutral-200">
             <thead>
-              <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-400">
-                <th className="py-2 pr-4 font-medium">Workflow</th>
+              <tr className="border-b border-neutral-800 text-xs uppercase tracking-wide text-neutral-400">
+                <th className="py-2 pl-3 pr-4 font-medium">Workflow</th>
                 <th className="py-2 pr-4 font-medium">Status</th>
                 <th className="py-2 pr-4 font-medium">Started</th>
                 <th className="py-2 pr-4 font-medium">Duration</th>
@@ -81,17 +91,20 @@ export function ExecutionsTable({ workflowId, extraFilters }: ExecutionsTablePro
             </thead>
             <tbody>
               {data.data.map((e) => (
-                <tr key={e.id} className="border-b border-slate-100 hover:bg-slate-50">
-                  <td className="max-w-52 truncate py-2.5 pr-4 font-medium text-slate-900">{e.workflowName}</td>
+                <tr
+                  key={e.id}
+                  className={`border-b border-l-4 border-b-neutral-800/70 transition-colors duration-150 hover:bg-neutral-800/50 ${ROW_ACCENT[e.status]}`}
+                >
+                  <td className="max-w-52 truncate py-2.5 pl-3 pr-4 font-medium text-white">{e.workflowName}</td>
                   <td className="py-2.5 pr-4">
                     <ExecutionStatusBadge status={e.status} />
                   </td>
-                  <td className="whitespace-nowrap py-2.5 pr-4 text-slate-600">{formatDateTime(e.startedAt)}</td>
-                  <td className="whitespace-nowrap py-2.5 pr-4 tabular-nums text-slate-600">
+                  <td className="whitespace-nowrap py-2.5 pr-4 text-neutral-300">{formatDateTime(e.startedAt)}</td>
+                  <td className="whitespace-nowrap py-2.5 pr-4 tabular-nums text-neutral-300">
                     {formatDuration(e.startedAt, e.finishedAt)}
                   </td>
                   <td className="py-2.5 text-right">
-                    <Link href={`/executions/${e.id}`} className="text-xs font-medium text-indigo-600 hover:text-indigo-500">
+                    <Link href={`/executions/${e.id}`} className="text-xs font-medium text-indigo-400 hover:text-indigo-300">
                       Details →
                     </Link>
                   </td>

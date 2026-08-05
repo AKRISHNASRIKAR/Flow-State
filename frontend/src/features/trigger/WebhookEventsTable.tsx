@@ -16,14 +16,14 @@ export function WebhookEventsTable({ workflowId }: { workflowId: string }) {
 
   if (isPending) return <Spinner label="Loading events…" />;
   if (!data || data.data.length === 0) {
-    return <p className="mt-4 text-sm text-slate-500">No events received yet.</p>;
+    return <p className="mt-4 text-sm text-neutral-400">No events received yet.</p>;
   }
 
   return (
     <div className="mt-4">
-      <table className="w-full text-left text-sm">
+      <table className="w-full text-left text-sm text-neutral-200">
         <thead>
-          <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-400">
+          <tr className="border-b border-neutral-800 text-xs uppercase tracking-wide text-neutral-400">
             <th className="py-2 pr-4 font-medium">Received</th>
             <th className="py-2 pr-4 font-medium">Status</th>
             <th className="py-2 font-medium">Payload</th>
@@ -34,8 +34,8 @@ export function WebhookEventsTable({ workflowId }: { workflowId: string }) {
             const json = formatJson(event.payload);
             const expanded = expandedId === event.id;
             return (
-              <tr key={event.id} className="border-b border-slate-100 align-top">
-                <td className="whitespace-nowrap py-2.5 pr-4 text-slate-600">{formatDateTime(event.receivedAt)}</td>
+              <tr key={event.id} className="border-b border-neutral-800/70 align-top">
+                <td className="whitespace-nowrap py-2.5 pr-4 text-neutral-300">{formatDateTime(event.receivedAt)}</td>
                 <td className="py-2.5 pr-4">
                   <WebhookEventStatusBadge status={event.status} />
                 </td>
@@ -47,11 +47,11 @@ export function WebhookEventsTable({ workflowId }: { workflowId: string }) {
                     title={expanded ? 'Collapse' : 'Expand'}
                   >
                     {expanded ? (
-                      <pre className="max-h-64 overflow-auto rounded-md bg-slate-50 p-2 font-mono text-xs text-slate-700 ring-1 ring-slate-200">
+                      <pre className="max-h-64 overflow-auto rounded-lg bg-black p-3 font-mono text-xs text-emerald-400 ring-1 ring-neutral-800">
                         {json}
                       </pre>
                     ) : (
-                      <code className="font-mono text-xs text-slate-500">{truncate(json.replaceAll('\n', ' '), 80)}</code>
+                      <code className="font-mono text-xs text-neutral-400">{truncate(json.replaceAll('\n', ' '), 80)}</code>
                     )}
                   </button>
                 </td>

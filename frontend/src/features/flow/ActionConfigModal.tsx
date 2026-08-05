@@ -38,12 +38,12 @@ export function ActionConfigModal({ workflowId, action, onClose }: ActionConfigM
               key={meta.type}
               type="button"
               onClick={() => setType(meta.type)}
-              className="flex items-start gap-3 rounded-lg p-3 text-left ring-1 ring-slate-200 transition hover:bg-indigo-50 hover:ring-indigo-300"
+              className="flex items-start gap-3 rounded-xl bg-black/50 p-4 text-left ring-1 ring-neutral-800 transition hover:bg-neutral-800 hover:ring-indigo-500/40"
             >
               <span className="text-xl">{meta.icon}</span>
               <span>
-                <span className="block text-sm font-medium text-slate-900">{meta.label}</span>
-                <span className="block text-xs text-slate-500">{meta.description}</span>
+                <span className="block text-sm font-medium text-white">{meta.label}</span>
+                <span className="block text-xs text-neutral-300">{meta.description}</span>
               </span>
             </button>
           ))}
@@ -120,7 +120,7 @@ function ActionForm({ workflowId, type, action, onBack, onClose }: ActionFormPro
   const textField = (name: string, label: string, opts?: { textarea?: boolean; placeholder?: string; optional?: boolean }) => (
     <div>
       <label htmlFor={`af-${name}`} className={labelClass}>
-        {label} {opts?.optional && <span className="text-slate-400">(optional)</span>}
+        {label} {opts?.optional && <span className="text-neutral-400">(optional)</span>}
       </label>
       {opts?.textarea ? (
         <textarea
@@ -227,7 +227,7 @@ function ActionForm({ workflowId, type, action, onBack, onClose }: ActionFormPro
             {textField('message', 'Message', { textarea: true })}
             <div>
               <label htmlFor="af-parseMode" className={labelClass}>
-                Parse mode <span className="text-slate-400">(optional)</span>
+                Parse mode <span className="text-neutral-400">(optional)</span>
               </label>
               <select id="af-parseMode" className={inputClass} {...register('parseMode')}>
                 <option value="">Plain text</option>

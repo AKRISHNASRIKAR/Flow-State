@@ -76,17 +76,17 @@ export function RegisterPage() {
         </div>
         <div>
           <label htmlFor="name" className={labelClass}>
-            Name <span className="text-slate-400">(optional)</span>
+            Name <span className="text-neutral-400">(optional)</span>
           </label>
           <input id="name" type="text" autoComplete="name" className={inputClass} {...register('name')} />
         </div>
-        <Button type="submit" variant="primary" className="w-full justify-center" disabled={isSubmitting}>
+        <Button type="submit" variant="primary" size="lg" className="w-full justify-center" disabled={isSubmitting}>
           {isSubmitting ? 'Creating account…' : 'Create account'}
         </Button>
       </form>
-      <p className="mt-4 text-center text-sm text-slate-500">
+      <p className="mt-4 text-center text-sm text-neutral-400">
         Already have an account?{' '}
-        <Link href="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
+        <Link href="/login" className="font-medium text-indigo-400 hover:text-indigo-300">
           Sign in
         </Link>
       </p>

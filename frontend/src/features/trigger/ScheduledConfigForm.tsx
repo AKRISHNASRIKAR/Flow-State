@@ -64,8 +64,8 @@ export function ScheduledConfigForm({ trigger, saving, onSave }: ScheduledConfig
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="mt-5 space-y-4 border-t border-slate-100 pt-5" noValidate>
-      <p className="text-sm text-slate-600">
+    <form onSubmit={handleSubmit(onSubmit)} className="mt-5 space-y-4 border-t border-neutral-800 pt-5" noValidate>
+      <p className="text-sm text-neutral-300">
         The scheduler polls an endpoint on an interval and fires the workflow when the response changes.
       </p>
       <div className="flex gap-3">
@@ -115,7 +115,7 @@ export function ScheduledConfigForm({ trigger, saving, onSave }: ScheduledConfig
         <div className="flex-1">
           <label htmlFor="sc-stateKey" className={labelClass}>
             Field to watch{' '}
-            <span className="text-slate-400">{changeMode === 'specific_field' ? '' : '(optional)'}</span>
+            <span className="text-neutral-400">{changeMode === 'specific_field' ? '' : '(optional)'}</span>
           </label>
           <input
             id="sc-stateKey"
