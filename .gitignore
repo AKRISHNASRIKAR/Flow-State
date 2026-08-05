@@ -65,9 +65,7 @@ testem.log
 
 # Personal / local notes — not committed
 # These patterns cover common names for scratch pads, design notes,
-# and personal logs that should stay local. The negation rules below
-# ensure .claude/ and .agents/ (shared agent skills & config) are
-# always tracked regardless of any catch-all above.
+# and personal logs that should stay local.
 NOTES.md
 NOTES.txt
 TODO.md
@@ -82,6 +80,8 @@ PROJECT_OVERVIEW.md
 /local-docs/
 /private/
 
-# Keep agent config directories tracked even if a parent rule would catch them
-!/.claude/
-!/.agents/
+# Agent & Skill Folders — not committed
+.claude/
+.agents/
+skills/
+/skills/
