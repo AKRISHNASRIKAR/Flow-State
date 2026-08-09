@@ -10,6 +10,7 @@ import { authApi } from '../../lib/api';
 import { ApiError } from '../../lib/api-client';
 import { useAuthStore } from '../../lib/auth-store';
 import { Button, FieldError, FormErrors, inputClass, labelClass } from '../../components/ui';
+import { LogoMark } from '../../components/Logo';
 
 const schema = z.object({
   email: z.string().email('Enter a valid email address'),
@@ -93,7 +94,6 @@ const BRAND_POINTS = [
 ];
 
 const CHECK_PATH = 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z';
-const BOLT_PATH = 'M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z';
 
 export function AuthLayout({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -113,9 +113,7 @@ export function AuthLayout({ title, children }: { title: string; children: React
         <div className="relative max-w-md">
           <div className="flex items-center gap-3 text-white">
             <span className="flex size-11 items-center justify-center rounded-2xl bg-indigo-500 shadow-lg shadow-indigo-500/30">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden className="size-6">
-                <path strokeLinecap="round" strokeLinejoin="round" d={BOLT_PATH} />
-              </svg>
+              <LogoMark className="size-6" />
             </span>
             <span className="text-2xl font-semibold tracking-tight">FlowState</span>
           </div>
@@ -146,9 +144,7 @@ export function AuthLayout({ title, children }: { title: string; children: React
         <div className="w-full max-w-sm">
           <div className="mb-8 flex items-center justify-center gap-2.5 text-lg font-semibold text-white md:hidden">
             <span className="flex size-9 items-center justify-center rounded-xl bg-indigo-500 text-white shadow-lg shadow-indigo-500/20">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden className="size-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d={BOLT_PATH} />
-              </svg>
+              <LogoMark className="size-5" />
             </span>
             FlowState
           </div>

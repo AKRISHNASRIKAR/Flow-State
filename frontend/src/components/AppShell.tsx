@@ -6,13 +6,14 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { authApi } from '../lib/api';
 import { useAuthStore } from '../lib/auth-store';
+import { LogoMark } from './Logo';
 
 const SIDEBAR_WIDTH = 'w-64'; // 256px — paired with md:pl-64 on the content column.
 
 // 24x24 Heroicons outline path data, inlined: there is no icon package in this
-// workspace and adding one for six glyphs isn't worth the dependency.
+// workspace and adding one for five glyphs isn't worth the dependency. The
+// brand mark is not one of these — it lives in components/Logo.tsx.
 const ICONS = {
-  bolt: 'M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z',
   workflows:
     'M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z',
   executions:
@@ -119,7 +120,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="flex h-14 items-center gap-2.5 px-4">
           <Link href="/workflows" className="flex items-center gap-2.5 text-white">
             <span className="flex size-8 items-center justify-center rounded-xl bg-indigo-500 shadow-lg shadow-indigo-500/20">
-              <Icon path={ICONS.bolt} className="size-4" />
+              {/* Heavier stroke than the default: at 18px the hairline reads
+                  too light next to the semibold wordmark. */}
+              <LogoMark className="size-[18px]" strokeWidth={2.4} />
             </span>
             <span className="text-base font-semibold tracking-tight">FlowState</span>
           </Link>
