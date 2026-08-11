@@ -140,12 +140,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {NAV_ITEMS.map((item) => (
             <NavItem key={item.href} {...item} onNavigate={() => setMenuOpen(false)} />
           ))}
-          {user && (
-            <>
-              <div className="my-3 border-t border-neutral-800" />
-              <NavItem href="/admin" label="Admin" icon={ICONS.admin} onNavigate={() => setMenuOpen(false)} />
-            </>
-          )}
         </nav>
 
         <div className="flex items-center gap-2.5 border-t border-neutral-800 px-3 py-3">

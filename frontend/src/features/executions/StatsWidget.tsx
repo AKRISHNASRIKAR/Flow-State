@@ -43,7 +43,7 @@ export function StatsWidget() {
         <StatTile
           label="Dead-lettered"
           value={String(stats.failedJobsInDLQ)}
-          alert={stats.failedJobsInDLQ > 0 ? 'Failed runs waiting in the DLQ — see /admin' : undefined}
+          alert={stats.failedJobsInDLQ > 0 ? 'Failed runs waiting in the DLQ' : undefined}
         />
         <StatTile
           label="Rate limit left"
