@@ -37,6 +37,23 @@ html {
   color-scheme: dark;
 }
 
+/* Tailwind v3's preflight forced `cursor: pointer` on buttons; v4 deliberately
+   reverted to the UA default (an arrow), which left every tab, icon button, and
+   menu item in the app feeling inert. Restoring it once here is the only way to
+   keep that guarantee — a per-element utility is one forgotten class away from
+   the same bug, which is how it reappeared on the flow nodes. */
+@layer base {
+  button,
+  select {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  select:disabled {
+    cursor: not-allowed;
+  }
+}
+
 /* Surface ladder, darkest first — `neutral` rather than `slate` so nothing in
    the chrome carries a blue cast, leaving indigo as the only hue on screen:
      #000000  page, canvas, inset fields          (bg-black)
