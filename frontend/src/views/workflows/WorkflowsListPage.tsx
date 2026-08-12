@@ -150,12 +150,17 @@ export function WorkflowsListPage() {
                   openMenuId === wf.id ? 'z-50' : 'z-10'
                 } ${visible.length === 1 ? 'p-8 min-h-[200px]' : 'p-6'}`}
               >
-                {/* Dot-grid texture. Sits under the content, which is z-10. */}
+                {/* Dot-grid texture. It stays under the content by DOM order
+                    alone — every row below is positioned too, so it paints on
+                    top without needing a z-index. Deliberately not giving those
+                    rows one: a positioned row with a z-index becomes a stacking
+                    context, which would trap the action menu's z-20 inside the
+                    header and let the footer paint over it. */}
                 <span
                   aria-hidden
                   className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl bg-[radial-gradient(#404040_1px,transparent_1px)] opacity-30 [background-size:16px_16px]"
                 />
-                <div className="relative z-10 flex items-start gap-4">
+                <div className="relative flex items-start gap-4">
                   <span
                     aria-hidden
                     className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-indigo-500/20 text-xl font-bold uppercase text-indigo-400 ring-1 ring-indigo-500/30"
@@ -235,7 +240,7 @@ export function WorkflowsListPage() {
                     </p>
                   </div>
                 </div>
-                <div className="relative z-10 mt-5 flex items-center justify-between gap-2 border-t border-neutral-800 pt-4">
+                <div className="relative mt-5 flex items-center justify-between gap-2 border-t border-neutral-800 pt-4">
                   <WorkflowStatusBadge status={wf.status} />
                   {/* `updatedAt` is the last edit, not the last run — the list
                       endpoint returns no run timestamp, so the label says so. */}
