@@ -1,7 +1,11 @@
 import type { ApiErrorResponse, RefreshResponse } from '@flowstate/api-types';
 import { getStoredRefreshToken, useAuthStore } from './auth-store';
+import { toast } from './toast';
 
 export const API_URL: string = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+
+/** statusCode used when the request never got an HTTP response at all. */
+export const NETWORK_ERROR_STATUS = 0;
 
 export class ApiError extends Error {
   readonly statusCode: number;
@@ -17,6 +21,15 @@ export class ApiError extends Error {
     this.statusCode = status;
     this.messages = messages;
   }
+
+  static network(cause: unknown): ApiError {
+    const error = new ApiError(
+      { error: 'Network error', message: 'Could not reach the API', statusCode: NETWORK_ERROR_STATUS, timestamp: '' },
+      NETWORK_ERROR_STATUS,
+    );
+    error.cause = cause;
+    return error;
+  }
 }
 
 async function parseError(res: Response): Promise<ApiError> {
@@ -29,27 +42,38 @@ async function parseError(res: Response): Promise<ApiError> {
   return new ApiError(body, res.status);
 }
 
+/**
+ * - ok: new tokens stored.
+ * - rejected: the API answered and said no (expired, revoked, already used)
+ *   — the session is over.
+ * - unreachable: no answer, or a 5xx. The stored token is kept: logging
+ *   someone out because their wifi blinked would be wrong, and if the token
+ *   really was spent, the next attempt is rejected properly.
+ */
+type RefreshOutcome = 'ok' | 'rejected' | 'unreachable';
+
 // Single-flight refresh: concurrent 401s share one /auth/refresh call so the
 // one-time-use refresh token is only spent once.
-let refreshInFlight: Promise<boolean> | null = null;
+let refreshInFlight: Promise<RefreshOutcome> | null = null;
 
-async function refreshSession(): Promise<boolean> {
-  refreshInFlight ??= (async () => {
+async function refreshSession(): Promise<RefreshOutcome> {
+  refreshInFlight ??= (async (): Promise<RefreshOutcome> => {
     const refreshToken = getStoredRefreshToken();
-    if (refreshToken === null) return false;
+    if (refreshToken === null) return 'rejected';
     try {
       const res = await fetch(`${API_URL}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken }),
       });
-      if (!res.ok) return false;
+      if (res.status >= 500) return 'unreachable';
+      if (!res.ok) return 'rejected';
       const tokens = (await res.json()) as RefreshResponse;
       // The backend rotates refresh tokens — always store the NEW one.
       useAuthStore.getState().setTokens(tokens.accessToken, tokens.refreshToken);
-      return true;
+      return 'ok';
     } catch {
-      return false;
+      return 'unreachable';
     }
   })().finally(() => {
     refreshInFlight = null;
@@ -64,8 +88,10 @@ export async function bootstrapSession(): Promise<void> {
     store.setBootstrapping(false);
     return;
   }
-  const ok = await refreshSession();
-  if (!ok) store.clear();
+  store.setBootstrapping(true);
+  const outcome = await refreshSession();
+  if (outcome === 'rejected') store.clear();
+  if (outcome === 'unreachable') store.setUnreachable();
 }
 
 interface RequestOptions {
@@ -92,15 +118,28 @@ async function request<T>(path: string, options: RequestOptions = {}, isRetry = 
   const { accessToken } = useAuthStore.getState();
   if (auth && accessToken !== null) finalHeaders['Authorization'] = `Bearer ${accessToken}`;
 
-  const res = await fetch(url, {
-    method,
-    headers: finalHeaders,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method,
+      headers: finalHeaders,
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch (cause) {
+    // fetch only rejects when no HTTP response arrived (offline, DNS, CORS,
+    // API down). A typed error lets the UI say so instead of "Failed to fetch".
+    throw ApiError.network(cause);
+  }
 
   if (res.status === 401 && auth && !isRetry && !path.startsWith('/auth/')) {
-    const refreshed = await refreshSession();
-    if (refreshed) return request<T>(path, options, true);
+    const outcome = await refreshSession();
+    if (outcome === 'ok') return request<T>(path, options, true);
+    // Couldn't ask the API — that's a connection problem, not a logout.
+    if (outcome === 'unreachable') throw ApiError.network(new Error('Session refresh failed'));
+    if (useAuthStore.getState().accessToken !== null) {
+      // Keyed so a page firing several requests at once shows this once.
+      toast.info('Your session has ended', { description: 'Sign in again to continue.', key: 'session-ended' });
+    }
     useAuthStore.getState().clear();
     throw await parseError(res);
   }

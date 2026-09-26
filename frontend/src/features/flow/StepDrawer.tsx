@@ -4,9 +4,8 @@ import type { Action, ActionType } from '@flowstate/api-types';
 import { useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { actionsApi } from '../../lib/api';
-import { ApiError } from '../../lib/api-client';
 import { toast } from '../../lib/toast';
-import { Button, FieldError, FormErrors, inputClass, labelClass, Modal } from '../../components/ui';
+import { Button, Drawer, FieldError, inputClass, labelClass } from '../../components/ui';
 import {
   ACTION_META,
   ACTION_TYPES,
@@ -17,38 +16,41 @@ import {
 import { KeyValueEditor } from './KeyValueEditor';
 import { VariableChips } from './VariableChips';
 
-interface ActionConfigModalProps {
+interface StepDrawerProps {
   workflowId: string;
   /** Existing action → edit mode; null → create mode (starts at the type picker). */
   action: Action | null;
   onClose: () => void;
 }
 
-export function ActionConfigModal({ workflowId, action, onClose }: ActionConfigModalProps) {
+/** Side panel for adding a step (starting at the type picker) or editing one. */
+export function StepDrawer({ workflowId, action, onClose }: StepDrawerProps) {
   const [type, setType] = useState<ActionType | null>(
     action ? (action.type as ActionType) : null,
   );
 
   if (type === null) {
     return (
-      <Modal title="Add action" onClose={onClose} wide>
-        <div className="grid gap-3 sm:grid-cols-2">
+      <Drawer title="Add a step" subtitle="What should happen when this workflow runs?" onClose={onClose}>
+        <div className="space-y-2">
           {ACTION_TYPES.map((meta) => (
             <button
               key={meta.type}
               type="button"
               onClick={() => setType(meta.type)}
-              className="flex items-start gap-3 rounded-xl bg-black/50 p-4 text-left ring-1 ring-neutral-800 transition hover:bg-neutral-800 hover:ring-indigo-500/40"
+              className="flex w-full items-start gap-3 rounded-xl bg-neutral-900 p-4 text-left ring-1 ring-neutral-800 transition hover:bg-neutral-800 hover:ring-indigo-500/40"
             >
-              <span className="text-xl">{meta.icon}</span>
+              <span className="text-xl" aria-hidden>
+                {meta.icon}
+              </span>
               <span>
                 <span className="block text-sm font-medium text-white">{meta.label}</span>
-                <span className="block text-xs text-neutral-300">{meta.description}</span>
+                <span className="block text-xs text-neutral-400">{meta.description}</span>
               </span>
             </button>
           ))}
         </div>
-      </Modal>
+      </Drawer>
     );
   }
 
@@ -76,7 +78,6 @@ interface ActionFormProps {
 function ActionForm({ workflowId, type, action, onBack, onClose }: ActionFormProps) {
   const meta = ACTION_META[type];
   const queryClient = useQueryClient();
-  const [apiErrors, setApiErrors] = useState<string[]>([]);
   // Tracks which text field last had focus so "insert variable" knows where
   // to append the {{payload.x}} snippet.
   const lastFocusedField = useRef<string | null>(null);
@@ -87,7 +88,7 @@ function ActionForm({ workflowId, type, action, onBack, onClose }: ActionFormPro
     control,
     setValue,
     getValues,
-    formState: { errors, isSubmitting },
+    formState: { errors },
   } = useForm<Record<string, unknown>>({
     resolver: zodResolver(actionSchemas[type]),
     defaultValues: configurationToForm(type, action?.configuration ?? {}),
@@ -98,13 +99,11 @@ function ActionForm({ workflowId, type, action, onBack, onClose }: ActionFormPro
       action
         ? actionsApi.update(workflowId, action.id, { configuration })
         : actionsApi.create(workflowId, { type, configuration }),
+    meta: { errorContext: action ? 'Couldn’t save the step' : 'Couldn’t add the step' },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['actions', workflowId] });
-      toast.success(action ? 'Action updated' : 'Action added');
+      toast.success(action ? 'Step saved' : 'Step added');
       onClose();
-    },
-    onError: (err) => {
-      setApiErrors(err instanceof ApiError ? err.messages : ['Failed to save action']);
     },
   });
 
@@ -145,14 +144,28 @@ function ActionForm({ workflowId, type, action, onBack, onClose }: ActionFormPro
   );
 
   const onSubmit = (values: Record<string, unknown>) => {
-    setApiErrors([]);
     save.mutate(formToConfiguration(type, values));
   };
 
   return (
-    <Modal title={`${meta.icon} ${action ? 'Edit' : 'Add'} ${meta.label.toLowerCase()}`} onClose={onClose} wide>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-        <FormErrors messages={apiErrors} />
+    <Drawer
+      title={`${meta.icon} ${meta.label}`}
+      subtitle={meta.description}
+      onClose={onClose}
+      footer={
+        <div className="flex justify-between gap-2">
+          <div>{onBack && <Button onClick={onBack}>← Choose a different step</Button>}</div>
+          <div className="flex gap-2">
+            <Button onClick={onClose}>Cancel</Button>
+            {/* Outside the form (it's in the pinned footer), so it targets it by id. */}
+            <Button type="submit" form="step-form" variant="primary" disabled={save.isPending}>
+              {save.isPending ? 'Saving…' : action ? 'Save step' : 'Add step'}
+            </Button>
+          </div>
+        </div>
+      }
+    >
+      <form id="step-form" onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
 
         {type === 'LOG_MESSAGE' && (
           <>
@@ -239,17 +252,7 @@ function ActionForm({ workflowId, type, action, onBack, onClose }: ActionFormPro
         )}
 
         <VariableChips workflowId={workflowId} onInsert={insertVariable} />
-
-        <div className="flex justify-between gap-2 pt-1">
-          <div>{onBack && <Button onClick={onBack}>← Back</Button>}</div>
-          <div className="flex gap-2">
-            <Button onClick={onClose}>Cancel</Button>
-            <Button type="submit" variant="primary" disabled={isSubmitting || save.isPending}>
-              {save.isPending ? 'Saving…' : action ? 'Save changes' : 'Add action'}
-            </Button>
-          </div>
-        </div>
       </form>
-    </Modal>
+    </Drawer>
   );
 }

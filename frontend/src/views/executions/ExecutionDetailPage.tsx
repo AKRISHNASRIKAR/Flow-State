@@ -10,6 +10,7 @@ import { Button, EmptyState, Spinner } from '../../components/ui';
 import { ACTION_META } from '../../features/flow/action-meta';
 import { actionsApi, executionsApi } from '../../lib/api';
 import { ApiError } from '../../lib/api-client';
+import { toastError } from '../../lib/errors';
 import { formatDateTime, formatDuration, formatJson } from '../../lib/format';
 import { toast } from '../../lib/toast';
 
@@ -18,7 +19,7 @@ export function ExecutionDetailPage() {
   const executionId = id;
   const queryClient = useQueryClient();
 
-  const { data: execution, isPending, isError } = useQuery({
+  const { data: execution, isPending, isError, refetch } = useQuery({
     queryKey: ['execution', executionId],
     queryFn: () => executionsApi.get(executionId),
     // Keep the timeline live while the run is still in flight.
@@ -26,18 +27,24 @@ export function ExecutionDetailPage() {
       const status = query.state.data?.status;
       return status === 'PENDING' || status === 'RUNNING' ? 2000 : false;
     },
+    meta: { errorContext: 'Couldn’t load this run' },
   });
 
   const { data: actions } = useQuery({
     queryKey: ['actions', execution?.workflowId],
     queryFn: () => actionsApi.list(execution!.workflowId),
     enabled: !!execution?.workflowId,
+    // Only used to label steps with their names; the run still reads fine
+    // without them, so a failure here isn't worth a second toast.
+    meta: { silent: true },
   });
 
   const cancel = useMutation({
     mutationFn: () => executionsApi.cancel(executionId),
+    // Handles its own errors: a 400 here is an expected race, not a failure.
+    meta: { silent: true },
     onSuccess: () => {
-      toast.success('Execution cancelled');
+      toast.success('Run cancelled');
       void queryClient.invalidateQueries({ queryKey: ['execution', executionId] });
       void queryClient.invalidateQueries({ queryKey: ['executions'] });
     },
@@ -46,17 +53,23 @@ export function ExecutionDetailPage() {
       // <200ms, at which point cancel returns 400. That's information, not an
       // error state.
       if (err instanceof ApiError && err.statusCode === 400) {
-        toast.info('This run already started — only PENDING executions can be cancelled.');
+        toast.info('Too late to cancel', { description: 'This run already started — only queued runs can be cancelled.' });
         void queryClient.invalidateQueries({ queryKey: ['execution', executionId] });
       } else {
-        toast.error(err.message);
+        toastError(err, 'Couldn’t cancel the run');
       }
     },
   });
 
-  if (isPending) return <Spinner label="Loading execution…" />;
+  if (isPending) return <Spinner label="Loading run…" />;
   if (isError || !execution) {
-    return <EmptyState title="Execution not found" body="It may belong to another account, or the ID is wrong." />;
+    return (
+      <EmptyState
+        title="Couldn’t show this run"
+        body="It may have been deleted or belong to another account — the notification has the details."
+        action={<Button onClick={() => void refetch()}>Try again</Button>}
+      />
+    );
   }
 
   const attempts = groupIntoAttempts(execution.actionExecutions);
@@ -69,12 +82,12 @@ export function ExecutionDetailPage() {
     <div>
       <div className="mb-1 text-sm">
         <Link href="/executions" className="text-indigo-400 hover:text-indigo-300">
-          ← All executions
+          ← All runs
         </Link>
       </div>
       <div className="mb-6 flex flex-wrap items-center gap-3">
         <h1 className="text-xl font-semibold text-white">
-          {execution.workflowName ?? 'Execution'}{' '}
+          {execution.workflowName ?? 'Run'}{' '}
           <span className="font-mono text-sm font-normal text-neutral-400">{execution.id.slice(0, 8)}</span>
         </h1>
         <ExecutionStatusBadge status={execution.status} />

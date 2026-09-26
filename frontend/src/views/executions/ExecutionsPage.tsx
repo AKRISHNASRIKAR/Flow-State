@@ -13,14 +13,15 @@ export function ExecutionsPage() {
     queryKey: ['workflows', 'filter-options'],
     queryFn: () => workflowsApi.list(1, 100),
     staleTime: 60_000,
+    meta: { errorContext: 'Couldn’t load the workflow filter' },
   });
 
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-white">Executions</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-white">Runs</h1>
         <p className="mt-1.5 text-sm text-neutral-300">
-          Every run the engine has recorded, newest first. Open one to see its per-step input and output.
+          Every time a workflow ran, newest first. Open one to see what each step received and returned.
         </p>
       </div>
       <StatsWidget />

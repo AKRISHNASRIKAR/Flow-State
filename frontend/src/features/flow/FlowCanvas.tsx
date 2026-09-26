@@ -1,16 +1,14 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { Action, Trigger } from '@flowstate/api-types';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { Action } from '@flowstate/api-types';
 import { Background, BackgroundVariant, ReactFlow, useNodesState, type Edge, type Node } from '@xyflow/react';
-import { usePathname, useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import '@xyflow/react/dist/style.css';
-import { Button, ConfirmDialog, EmptyState, Spinner } from '../../components/ui';
-import { actionsApi, triggersApi } from '../../lib/api';
-import { ApiError } from '../../lib/api-client';
+import { Button, ConfirmDialog, Spinner } from '../../components/ui';
+import { actionsApi } from '../../lib/api';
 import { toast } from '../../lib/toast';
-import { ActionConfigModal } from './ActionConfigModal';
+import { useActions, useTrigger } from '../workflow/queries';
 import { ActionNode, AddActionNode, TriggerNode } from './nodes';
 
 // The execution engine runs a strict linear chain (one trigger, actions in
@@ -23,41 +21,27 @@ const nodeTypes = { trigger: TriggerNode, action: ActionNode, add: AddActionNode
 
 const actionY = (index: number) => (index + 1) * GAP_Y;
 
-export function FlowCanvas({ workflowId }: { workflowId: string }) {
+interface FlowCanvasProps {
+  workflowId: string;
+  onEditTrigger: () => void;
+  /** null → add a new step. */
+  onEditStep: (action: Action | null) => void;
+}
+
+export function FlowCanvas({ workflowId, onEditTrigger, onEditStep }: FlowCanvasProps) {
   const queryClient = useQueryClient();
-  const router = useRouter();
-  const pathname = usePathname();
-  const goToTriggerTab = useCallback(
-    () => router.replace(`${pathname}?tab=trigger`),
-    [router, pathname],
-  );
-  const [editing, setEditing] = useState<Action | 'new' | null>(null);
   const [deleting, setDeleting] = useState<Action | null>(null);
 
-  const actionsQuery = useQuery({
-    queryKey: ['actions', workflowId],
-    queryFn: () => actionsApi.list(workflowId),
-  });
-
-  // GET /workflows/:id/trigger 404s when no trigger is configured yet —
-  // that's the "configure a trigger to get started" empty state, not an error.
-  const triggerQuery = useQuery<Trigger | null>({
-    queryKey: ['trigger', workflowId],
-    queryFn: async () => {
-      try {
-        return await triggersApi.get(workflowId);
-      } catch (err) {
-        if (err instanceof ApiError && err.statusCode === 404) return null;
-        throw err;
-      }
-    },
-  });
-
+  const actionsQuery = useActions(workflowId);
+  const triggerQuery = useTrigger(workflowId);
   const actions = actionsQuery.data;
   const trigger = triggerQuery.data;
 
+  const sorted = useMemo(() => [...(actions ?? [])].sort((a, b) => a.order - b.order), [actions]);
+
   const reorder = useMutation({
     mutationFn: (orderedIds: string[]) => actionsApi.reorder(workflowId, orderedIds),
+    meta: { errorContext: 'Couldn’t reorder the steps — the previous order is back' },
     onMutate: async (orderedIds) => {
       await queryClient.cancelQueries({ queryKey: ['actions', workflowId] });
       const previous = queryClient.getQueryData<Action[]>(['actions', workflowId]);
@@ -70,27 +54,36 @@ export function FlowCanvas({ workflowId }: { workflowId: string }) {
       }
       return { previous };
     },
-    onError: (err, _vars, context) => {
+    onError: (_err, _vars, context) => {
       if (context?.previous) queryClient.setQueryData(['actions', workflowId], context.previous);
-      toast.error(err instanceof ApiError ? err.message : 'Reorder failed — restored previous order');
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: ['actions', workflowId] }),
   });
 
   const remove = useMutation({
     mutationFn: (actionId: string) => actionsApi.remove(workflowId, actionId),
+    meta: { errorContext: 'Couldn’t delete the step' },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['actions', workflowId] });
       setDeleting(null);
-      toast.success('Action deleted');
+      toast.success('Step deleted');
     },
-    onError: (e) => toast.error(e.message),
   });
 
+  const move = useCallback(
+    (fromIndex: number, toIndex: number) => {
+      if (toIndex < 0 || toIndex >= sorted.length || toIndex === fromIndex) return;
+      const reordered = [...sorted];
+      const [moved] = reordered.splice(fromIndex, 1);
+      reordered.splice(toIndex, 0, moved);
+      reorder.mutate(reordered.map((a) => a.id));
+    },
+    [sorted, reorder],
+  );
+
   const layoutNodes = useMemo<Node[]>(() => {
-    if (!trigger || !actions) return [];
-    const sorted = [...actions].sort((a, b) => a.order - b.order);
-    const nodes: Node[] = [
+    if (trigger === undefined || actions === undefined) return [];
+    return [
       {
         id: 'trigger',
         type: 'trigger',
@@ -99,7 +92,7 @@ export function FlowCanvas({ workflowId }: { workflowId: string }) {
         // fully non-interactive nodes pointer-events:none, which would swallow
         // the node's own buttons.
         draggable: false,
-        data: { trigger, onEdit: goToTriggerTab },
+        data: { trigger, onEdit: onEditTrigger },
       },
       ...sorted.map<Node>((action, index) => ({
         id: action.id,
@@ -108,9 +101,12 @@ export function FlowCanvas({ workflowId }: { workflowId: string }) {
         data: {
           action,
           index,
-          onEdit: () => setEditing(action),
+          isFirst: index === 0,
+          isLast: index === sorted.length - 1,
+          onEdit: () => onEditStep(action),
+          onMove: (direction: -1 | 1) => move(index, index + direction),
           onDelete: () => {
-            // Only ask for confirmation when the config is non-trivial.
+            // Only ask for confirmation when there's configuration to lose.
             if (JSON.stringify(action.configuration ?? {}).length > 24) {
               setDeleting(action);
             } else {
@@ -124,12 +120,11 @@ export function FlowCanvas({ workflowId }: { workflowId: string }) {
         type: 'add',
         position: { x: 0, y: actionY(sorted.length) },
         draggable: false,
-        data: { onAdd: () => setEditing('new'), isFirst: sorted.length === 0 },
+        data: { onAdd: () => onEditStep(null), isFirst: sorted.length === 0 },
       },
     ];
-    return nodes;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trigger, actions]);
+  }, [trigger, actions, sorted]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
 
@@ -138,8 +133,7 @@ export function FlowCanvas({ workflowId }: { workflowId: string }) {
   }, [layoutNodes, setNodes]);
 
   const edges = useMemo<Edge[]>(() => {
-    if (!trigger || !actions) return [];
-    const sorted = [...actions].sort((a, b) => a.order - b.order);
+    if (trigger === undefined || actions === undefined) return [];
     const chain = ['trigger', ...sorted.map((a) => a.id), 'add'];
     return chain.slice(0, -1).map((source, i) => ({
       id: `e-${source}-${chain[i + 1]}`,
@@ -149,9 +143,9 @@ export function FlowCanvas({ workflowId }: { workflowId: string }) {
       animated: chain[i + 1] === 'add',
       style: { stroke: '#525252', strokeWidth: 1.5 },
     }));
-  }, [trigger, actions]);
+  }, [trigger, actions, sorted]);
 
-  // Constrain dragging to the vertical axis — actions can only be reordered
+  // Constrain dragging to the vertical axis — steps can only be reordered
   // within the stack, not placed freely in 2D.
   const onNodeDrag = useCallback(
     (_: unknown, node: Node) => {
@@ -166,54 +160,43 @@ export function FlowCanvas({ workflowId }: { workflowId: string }) {
 
   const onNodeDragStop = useCallback(
     (_: unknown, node: Node) => {
-      if (!actions || node.type !== 'action') return;
-      const sorted = [...actions].sort((a, b) => a.order - b.order);
+      if (node.type !== 'action') return;
       const fromIndex = sorted.findIndex((a) => a.id === node.id);
       if (fromIndex === -1) return;
-      const toIndex = Math.min(
-        sorted.length - 1,
-        Math.max(0, Math.round((node.position.y - GAP_Y) / GAP_Y)),
-      );
+      const toIndex = Math.min(sorted.length - 1, Math.max(0, Math.round((node.position.y - GAP_Y) / GAP_Y)));
       if (toIndex === fromIndex) {
         setNodes(layoutNodes); // snap back into place
         return;
       }
-      const reordered = [...sorted];
-      const [moved] = reordered.splice(fromIndex, 1);
-      reordered.splice(toIndex, 0, moved);
-      reorder.mutate(reordered.map((a) => a.id));
+      move(fromIndex, toIndex);
     },
-    [actions, layoutNodes, reorder, setNodes],
+    [sorted, layoutNodes, move, setNodes],
   );
 
-  if (actionsQuery.isPending || triggerQuery.isPending) return <Spinner label="Loading flow…" />;
+  if (actionsQuery.isPending || triggerQuery.isPending) return <Spinner label="Loading the workflow’s steps…" />;
 
   if (actionsQuery.isError || triggerQuery.isError) {
-    return <EmptyState title="Couldn't load the flow" body="Check that the API is running and try again." />;
-  }
-
-  if (!trigger) {
     return (
-      <EmptyState
-        title="Configure a trigger to get started"
-        body="Every workflow starts with exactly one trigger — a webhook, a schedule, or a manual test button. Actions run in order after it fires."
-        action={
-          <Button variant="primary" onClick={goToTriggerTab}>
-            Configure trigger
-          </Button>
-        }
-      />
+      <div className="rounded-2xl bg-neutral-900 p-10 text-center ring-1 ring-neutral-800">
+        <p className="text-sm text-neutral-300">The steps couldn’t be loaded.</p>
+        <Button
+          className="mt-3"
+          onClick={() => {
+            void actionsQuery.refetch();
+            void triggerQuery.refetch();
+          }}
+        >
+          Try again
+        </Button>
+      </div>
     );
   }
 
-  const canvasHeight = Math.max(420, ((actions?.length ?? 0) + 2) * GAP_Y + 60);
+  const canvasHeight = Math.max(420, (sorted.length + 2) * GAP_Y + 60);
 
   return (
     <>
-      <div
-        className="overflow-hidden rounded-2xl bg-black ring-1 ring-neutral-800"
-        style={{ height: Math.min(canvasHeight, 640) }}
-      >
+      <div className="overflow-hidden rounded-2xl bg-black ring-1 ring-neutral-800" style={{ height: Math.min(canvasHeight, 680) }}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -235,21 +218,14 @@ export function FlowCanvas({ workflowId }: { workflowId: string }) {
         </ReactFlow>
       </div>
       <p className="mt-2 text-xs text-neutral-400">
-        Actions run top to bottom as a linear chain — drag a step vertically to reorder it.
+        Steps run top to bottom, one after another. Click any box to edit it; use the arrows (or drag) to reorder.
       </p>
 
-      {editing !== null && (
-        <ActionConfigModal
-          workflowId={workflowId}
-          action={editing === 'new' ? null : editing}
-          onClose={() => setEditing(null)}
-        />
-      )}
       {deleting && (
         <ConfirmDialog
-          title="Delete this action?"
-          body="Its configuration will be lost. The rest of the chain moves up to fill the gap."
-          confirmLabel="Delete action"
+          title="Delete this step?"
+          body="Its settings will be lost. The steps below it move up."
+          confirmLabel="Delete step"
           danger
           busy={remove.isPending}
           onConfirm={() => remove.mutate(deleting.id)}

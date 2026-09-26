@@ -15,8 +15,14 @@ interface AuthState {
   user: AuthUser | null;
   /** True until the initial silent-refresh attempt on app boot settles. */
   bootstrapping: boolean;
+  /**
+   * The boot-time restore couldn't reach the API. The refresh token is still
+   * stored, so this is "try again", not "sign in again".
+   */
+  unreachable: boolean;
   setTokens: (accessToken: string, refreshToken: string) => void;
   setBootstrapping: (value: boolean) => void;
+  setUnreachable: () => void;
   clear: () => void;
 }
 
@@ -68,13 +74,15 @@ export const useAuthStore = create<AuthState>((set) => ({
   accessToken: null,
   user: null,
   bootstrapping: getStoredRefreshToken() !== null,
+  unreachable: false,
   setTokens: (accessToken, refreshToken) => {
     storeRefreshToken(refreshToken);
-    set({ accessToken, user: decodeAccessToken(accessToken), bootstrapping: false });
+    set({ accessToken, user: decodeAccessToken(accessToken), bootstrapping: false, unreachable: false });
   },
-  setBootstrapping: (value) => set({ bootstrapping: value }),
+  setBootstrapping: (value) => set({ bootstrapping: value, ...(value ? { unreachable: false } : {}) }),
+  setUnreachable: () => set({ bootstrapping: false, unreachable: true }),
   clear: () => {
     storeRefreshToken(null);
-    set({ accessToken: null, user: null, bootstrapping: false });
+    set({ accessToken: null, user: null, bootstrapping: false, unreachable: false });
   },
 }));

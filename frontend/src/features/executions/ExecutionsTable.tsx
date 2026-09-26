@@ -4,8 +4,8 @@ import { useQuery } from '@tanstack/react-query';
 import type { ExecutionStatus } from '@flowstate/api-types';
 import Link from 'next/link';
 import { useState } from 'react';
-import { ExecutionStatusBadge } from '../../components/StatusBadge';
-import { EmptyState, Pagination, Spinner, inputClass } from '../../components/ui';
+import { EXECUTION_STATUS_LABEL, ExecutionStatusBadge } from '../../components/StatusBadge';
+import { Button, EmptyState, Pagination, Spinner, inputClass } from '../../components/ui';
 import { executionsApi } from '../../lib/api';
 import { formatDateTime, formatDuration } from '../../lib/format';
 
@@ -32,7 +32,7 @@ export function ExecutionsTable({ workflowId, extraFilters }: ExecutionsTablePro
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState<ExecutionStatus | ''>('');
 
-  const { data, isPending } = useQuery({
+  const { data, isPending, isError, refetch } = useQuery({
     queryKey: ['executions', { workflowId, status, page }],
     queryFn: () =>
       executionsApi.list({ page, status: status === '' ? undefined : status, workflowId }),
@@ -42,6 +42,7 @@ export function ExecutionsTable({ workflowId, extraFilters }: ExecutionsTablePro
       const rows = query.state.data?.data;
       return rows?.some((e) => e.status === 'PENDING' || e.status === 'RUNNING') ? 3000 : false;
     },
+    meta: { errorContext: 'Couldn’t load runs' },
   });
 
   return (
@@ -60,7 +61,7 @@ export function ExecutionsTable({ workflowId, extraFilters }: ExecutionsTablePro
             <option value="">All statuses</option>
             {STATUSES.map((s) => (
               <option key={s} value={s}>
-                {s}
+                {EXECUTION_STATUS_LABEL[s]}
               </option>
             ))}
           </select>
@@ -68,12 +69,24 @@ export function ExecutionsTable({ workflowId, extraFilters }: ExecutionsTablePro
         {extraFilters}
       </div>
 
-      {isPending && <Spinner label="Loading executions…" />}
+      {isPending && <Spinner label="Loading runs…" />}
+
+      {isError && !data && (
+        <EmptyState
+          title="Couldn’t load runs"
+          body="The details are in the notification."
+          action={<Button onClick={() => void refetch()}>Try again</Button>}
+        />
+      )}
 
       {data && data.data.length === 0 && (
         <EmptyState
-          title="No executions yet"
-          body='Fire a workflow (the "Test this workflow" button on its Trigger tab) and its runs will show up here.'
+          title={status === '' ? 'No runs yet' : `No ${EXECUTION_STATUS_LABEL[status].toLowerCase()} runs`}
+          body={
+            status === ''
+              ? 'Each time a workflow is triggered, a run appears here with the result of every step. Press Test run on a workflow to try one.'
+              : 'Try a different status filter.'
+          }
         />
       )}
 
@@ -105,7 +118,7 @@ export function ExecutionsTable({ workflowId, extraFilters }: ExecutionsTablePro
                   </td>
                   <td className="py-2.5 text-right">
                     <Link href={`/executions/${e.id}`} className="text-xs font-medium text-indigo-400 hover:text-indigo-300">
-                      Details →
+                      View steps →
                     </Link>
                   </td>
                 </tr>

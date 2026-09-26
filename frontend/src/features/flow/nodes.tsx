@@ -1,10 +1,12 @@
 import { Handle, Position } from '@xyflow/react';
 import type { NodeProps } from '@xyflow/react';
 import type { Action, Trigger } from '@flowstate/api-types';
+import { Icon, ICON_PATHS } from '../../components/ui';
+import { TRIGGER_ICONS } from '../trigger/TriggerDrawer';
 import { ACTION_META } from './action-meta';
 import { truncate } from '../../lib/format';
 
-export const NODE_WIDTH = 320;
+export const NODE_WIDTH = 340;
 
 // Per-type accent so a long chain is scannable by color before it is read.
 // Falls back to plain gray for a type the frontend doesn't know yet.
@@ -17,49 +19,69 @@ const ACTION_ACCENT: Record<string, { border: string; chip: string }> = {
 };
 const DEFAULT_ACCENT = { border: 'border-l-neutral-600', chip: 'bg-neutral-500/15' };
 
-const BOLT_PATH = 'M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z';
-const PLUS_PATH = 'M12 4.5v15m7.5-7.5h-15';
-
 const triggerSummaries: Record<string, (t: Trigger) => string> = {
-  WEBHOOK: () => 'Runs when the webhook URL receives a signed request',
-  MANUAL: () => 'Runs only via the "Test workflow" button',
+  WEBHOOK: () => 'When another app sends a request to this workflow’s webhook URL',
+  MANUAL: () => 'Only when you press Test run',
   SCHEDULED: (t) => {
     const interval = (t.configuration as { interval?: number }).interval;
     const endpoint = (t.configuration as { endpoint?: string }).endpoint;
-    return `Polls ${endpoint ?? '(no endpoint)'} every ${interval ?? '?'}s`;
+    return `When ${endpoint ?? '(no URL)'} changes — checked every ${interval ?? '?'}s`;
   },
 };
 
+const TRIGGER_TITLES: Record<string, string> = {
+  WEBHOOK: 'Webhook',
+  MANUAL: 'Test run button',
+  SCHEDULED: 'URL check',
+};
+
 export interface TriggerNodeData {
-  trigger: Trigger;
+  /** null → nothing chosen yet; the node becomes the call to action. */
+  trigger: Trigger | null;
   onEdit: () => void;
   [key: string]: unknown;
 }
 
 export function TriggerNode({ data }: NodeProps) {
   const { trigger, onEdit } = data as TriggerNodeData;
+
+  if (!trigger) {
+    return (
+      <button
+        type="button"
+        onClick={onEdit}
+        style={{ width: NODE_WIDTH }}
+        className="rounded-xl border-2 border-dashed border-indigo-500/60 bg-indigo-500/5 p-4 text-left transition hover:border-indigo-400 hover:bg-indigo-500/10"
+      >
+        <span className="flex items-center gap-2.5 text-sm font-semibold text-indigo-300">
+          <Icon path={ICON_PATHS.bolt} className="size-5" />
+          Choose what starts this workflow
+        </span>
+        <span className="mt-1.5 block text-xs text-neutral-400">A webhook, a URL check on a schedule, or a button.</span>
+        <Handle type="source" position={Position.Bottom} className="!bg-indigo-400" />
+      </button>
+    );
+  }
+
   return (
     <button
       type="button"
       onClick={onEdit}
       style={{ width: NODE_WIDTH }}
-      className="cursor-pointer rounded-xl bg-indigo-950 p-4 text-left text-white shadow-[0_0_20px_-5px_rgba(99,102,241,0.4)] ring-1 ring-indigo-500/50 transition hover:bg-indigo-900"
-      title="Open trigger configuration"
+      className="rounded-xl bg-indigo-950 p-4 text-left text-white shadow-[0_0_20px_-5px_rgba(99,102,241,0.4)] ring-1 ring-indigo-500/50 transition hover:bg-indigo-900"
+      title="Change what starts this workflow"
     >
       <div className="flex items-center gap-2.5">
         <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-300 ring-1 ring-indigo-500/30">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} aria-hidden className="size-4">
-            <path strokeLinecap="round" strokeLinejoin="round" d={BOLT_PATH} />
-          </svg>
+          <Icon path={TRIGGER_ICONS[trigger.type] ?? ICON_PATHS.bolt} className="size-4" />
         </span>
         <span className="rounded-md bg-indigo-500/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-300">
-          Trigger
+          Starts
         </span>
-        <span className="text-sm font-semibold">{trigger.type}</span>
+        <span className="text-sm font-semibold">{TRIGGER_TITLES[trigger.type] ?? trigger.type}</span>
+        <span className="ml-auto text-xs text-indigo-300/80">Edit</span>
       </div>
-      <p className="mt-2 text-xs text-indigo-200/70">
-        {(triggerSummaries[trigger.type] ?? (() => ''))(trigger)}
-      </p>
+      <p className="mt-2 text-xs text-indigo-200/70">{truncate((triggerSummaries[trigger.type] ?? (() => ''))(trigger), 90)}</p>
       <Handle type="source" position={Position.Bottom} className="!bg-indigo-400" />
     </button>
   );
@@ -68,13 +90,45 @@ export function TriggerNode({ data }: NodeProps) {
 export interface ActionNodeData {
   action: Action;
   index: number;
+  isFirst: boolean;
+  isLast: boolean;
   onEdit: () => void;
   onDelete: () => void;
+  onMove: (direction: -1 | 1) => void;
   [key: string]: unknown;
 }
 
+function NodeButton({
+  label,
+  path,
+  onClick,
+  disabled,
+  danger,
+}: {
+  label: string;
+  path: string;
+  onClick: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      title={label}
+      className={`nodrag rounded-md p-1 text-neutral-400 transition disabled:opacity-30 ${
+        danger ? 'hover:bg-red-500/10 hover:text-red-400' : 'hover:bg-neutral-800 hover:text-white'
+      }`}
+    >
+      <Icon path={path} className="size-4" />
+    </button>
+  );
+}
+
 export function ActionNode({ data, dragging }: NodeProps) {
-  const { action, index, onEdit, onDelete } = data as ActionNodeData;
+  const { action, index, isFirst, isLast, onEdit, onDelete, onMove } = data as ActionNodeData;
   const meta = ACTION_META[action.type as keyof typeof ACTION_META];
   const accent = ACTION_ACCENT[action.type] ?? DEFAULT_ACCENT;
   return (
@@ -89,7 +143,7 @@ export function ActionNode({ data, dragging }: NodeProps) {
         <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-neutral-800 text-xs font-bold text-neutral-200 ring-1 ring-neutral-700">
           {index + 1}
         </span>
-        <button type="button" onClick={onEdit} className="min-w-0 flex-1 cursor-pointer text-left" title="Edit action">
+        <button type="button" onClick={onEdit} className="nodrag min-w-0 flex-1 text-left" title="Edit step">
           <p className="flex items-center gap-2 text-sm font-semibold text-white">
             <span className={`flex size-6 shrink-0 items-center justify-center rounded-md text-xs ${accent.chip}`}>
               {meta?.icon ?? '⚙️'}
@@ -100,20 +154,12 @@ export function ActionNode({ data, dragging }: NodeProps) {
             {meta ? truncate(meta.summarize(action.configuration), 60) : ''}
           </p>
         </button>
-        <button
-          type="button"
-          onClick={onDelete}
-          aria-label="Delete action"
-          className="cursor-pointer rounded-md p-1 text-neutral-500 opacity-0 transition group-hover:opacity-100 hover:bg-red-500/10 hover:text-red-400"
-        >
-          <svg viewBox="0 0 20 20" fill="currentColor" className="size-4">
-            <path
-              fillRule="evenodd"
-              d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482 41.03 41.03 0 0 0-2.365-.298V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4Z"
-              clipRule="evenodd"
-            />
-          </svg>
-        </button>
+        {/* Shown on hover and on keyboard focus, so they're reachable without a mouse. */}
+        <div className="flex shrink-0 items-center opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100">
+          <NodeButton label="Move up" path={ICON_PATHS.arrowUp} onClick={() => onMove(-1)} disabled={isFirst} />
+          <NodeButton label="Move down" path={ICON_PATHS.arrowDown} onClick={() => onMove(1)} disabled={isLast} />
+          <NodeButton label="Delete step" path={ICON_PATHS.trash} onClick={onDelete} danger />
+        </div>
       </div>
       <Handle type="source" position={Position.Bottom} className="!bg-neutral-600" />
     </div>
@@ -134,12 +180,10 @@ export function AddActionNode({ data }: NodeProps) {
       <button
         type="button"
         onClick={onAdd}
-        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-neutral-700 bg-neutral-900/50 py-4 text-sm font-medium text-neutral-300 transition-all hover:border-indigo-500/50 hover:bg-neutral-800 hover:text-indigo-400"
+        className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-neutral-700 bg-neutral-900/50 py-4 text-sm font-medium text-neutral-300 transition-all hover:border-indigo-500/50 hover:bg-neutral-800 hover:text-indigo-400"
       >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden className="size-4">
-          <path strokeLinecap="round" strokeLinejoin="round" d={PLUS_PATH} />
-        </svg>
-        {isFirst ? 'Add your first action' : 'Add action'}
+        <Icon path={ICON_PATHS.plus} className="size-4" strokeWidth={2} />
+        {isFirst ? 'Add your first step' : 'Add a step'}
       </button>
     </div>
   );

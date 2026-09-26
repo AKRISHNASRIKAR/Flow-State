@@ -155,7 +155,7 @@ Reference: `ExecutionsTable.tsx:31-35`, `ExecutionDetailPage.tsx:26-30`.
 
 ### Optimistic updates
 
-Use `onMutate` → snapshot → optimistic `setQueryData` → `onError` restore + toast → `onSettled` invalidate. Reference: `FlowCanvas.tsx:59-78`.
+Use `onMutate` → snapshot → optimistic `setQueryData` → `onError` restore (the toast comes from the global handler — set `meta.errorContext`) → `onSettled` invalidate. Reference: the `reorder` mutation in `FlowCanvas.tsx`.
 
 ### Forms
 
@@ -163,7 +163,7 @@ react-hook-form + `zodResolver`. **Mirror backend validation exactly and say so 
 
 ### UI primitives
 
-Always use `components/ui.tsx`: `Button`, `Modal`, `ConfirmDialog`, `Spinner`, `EmptyState`, `Pagination`, `FieldError`, `FormErrors`, `CopyField`, plus the `inputClass` / `labelClass` string exports. **Never hand-roll a modal or a button.** There is no external component library — do not add one.
+Always use `components/ui.tsx`: `Button`, `Modal` (short decisions), `Drawer` (side panel for editing), `ConfirmDialog`, `Switch`, `Menu`, `Tabs`, `Notice`, `Spinner`, `EmptyState`, `Pagination`, `FieldError`, `CopyField`, `Icon`/`ICON_PATHS`, plus the `inputClass` / `labelClass` / `hintClass` exports. **Never hand-roll a modal or a button.** There is no external component library — do not add one.
 
 ### Empty states must teach
 
@@ -261,9 +261,14 @@ Put navigational state in the URL so it survives reload and can be linked.
 ### Frontend
 
 - All errors surface as `ApiError` with a `messages: string[]` (validation errors arrive as arrays).
-- Forms show API errors via `<FormErrors messages={...} />`; mutations use `toast.error`.
-- **Handle expected non-200s as information, not failure.** Two established examples: a 404 from `GET /trigger` means "no trigger yet" → render the empty state (`FlowCanvas.tsx:42-53`); a 400 from cancel means a worker won the race → `toast.info` (`ExecutionDetailPage.tsx:47-56`).
-- Never retry 4xx (configured globally in `app/providers.tsx`).
+- **Errors are toasts, raised in one place.** `app/providers.tsx` wires `QueryCache`/`MutationCache` `onError` → `toastError` (`lib/errors.ts`), which turns an `ApiError` into plain words (offline, session ended, not found, validation…). Components **don't** write `onError: toast.error(...)`; they set `meta: { errorContext: 'Couldn’t save the step' }` to name what failed. Failed loads get a Retry action automatically.
+- `meta: { silent: true }` only when the component turns the failure into UI itself (a 404 that means "not set up yet", a redirect on not-found, an expected 400 race). Say why in a comment.
+- Field validation stays inline (`FieldError` under the field); everything else — server validation included — is a toast. There is no `FormErrors` banner any more.
+- A network failure is `ApiError` with `statusCode === NETWORK_ERROR_STATUS` (0), never a raw `TypeError`.
+- **Handle expected non-200s as information, not failure.** Two established examples: a 404 from `GET /trigger` means "no trigger yet" → `null` in `useTrigger` (`features/workflow/queries.ts`); a 400 from cancel means a worker won the race → `toast.info` (the `cancel` mutation in `ExecutionDetailPage.tsx`).
+- Never retry 4xx; retry an unreachable API once, 5xx twice (configured globally in `app/providers.tsx`).
+- A session refresh that gets **no answer** (offline, 5xx) must not log the user out — `refreshSession` returns `'unreachable'` and `ProtectedRoute` offers a retry. Only a rejected refresh clears the session.
+- User-facing words: **On / Paused / Draft** for workflows, **Queued / Running / Succeeded / Failed / Cancelled** for runs, **Runs** (not executions), **steps** (not actions). Use the label maps in `StatusBadge.tsx`; API enums stay unchanged.
 
 ---
 

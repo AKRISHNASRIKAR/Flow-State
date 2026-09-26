@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { EXECUTION_STATUS_LABEL } from '../../components/StatusBadge';
 import type { ExecutionStatus } from '@flowstate/api-types';
 import { executionsApi } from '../../lib/api';
 import { formatMs } from '../../lib/format';
@@ -22,6 +23,7 @@ export function StatsWidget() {
     queryKey: ['execution-stats'],
     queryFn: executionsApi.stats,
     refetchInterval: 15_000,
+    meta: { errorContext: 'Couldn’t load run statistics' },
   });
 
   if (!stats) return null;
@@ -41,16 +43,16 @@ export function StatsWidget() {
         <StatTile label="Last 24 h" value={String(stats.last24hTotal)} />
         <StatTile label="Avg duration" value={stats.avgDurationMs != null ? formatMs(stats.avgDurationMs) : '—'} />
         <StatTile
-          label="Dead-lettered"
+          label="Gave up after retries"
           value={String(stats.failedJobsInDLQ)}
-          alert={stats.failedJobsInDLQ > 0 ? 'Failed runs waiting in the DLQ' : undefined}
+          alert={stats.failedJobsInDLQ > 0 ? 'Runs that failed every retry attempt' : undefined}
         />
         <StatTile
-          label="Rate limit left"
+          label="Runs left this hour"
           value={stats.rateLimitRemaining != null ? String(stats.rateLimitRemaining) : '—'}
           alert={
             stats.rateLimitRemaining != null && stats.rateLimitRemaining < 10
-              ? 'Close to the hourly execution cap'
+              ? 'Close to the hourly limit of 100 runs'
               : undefined
           }
         />
@@ -64,7 +66,7 @@ export function StatsWidget() {
               .map((s) => (
                 <div
                   key={s.status}
-                  title={`${s.status}: ${s.count}`}
+                  title={`${EXECUTION_STATUS_LABEL[s.status]}: ${s.count}`}
                   style={{
                     width: `${Math.max(1.5, (s.count / barTotal) * 100)}%`,
                     backgroundColor: STATUS_COLOR[s.status],
@@ -76,7 +78,7 @@ export function StatsWidget() {
             {byStatus.map((s) => (
               <span key={s.status} className="inline-flex items-center gap-1.5">
                 <span className="size-2 rounded-full" style={{ backgroundColor: STATUS_COLOR[s.status] }} />
-                {s.status.toLowerCase()}{' '}
+                {EXECUTION_STATUS_LABEL[s.status]}{' '}
                 <span
                   className={`font-medium tabular-nums ${
                     s.status === 'RUNNING' && running > 0 ? 'animate-pulse text-blue-400' : 'text-neutral-100'

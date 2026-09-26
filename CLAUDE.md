@@ -46,7 +46,7 @@ Redis also holds poll state (`poll:state:<triggerId>`, 24h TTL) rate limits (`ra
 | Webhook ingress (HMAC + idempotency) | ✅ Complete — strongest area |
 | Polling (3 change modes) | ✅ Complete |
 | Execution engine (retry + DLQ, resume-from-failure, payload chaining) | ✅ Complete |
-| Dashboard (7 pages) | ✅ Complete |
+| Dashboard | ✅ Redesigned: trigger set up on the canvas (side `Drawer`), per-workflow setup checklist, "What's new" panel, On/Off switches, plain-language statuses, every error a toast |
 | Admin / DLQ | ✅ API only — dashboard page removed in `8034c79` |
 | Telegram bot | ⚠️ Partial — no `User` link; boots without a token (dummy token, polling off) |
 | Conditions / branching | ❌ Schema only, never evaluated |
@@ -89,6 +89,8 @@ Phase 0 (reproducibility) is done. Next up is **Google as the identity + integra
 - Executors never throw — return `ActionResult`.
 - Every external call gets an `AbortController` timeout.
 - Frontend: TanStack Query for server state, Zustand for client state, `components/ui.tsx` primitives only.
+- Frontend errors: never `onError: toast.error(...)` — set `meta: { errorContext }` and the global handler in `app/providers.tsx` toasts it (details in `AGENTS.md` §Frontend).
+- Shipping a user-visible feature? Add a `lib/changelog.ts` entry in the same change — and only for things that work end to end.
 
 ## Design philosophy
 
@@ -172,7 +174,9 @@ Enums: `WorkflowStatus` (DRAFT/ACTIVE/PAUSED/ARCHIVED) · `ExecutionStatus` (PEN
 | Failed runs vanish | They're in the DLQ — `GET /admin/failed-jobs` (needs `ADMIN_SECRET`) |
 | Poller never fires | First poll only baselines. Then: trigger `SCHEDULED` + `enabled`, workflow `ACTIVE`, and `poll:state:*` in Redis |
 | Template renders `{{payload.x}}` literally | Path unresolvable — deliberate fail-soft, check the actual payload in the execution detail |
-| Random logouts | Concurrent refresh spending the one-time token — verify single-flight in `api-client.ts` |
+| Random logouts | Concurrent refresh spending the one-time token — verify single-flight in `api-client.ts`. An *unreachable* API must return `'unreachable'` from `refreshSession`, never clear the session |
+| "Test run" is greyed out | Workflow is off, or has no trigger — manual fire requires `ACTIVE` (404s otherwise) |
+| An error toast never appears in a background tab | Expected: React Query pauses retries while the tab is hidden and resumes on focus |
 | 400 on a valid-looking body | `forbidNonWhitelisted` — the field isn't on the DTO |
 | App won't boot | Port 3000 taken (use `PORT=3001`) |
 | Sign-in button → Google says "OAuth client was not found" / `redirect_uri_mismatch` | `GOOGLE_CLIENT_ID` wrong, or `GOOGLE_REDIRECT_URI` isn't listed on the Google client |
@@ -203,6 +207,9 @@ Change these only with care (full list in `AGENTS.md` §19):
 | Turborepo + `packages/api-types` (`3566534`) | Stop backend/frontend type drift; shared types, no build step |
 | Idempotency fingerprint excludes timestamps | Correct dedup across real provider retry windows (GitHub 60s, Stripe 30–90s) |
 | Canvas is a vertical list, not a DAG editor | The engine runs a strict linear chain — the UI must not promise more |
+| Trigger lives on the canvas, edited in a side drawer (no Trigger tab) | The Flow tab used to be empty until a trigger was set on another tab. `?tab=trigger` still opens the drawer |
+| Setup checklist order: trigger → step → **on** → test | Manual fire is refused unless `ACTIVE`, so testing must come after turning on |
+| One global error → toast handler (`QueryCache`/`MutationCache`) | ~20 copy-pasted `onError`s, and queries that failed silently, collapsed into one place |
 | Admin auth = shared secret, not a role | No admin role on `User`; single-tenant. Fails closed when unset |
 | `DELAY` blocks inline | Deliberate simplification, documented in the processor and the executor |
 | Migrations squashed to one baseline (`20260926000000_baseline`) | History couldn't build a fresh DB; no production data to preserve. An existing dev DB needs its three old `_prisma_migrations` rows deleted, then `prisma migrate resolve --applied 20260926000000_baseline` |

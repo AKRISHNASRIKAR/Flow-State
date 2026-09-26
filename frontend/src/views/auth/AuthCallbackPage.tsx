@@ -5,7 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { authApi } from '../../lib/api';
 import { ApiError } from '../../lib/api-client';
-import { FormErrors, Spinner } from '../../components/ui';
+import { Spinner } from '../../components/ui';
+import { describeError } from '../../lib/errors';
+import { toast } from '../../lib/toast';
 import { AuthLayout } from './LoginPage';
 
 /**
@@ -27,7 +29,9 @@ export function AuthCallbackPage() {
     const code = searchParams.get('code');
     const returnTo = searchParams.get('returnTo');
     if (code === null) {
-      setError('This sign-in link is incomplete.');
+      const message = 'This sign-in link is incomplete. Please sign in again.';
+      toast.error('Couldn’t sign you in', { description: message });
+      setError(message);
       return;
     }
 
@@ -37,13 +41,14 @@ export function AuthCallbackPage() {
         router.replace(returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/workflows');
       })
       .catch((err: unknown) => {
-        setError(
-          err instanceof ApiError
-            ? 'That sign-in link expired or was already used.'
-            : err instanceof Error
-              ? err.message
-              : 'Sign-in failed.',
-        );
+        // 401 is the one expected failure (code expired, reused, or opened in
+        // another tab); anything else — offline, API down — says what it is.
+        const message =
+          err instanceof ApiError && err.statusCode === 401
+            ? 'That sign-in link expired or was already used. Please sign in again.'
+            : [describeError(err).title, describeError(err).description].filter(Boolean).join(' — ');
+        toast.error('Couldn’t sign you in', { description: message });
+        setError(message);
       });
   }, [router, searchParams]);
 
@@ -53,7 +58,7 @@ export function AuthCallbackPage() {
         <Spinner label="Finishing Google sign-in…" />
       ) : (
         <div className="space-y-4">
-          <FormErrors messages={[error]} />
+          <p className="text-sm text-neutral-300">{error}</p>
           <Link href="/login" className="block text-center text-sm font-medium text-indigo-400 hover:text-indigo-300">
             Back to sign in
           </Link>

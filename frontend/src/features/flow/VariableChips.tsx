@@ -12,6 +12,9 @@ export function VariableChips({ workflowId, onInsert }: { workflowId: string; on
     queryKey: ['webhook-events', workflowId, 'latest'],
     queryFn: () => triggersApi.webhookEvents(workflowId, 1, 1),
     staleTime: 30_000,
+    // Only a hint: the deliveries table and runs list surface the same
+    // failure, so a second toast here would just be noise.
+    meta: { silent: true },
   });
 
   const payload = data?.data[0]?.payload;
@@ -20,9 +23,10 @@ export function VariableChips({ workflowId, onInsert }: { workflowId: string; on
   return (
     <div className="rounded-lg bg-black p-3 text-xs text-neutral-300 ring-1 ring-neutral-800">
       <p>
-        String fields support{' '}
+        Text fields accept{' '}
         <code className="rounded bg-neutral-800 px-1 font-mono text-neutral-100">{'{{payload.field}}'}</code>{' '}
-        templates resolved against the trigger payload.
+        to insert the trigger’s data. After an HTTP request step, its reply is available as{' '}
+        <code className="rounded bg-neutral-800 px-1 font-mono text-neutral-100">{'{{payload.http.body.…}}'}</code>.
       </p>
       {paths.length > 0 ? (
         <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -40,7 +44,7 @@ export function VariableChips({ workflowId, onInsert }: { workflowId: string; on
           ))}
         </div>
       ) : (
-        <p className="mt-1">No events received yet — fire the workflow once to see available payload keys here.</p>
+        <p className="mt-1">Send a test run once and the fields it received will appear here to click and insert.</p>
       )}
     </div>
   );

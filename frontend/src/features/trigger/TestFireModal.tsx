@@ -3,76 +3,75 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { Button, FormErrors, Modal } from '../../components/ui';
+import { Button, FieldError, Modal, hintClass } from '../../components/ui';
 import { triggersApi } from '../../lib/api';
-import { ApiError } from '../../lib/api-client';
 import { toast } from '../../lib/toast';
 
 /**
- * "Test this workflow" — POST /workflows/:id/trigger/fire with a custom JSON
- * payload, then jump straight to the Runs tab so the new execution is visible
- * as it moves PENDING → RUNNING → SUCCEEDED/FAILED.
+ * "Test run" — POST /workflows/:id/trigger/fire with sample data, then jump
+ * to the Runs tab so the new run is visible as it moves Queued → Running →
+ * Succeeded/Failed.
  */
 export function TestFireModal({ workflowId, onClose }: { workflowId: string; onClose: () => void }) {
-  const [payloadText, setPayloadText] = useState('{}');
-  const [errors, setErrors] = useState<string[]>([]);
+  const [payloadText, setPayloadText] = useState('{\n  "example": "hello"\n}');
+  const [jsonError, setJsonError] = useState<string | undefined>();
   const router = useRouter();
   const queryClient = useQueryClient();
 
   const fire = useMutation({
     mutationFn: (payload: Record<string, unknown>) => triggersApi.fire(workflowId, { payload }),
-    onSuccess: (result) => {
-      toast.success(`Fired — event ${result.eventId.slice(0, 8)}…`);
+    meta: { errorContext: 'Couldn’t start the test run' },
+    onSuccess: () => {
+      toast.success('Test run started', { description: 'It appears in Runs within a few seconds.' });
       void queryClient.invalidateQueries({ queryKey: ['executions'] });
       void queryClient.invalidateQueries({ queryKey: ['webhook-events', workflowId] });
+      onClose();
       router.push(`/workflows/${workflowId}?tab=runs`);
-    },
-    onError: (err) => {
-      setErrors(err instanceof ApiError ? err.messages : ['Failed to fire the trigger']);
     },
   });
 
   const submit = () => {
-    setErrors([]);
-    let payload: Record<string, unknown>;
+    let parsed: unknown;
     try {
-      const parsed: unknown = JSON.parse(payloadText.trim() === '' ? '{}' : payloadText);
-      if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
-        setErrors(['The payload must be a JSON object, e.g. {"user": "ada"}']);
-        return;
-      }
-      payload = parsed as Record<string, unknown>;
+      parsed = JSON.parse(payloadText.trim() === '' ? '{}' : payloadText);
     } catch {
-      setErrors(['That is not valid JSON']);
+      setJsonError('This isn’t valid JSON — check for missing quotes or commas.');
       return;
     }
-    fire.mutate(payload);
+    if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      setJsonError('Use a JSON object, like {"user": "ada"}.');
+      return;
+    }
+    setJsonError(undefined);
+    fire.mutate(parsed as Record<string, unknown>);
   };
 
   return (
-    <Modal title="Test this workflow" onClose={onClose}>
+    <Modal title="Test run" onClose={onClose}>
       <div className="space-y-4">
-        <FormErrors messages={errors} />
         <div>
           <label htmlFor="tf-payload" className="mb-1.5 block text-sm font-medium text-neutral-200">
-            Test payload (JSON)
+            Sample data
           </label>
           <textarea
             id="tf-payload"
-            rows={6}
+            rows={7}
             spellCheck={false}
+            aria-invalid={jsonError !== undefined}
             className="block w-full rounded-lg border-0 bg-black px-3 py-2 font-mono text-xs text-emerald-400 ring-1 ring-inset ring-neutral-800 focus:ring-2 focus:ring-inset focus:ring-indigo-500"
             value={payloadText}
             onChange={(e) => setPayloadText(e.target.value)}
           />
-          <p className="mt-1.5 text-xs text-neutral-400">
-            Actions can reference these fields with <code className="font-mono">{'{{payload.field}}'}</code>.
+          <FieldError message={jsonError} />
+          <p className={hintClass}>
+            Your steps receive this as the trigger’s data — a step can use{' '}
+            <code className="font-mono text-neutral-300">{'{{payload.example}}'}</code> to insert a value.
           </p>
         </div>
         <div className="flex justify-end gap-2">
           <Button onClick={onClose}>Cancel</Button>
           <Button variant="primary" onClick={submit} disabled={fire.isPending}>
-            {fire.isPending ? 'Firing…' : '▶ Fire trigger'}
+            {fire.isPending ? 'Starting…' : 'Start test run'}
           </Button>
         </div>
       </div>

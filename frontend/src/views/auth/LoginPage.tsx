@@ -5,7 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { authApi } from '../../lib/api';
 import { useAuthStore } from '../../lib/auth-store';
-import { Button, FormErrors } from '../../components/ui';
+import { Button } from '../../components/ui';
+import { toast } from '../../lib/toast';
 import { LogoMark } from '../../components/Logo';
 
 const SIGN_IN_ERRORS: Record<GoogleSignInError, string> = {
@@ -32,9 +33,18 @@ export function LoginPage() {
     if (accessToken !== null) router.replace('/workflows');
   }, [accessToken, router]);
 
+  // The API redirects here with ?error=<code> when Google sign-in fails.
+  // Show it once as a toast, then drop it from the URL so a refresh or a
+  // bookmark doesn't replay a stale error.
   const errorCode = searchParams.get('error');
-  const errorMessage =
-    errorCode === null ? null : isSignInError(errorCode) ? SIGN_IN_ERRORS[errorCode] : SIGN_IN_ERRORS.google_failed;
+  useEffect(() => {
+    if (errorCode === null) return;
+    const message = isSignInError(errorCode) ? SIGN_IN_ERRORS[errorCode] : SIGN_IN_ERRORS.google_failed;
+    toast.error('Couldn’t sign you in', { description: message, key: 'sign-in-error' });
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('error');
+    router.replace(params.size > 0 ? `/login?${params.toString()}` : '/login');
+  }, [errorCode, router, searchParams]);
 
   const signIn = () => {
     setRedirecting(true);
@@ -45,7 +55,6 @@ export function LoginPage() {
   return (
     <AuthLayout title="Sign in to FlowState">
       <div className="space-y-4">
-        <FormErrors messages={errorMessage === null ? [] : [errorMessage]} />
         <Button
           variant="secondary"
           size="lg"

@@ -25,11 +25,20 @@ const workflowDots: Record<WorkflowStatus, string> = {
   ARCHIVED: 'bg-neutral-500',
 };
 
+// Plain words for what each state means to the user; the API's enum values
+// stay as they are.
+export const WORKFLOW_STATUS_LABEL: Record<WorkflowStatus, string> = {
+  DRAFT: 'Draft',
+  ACTIVE: 'On',
+  PAUSED: 'Paused',
+  ARCHIVED: 'Deleted',
+};
+
 export function WorkflowStatusBadge({ status }: { status: WorkflowStatus }) {
   return (
     <span className={`${BADGE_BASE} ${workflowStyles[status]}`}>
       <Dot className={workflowDots[status]} />
-      {status}
+      {WORKFLOW_STATUS_LABEL[status]}
     </span>
   );
 }
@@ -52,11 +61,19 @@ const executionDots: Record<ExecutionStatus, string> = {
   CANCELLED: 'bg-neutral-500',
 };
 
+export const EXECUTION_STATUS_LABEL: Record<ExecutionStatus, string> = {
+  PENDING: 'Queued',
+  RUNNING: 'Running',
+  SUCCEEDED: 'Succeeded',
+  FAILED: 'Failed',
+  CANCELLED: 'Cancelled',
+};
+
 export function ExecutionStatusBadge({ status }: { status: ExecutionStatus }) {
   return (
     <span className={`${BADGE_BASE} ${executionStyles[status]}`}>
       <Dot className={executionDots[status]} />
-      {status}
+      {EXECUTION_STATUS_LABEL[status]}
     </span>
   );
 }
@@ -73,7 +90,16 @@ const webhookEventStyles: Record<string, string> = {
   SKIPPED_RATE_LIMIT: 'bg-red-500/15 text-red-300 ring-red-500/30',
 };
 
+const WEBHOOK_EVENT_LABEL: Record<string, string> = {
+  RECEIVED: 'Received',
+  PROCESSED: 'Ran',
+  MANUAL: 'Test run',
+  SKIPPED: 'Skipped — workflow off',
+  SKIPPED_CONCURRENCY_LIMIT: 'Skipped — too many running',
+  SKIPPED_RATE_LIMIT: 'Skipped — hourly limit',
+};
+
 export function WebhookEventStatusBadge({ status }: { status: string }) {
   const style = webhookEventStyles[status] ?? 'bg-neutral-500/15 text-neutral-300 ring-neutral-500/30';
-  return <span className={`${BADGE_BASE} ${style}`}>{status.replaceAll('_', ' ')}</span>;
+  return <span className={`${BADGE_BASE} ${style}`}>{WEBHOOK_EVENT_LABEL[status] ?? status.replaceAll('_', ' ')}</span>;
 }
