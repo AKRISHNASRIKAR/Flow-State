@@ -53,10 +53,22 @@ export class WorkflowProcessor extends WorkerHost {
       data: { status: ExecutionStatus.RUNNING, startedAt: new Date() },
     });
 
-    let currentPayload = (execution.input ?? {}) as Record<string, unknown>;
+    // A retry resumes after the steps that already succeeded instead of
+    // re-running from action #1, so their side effects (an email sent, a row
+    // appended) aren't repeated. `output` is checkpointed in the same
+    // transaction that marks each step SUCCEEDED, so it always holds exactly
+    // the payload the next unfinished step should see.
+    const succeededActionIds = await this.findSucceededActionIds(execution.id);
+    let currentPayload = ((succeededActionIds.size > 0
+      ? (execution.output ?? execution.input)
+      : execution.input) ?? {}) as Record<string, unknown>;
     let failure: { actionId: string; error: string } | undefined;
 
     for (const action of actions) {
+      if (succeededActionIds.has(action.id)) {
+        continue;
+      }
+
       const actionExecution = await this.prisma.actionExecution.create({
         data: {
           workflowExecutionId: execution.id,
@@ -89,32 +101,40 @@ export class WorkflowProcessor extends WorkerHost {
         },
       );
 
-      if (result.enrichedPayload) {
-        currentPayload = { ...currentPayload, ...result.enrichedPayload };
-      }
-
-      await this.prisma.actionExecution.update({
-        where: { id: actionExecution.id },
-        data: result.success
-          ? {
-              status: ExecutionStatus.SUCCEEDED,
-              output: (result.response ?? {}) as Prisma.InputJsonValue,
-              finishedAt: new Date(),
-            }
-          : {
-              status: ExecutionStatus.FAILED,
-              error: result.error,
-              finishedAt: new Date(),
-            },
-      });
-
       if (!result.success) {
+        await this.prisma.actionExecution.update({
+          where: { id: actionExecution.id },
+          data: {
+            status: ExecutionStatus.FAILED,
+            error: result.error,
+            finishedAt: new Date(),
+          },
+        });
         failure = {
           actionId: action.id,
           error: result.error ?? 'Unknown action failure',
         };
         break;
       }
+
+      if (result.enrichedPayload) {
+        currentPayload = { ...currentPayload, ...result.enrichedPayload };
+      }
+
+      await this.prisma.$transaction([
+        this.prisma.actionExecution.update({
+          where: { id: actionExecution.id },
+          data: {
+            status: ExecutionStatus.SUCCEEDED,
+            output: (result.response ?? {}) as Prisma.InputJsonValue,
+            finishedAt: new Date(),
+          },
+        }),
+        this.prisma.workflowExecution.update({
+          where: { id: execution.id },
+          data: { output: currentPayload as Prisma.InputJsonValue },
+        }),
+      ]);
     }
 
     if (!failure) {
@@ -160,6 +180,19 @@ export class WorkflowProcessor extends WorkerHost {
     // The @OnWorkerEvent('failed') hook below only fires the DLQ bookkeeping
     // once every retry attempt has been exhausted.
     throw new Error(failure.error);
+  }
+
+  private async findSucceededActionIds(
+    executionId: string,
+  ): Promise<Set<string>> {
+    const rows = await this.prisma.actionExecution.findMany({
+      where: {
+        workflowExecutionId: executionId,
+        status: ExecutionStatus.SUCCEEDED,
+      },
+      select: { actionId: true },
+    });
+    return new Set(rows.map((row) => row.actionId));
   }
 
   /**

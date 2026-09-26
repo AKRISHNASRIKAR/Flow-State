@@ -52,12 +52,17 @@ export class SendEmailExecutor implements IActionExecutor {
       if (!response.ok) {
         let errorMsg = `Resend API error: ${response.status}`;
         try {
-          const errorBody = await response.json();
-          if (errorBody && errorBody.message) {
+          const errorBody: unknown = await response.json();
+          if (
+            typeof errorBody === 'object' &&
+            errorBody !== null &&
+            'message' in errorBody &&
+            typeof errorBody.message === 'string'
+          ) {
             errorMsg += ` - ${errorBody.message}`;
           }
-        } catch (e) {
-          // ignore json parse error
+        } catch {
+          // A non-JSON error body still leaves the status code in the message.
         }
         return {
           success: false,

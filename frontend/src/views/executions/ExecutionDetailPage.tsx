@@ -61,6 +61,9 @@ export function ExecutionDetailPage() {
 
   const attempts = groupIntoAttempts(execution.actionExecutions);
   const actionById = new Map((actions ?? []).map((a) => [a.id, a]));
+  // Number steps by their place in the chain (the list comes back in chain
+  // order), not their place in the attempt — a resumed attempt starts mid-chain.
+  const stepIndexById = new Map((actions ?? []).map((a, i) => [a.id, i]));
 
   return (
     <div>
@@ -118,7 +121,7 @@ export function ExecutionDetailPage() {
               {attempts.length > 1 && (
                 <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400">
                   Attempt {i + 1} of {attempts.length}
-                  {i < attempts.length - 1 && ' — retried from the first action'}
+                  {i < attempts.length - 1 && ' — retried from the failed step'}
                 </h2>
               )}
               {/* The rail is drawn on the wrapper, not between items, so it stays
@@ -130,7 +133,7 @@ export function ExecutionDetailPage() {
                       key={ae.id}
                       actionExecution={ae}
                       action={actionById.get(ae.actionId)}
-                      index={stepIndex}
+                      index={stepIndexById.get(ae.actionId) ?? stepIndex}
                     />
                   ))}
                 </ol>
@@ -144,11 +147,11 @@ export function ExecutionDetailPage() {
 }
 
 /**
- * The engine is at-least-once: a retried execution re-runs from action #1, so
- * actionExecutions can hold several entries for the same actionId (one per
- * attempt). Group into attempts — a repeat of an already-seen actionId starts
- * the next attempt — instead of showing a flat list that reads like N distinct
- * actions ran.
+ * A retry resumes at the step that failed (earlier steps already succeeded
+ * and are skipped), so actionExecutions can hold several entries for the
+ * failing actionId — one per attempt. Group into attempts — a repeat of an
+ * already-seen actionId starts the next attempt — instead of showing a flat
+ * list that reads like N distinct actions ran.
  */
 function groupIntoAttempts(actionExecutions: ActionExecution[]): ActionExecution[][] {
   const sorted = [...actionExecutions].sort((a, b) => {

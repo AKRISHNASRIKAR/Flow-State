@@ -306,7 +306,7 @@ These procedures now live as skills, loaded on demand instead of sitting in cont
 | Task | Skill |
 |---|---|
 | Add an action executor or trigger type | `add-action-type` |
-| Change the database schema | `prisma-migration` — **read this first, the migration history is broken** |
+| Change the database schema | `prisma-migration` |
 | Add a REST endpoint | `new-api-endpoint` |
 | Add a dashboard page or route | `new-frontend-page` |
 
@@ -358,12 +358,12 @@ Read these before changing behaviour in their area.
 
 ## 20. Common pitfalls
 
-1. **Editing `schema.prisma` without a migration.** This has already happened twice (F1). Always pair them.
+1. **Editing `schema.prisma` without a migration.** This happened twice (F1) before the history was squashed to a baseline. Always pair them — CI's drift check fails otherwise.
 2. **Adding a request field without adding it to the DTO.** `forbidNonWhitelisted` turns it into a 400.
 3. **Forgetting `packages/api-types`.** No build step means no compile error at the boundary; you find out at runtime.
-4. **Assuming payload chaining works.** `enrichedPayload` is merged by the processor but **no executor populates it** (F6). Every action currently sees the original trigger payload.
-5. **Assuming `DELAY` is non-blocking.** Its own docstring says it is; the processor blocks inline (F2). Trust `workflow.processor.ts`.
-6. **Assuming retries resume.** Retries re-run **from action #1**. Any side effect before the failure point repeats.
+4. **Assuming every executor chains.** Only `HTTP_REQUEST` returns `enrichedPayload` (as `payload.http`). A new executor that should feed later steps must return it under its own namespaced key.
+5. **Assuming `DELAY` is non-blocking.** The processor sleeps inline and holds the worker slot for the whole delay.
+6. **Assuming retries are exactly-once.** A retry skips steps that already `SUCCEEDED` and resumes from the checkpointed `output`, but the failing step itself re-runs — make external writes idempotent where the API allows it.
 7. **Unconditional `refetchInterval`.** Always gate on in-flight status.
 8. **Using `@Public()` without `AdminGuard`** on an admin route — that makes it genuinely public.
 9. **Forgetting the poller.** Any change to workflow status or trigger type must call `registerPoller` / `unregisterPoller`.

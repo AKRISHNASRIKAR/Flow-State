@@ -1,3 +1,6 @@
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
+
 -- CreateEnum
 CREATE TYPE "WorkflowStatus" AS ENUM ('DRAFT', 'ACTIVE', 'PAUSED', 'ARCHIVED');
 
@@ -5,7 +8,10 @@ CREATE TYPE "WorkflowStatus" AS ENUM ('DRAFT', 'ACTIVE', 'PAUSED', 'ARCHIVED');
 CREATE TYPE "ExecutionStatus" AS ENUM ('PENDING', 'RUNNING', 'SUCCEEDED', 'FAILED', 'CANCELLED');
 
 -- CreateEnum
-CREATE TYPE "AuditAction" AS ENUM ('CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'TOKEN_REFRESH', 'WORKFLOW_RUN');
+CREATE TYPE "AuditAction" AS ENUM ('CREATE', 'UPDATE', 'DELETE', 'LOGIN', 'LOGOUT', 'TOKEN_REFRESH', 'WORKFLOW_RUN', 'WEBHOOK_RECEIVED');
+
+-- CreateEnum
+CREATE TYPE "TriggerType" AS ENUM ('WEBHOOK', 'MANUAL', 'SCHEDULED');
 
 -- CreateTable
 CREATE TABLE "users" (
@@ -50,13 +56,39 @@ CREATE TABLE "workflows" (
 CREATE TABLE "triggers" (
     "id" UUID NOT NULL,
     "workflow_id" UUID NOT NULL,
-    "type" TEXT NOT NULL,
-    "config" JSONB NOT NULL,
+    "type" "TriggerType" NOT NULL,
+    "config" JSONB NOT NULL DEFAULT '{}',
+    "secret" TEXT,
     "enabled" BOOLEAN NOT NULL DEFAULT true,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "triggers_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "polling_events" (
+    "id" UUID NOT NULL,
+    "trigger_id" UUID NOT NULL,
+    "polled_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "changed" BOOLEAN NOT NULL,
+    "response_snapshot" JSONB,
+    "error" TEXT,
+
+    CONSTRAINT "polling_events_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "webhook_events" (
+    "id" UUID NOT NULL,
+    "workflow_id" UUID NOT NULL,
+    "payload" JSONB NOT NULL,
+    "received_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "status" TEXT NOT NULL DEFAULT 'RECEIVED',
+    "idempotency_key" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "webhook_events_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -121,7 +153,7 @@ CREATE TABLE "action_executions" (
 CREATE TABLE "audit_logs" (
     "id" UUID NOT NULL,
     "user_id" UUID,
-    "action" "AuditAction" NOT NULL,
+    "action" TEXT NOT NULL,
     "entity_type" TEXT NOT NULL,
     "entity_id" UUID,
     "metadata" JSONB,
@@ -130,6 +162,22 @@ CREATE TABLE "audit_logs" (
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "audit_logs_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "telegram_users" (
+    "id" UUID NOT NULL,
+    "telegram_id" BIGINT NOT NULL,
+    "chat_id" BIGINT NOT NULL,
+    "username" TEXT,
+    "first_name" TEXT,
+    "last_name" TEXT,
+    "language_code" TEXT,
+    "is_active" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "telegram_users_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -142,7 +190,25 @@ CREATE INDEX "refresh_tokens_user_id_idx" ON "refresh_tokens"("user_id");
 CREATE INDEX "workflows_user_id_idx" ON "workflows"("user_id");
 
 -- CreateIndex
+CREATE UNIQUE INDEX "triggers_workflow_id_key" ON "triggers"("workflow_id");
+
+-- CreateIndex
 CREATE INDEX "triggers_workflow_id_idx" ON "triggers"("workflow_id");
+
+-- CreateIndex
+CREATE INDEX "polling_events_trigger_id_idx" ON "polling_events"("trigger_id");
+
+-- CreateIndex
+CREATE INDEX "polling_events_polled_at_idx" ON "polling_events"("polled_at");
+
+-- CreateIndex
+CREATE INDEX "webhook_events_workflow_id_idx" ON "webhook_events"("workflow_id");
+
+-- CreateIndex
+CREATE INDEX "webhook_events_status_idx" ON "webhook_events"("status");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "webhook_events_workflow_id_idempotency_key_key" ON "webhook_events"("workflow_id", "idempotency_key");
 
 -- CreateIndex
 CREATE INDEX "conditions_workflow_id_idx" ON "conditions"("workflow_id");
@@ -168,6 +234,15 @@ CREATE INDEX "audit_logs_user_id_idx" ON "audit_logs"("user_id");
 -- CreateIndex
 CREATE INDEX "audit_logs_entity_type_entity_id_idx" ON "audit_logs"("entity_type", "entity_id");
 
+-- CreateIndex
+CREATE UNIQUE INDEX "telegram_users_telegram_id_key" ON "telegram_users"("telegram_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "telegram_users_chat_id_key" ON "telegram_users"("chat_id");
+
+-- CreateIndex
+CREATE INDEX "telegram_users_telegram_id_idx" ON "telegram_users"("telegram_id");
+
 -- AddForeignKey
 ALTER TABLE "refresh_tokens" ADD CONSTRAINT "refresh_tokens_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -179,6 +254,12 @@ ALTER TABLE "workflows" ADD CONSTRAINT "workflows_user_id_fkey" FOREIGN KEY ("us
 
 -- AddForeignKey
 ALTER TABLE "triggers" ADD CONSTRAINT "triggers_workflow_id_fkey" FOREIGN KEY ("workflow_id") REFERENCES "workflows"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "polling_events" ADD CONSTRAINT "polling_events_trigger_id_fkey" FOREIGN KEY ("trigger_id") REFERENCES "triggers"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "webhook_events" ADD CONSTRAINT "webhook_events_workflow_id_fkey" FOREIGN KEY ("workflow_id") REFERENCES "workflows"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "conditions" ADD CONSTRAINT "conditions_workflow_id_fkey" FOREIGN KEY ("workflow_id") REFERENCES "workflows"("id") ON DELETE CASCADE ON UPDATE CASCADE;
@@ -200,3 +281,4 @@ ALTER TABLE "action_executions" ADD CONSTRAINT "action_executions_action_id_fkey
 
 -- AddForeignKey
 ALTER TABLE "audit_logs" ADD CONSTRAINT "audit_logs_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+

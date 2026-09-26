@@ -19,12 +19,14 @@ import { TelegramUpdate } from './telegram.update';
         const token = config.get<string>('TELEGRAM_BOT_TOKEN');
         const isValid = Boolean(
           token &&
-            token.trim().length > 0 &&
-            !token.includes('dummy') &&
-            !token.includes('123456789'),
+          token.trim().length > 0 &&
+          !token.includes('dummy') &&
+          !token.includes('123456789'),
         );
         return {
-          token: isValid ? token! : '000000000:AAA_dummy_telegram_token_for_startup',
+          token: isValid
+            ? token!
+            : '000000000:AAA_dummy_telegram_token_for_startup',
           launchOptions: isValid ? {} : false,
         };
       },

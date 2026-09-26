@@ -51,7 +51,7 @@ Think of it as the engine behind something like Zapier or n8n, except it's open 
 | 📋 | **Workflow CRUD** | Create, update, delete, pause, resume, and clone workflows with ownership enforcement |
 | ⚡ | **Three Trigger Types** | Webhook (HMAC-SHA256), Scheduled polling (pull-based), Manual fire |
 | 🔧 | **Five Action Executors** | HTTP request, email (Resend), Telegram notification, delay, log message |
-| 🔗 | **Payload Chaining** | Each action's output is merged into the running payload for downstream steps |
+| 🔗 | **Payload Chaining** | An `HTTP_REQUEST` step's response is available to later steps as `{{payload.http.body.*}}` |
 | 🧩 | **Template Interpolation** | `{{payload.field}}` dot-notation in any action config field |
 | 📬 | **Async Execution Queue** | BullMQ + Redis with configurable concurrency and automatic retries |
 | 💀 | **Dead-Letter Handling** | Exhausted jobs stay in Redis and are reflected in Postgres for full observability |
@@ -498,7 +498,8 @@ These are intentional simplifications. They are documented here rather than pape
 
 | Limitation | Detail |
 |---|---|
-| **`DELAY` blocks the worker** | The delay executor uses `setTimeout` inline, holding a BullMQ worker slot for the full duration. A production system would split remaining actions into a new delayed job so the worker is not held hostage. |
+| **At-least-once per step** | A retry skips steps that already succeeded and resumes at the failed one with the payload as it was. The failed step itself re-runs, so if it had an external effect before erroring (e.g. the remote accepted a request, then the connection timed out), that effect can happen twice. |
+| **`DELAY` blocks the worker** | The processor sleeps inline, holding a BullMQ worker slot for the full duration. A production system would split remaining actions into a new delayed job so the worker is not held hostage. |
 | **SPA token storage** | The dashboard keeps the refresh token in `localStorage` (access token stays in memory). Fine for local/dev; a production deployment should move refresh-token storage behind a BFF or a same-site cookie once API and frontend share a domain. |
 | **No per-endpoint rate limiting** | There are no request-rate guards on the API. |
 | **Single-region** | No built-in support for multi-region Redis or Postgres failover. |

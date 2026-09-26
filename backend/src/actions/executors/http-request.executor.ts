@@ -38,9 +38,16 @@ export class HttpRequestExecutor implements IActionExecutor {
         return { success: false, error: `HTTP ${response.status}` };
       }
 
+      // Namespaced under `http` so later steps can template against it
+      // ({{payload.http.body.id}}) without clobbering the trigger's own
+      // top-level fields. A second HTTP step replaces it — templates always
+      // see the most recent response.
       return {
         success: true,
         response: { status: response.status, responseBody },
+        enrichedPayload: {
+          http: { status: response.status, body: responseBody },
+        },
       };
     } catch (error) {
       return {

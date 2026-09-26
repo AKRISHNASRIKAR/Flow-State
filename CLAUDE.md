@@ -44,30 +44,32 @@ Redis also holds poll state (`poll:state:<triggerId>`, 24h TTL) and rate limits 
 | Triggers: WEBHOOK / MANUAL / SCHEDULED | ✅ Complete |
 | Webhook ingress (HMAC + idempotency) | ✅ Complete — strongest area |
 | Polling (3 change modes) | ✅ Complete |
-| Execution engine (retry + DLQ) | ✅ Complete |
+| Execution engine (retry + DLQ, resume-from-failure, payload chaining) | ✅ Complete |
 | Dashboard (7 pages) | ✅ Complete |
-| Admin / DLQ panel | ✅ Complete (not linked in nav) |
-| Telegram bot | ⚠️ Partial — no migration, no `User` link, blocks boot |
+| Admin / DLQ | ✅ API only — dashboard page removed in `8034c79` |
+| Telegram bot | ⚠️ Partial — no `User` link; boots without a token (dummy token, polling off) |
 | Conditions / branching | ❌ Schema only, never evaluated |
-| **Tests** | ❌ **Zero** — Jest configured, 0 `.spec.ts` files |
-| CI / Dockerfile / deployment | ❌ None exist |
-| **Migrations** | 🔴 **Broken — cannot build a fresh DB** |
+| Tests | ⚠️ Unit only — `template.util`, `polling-config`, HMAC, `WorkflowProcessor` (stubbed Prisma). No integration/e2e |
+| CI | ✅ `.github/workflows/ci.yml` — lint, typecheck, test, build, migration-drift check |
+| Dockerfile / deployment | ❌ None exist |
+| Migrations | ✅ Squashed to one baseline (`20260926000000_baseline`); CI rebuilds a fresh DB and fails on drift |
 
 > Build history: `git log --oneline`. Commits are coarse — roughly one per subsystem, in the order listed in the status table above.
 
 ## Current priorities
 
-1. 🔴 **Fix the migration history** — nothing else is reproducible until this works.
-2. 🔴 Fix the `DelayExecutor` comment that contradicts the engine.
-3. 🟠 Make `TelegramModule` optional so the API boots without a bot token.
-4. 🟠 First tests: `template.util`, `polling-config`, `verifyHmac`.
-5. 🟠 Populate `enrichedPayload` so payload chaining actually chains.
+Phase 0 (reproducibility) is done. Next up is **Google as the identity + integration platform**: users sign in with Google, and the same OAuth grant powers Gmail / Sheets / Calendar actions and triggers. That needs, in order:
+
+1. 🟠 **Per-user credential store** (`connections`, encrypted tokens, single-flight refresh) — the Phase 4 vault, pulled forward.
+2. 🟠 **Sign in with Google** alongside (or replacing) email+password; `User` gains a Google subject ID.
+3. 🟠 Google actions using the payload-chaining convention below (`gmail`, `sheets`, … keys).
+4. 🟠 Google triggers via the existing polling worker (Gmail `historyId` as poll state).
 
 ## Known limitations
 
-- **At-least-once execution.** A retry re-runs **from action #1** — side effects before the failure repeat. The UI groups repeated steps into "attempts" to be honest about this.
-- **`DELAY` blocks a worker slot** for its full duration (`workflow.processor.ts:70-79`), despite `delay.executor.ts`'s docstring claiming otherwise. **Trust the processor.**
-- **Payload chaining is inert** — `enrichedPayload` is merged by the processor but no executor returns it.
+- **At-least-once per step.** A retry (BullMQ or admin DLQ) resumes at the first action without a `SUCCEEDED` row, using the payload checkpointed in `workflow_executions.output`. The *failing* step itself can still repeat — if it had a side effect before erroring (e.g. a timeout after the remote accepted), that side effect repeats. The UI groups repeated steps into "attempts".
+- **`DELAY` blocks a worker slot** for its full duration (the processor sleeps inline).
+- **Payload chaining is namespaced.** An executor publishes to later steps via `enrichedPayload` under its own key — `HTTP_REQUEST` → `{{payload.http.status}}` / `{{payload.http.body.*}}`. A later step of the same type overwrites it. Only `HTTP_REQUEST` publishes today.
 - **Refresh token in `localStorage`** (XSS-exposed); documented trade-off while API and frontend are on different origins.
 - **No per-endpoint rate limiting** — `/auth/login` is unthrottled.
 - **SSRF surface** — `HTTP_REQUEST` and polling fetch arbitrary user URLs with no allowlist.
@@ -121,7 +123,7 @@ Single `.env` at the repo root (backend reads `['.env', '../.env']`).
 | `REDIS_URL` | ✅ | Or `REDIS_HOST`/`PORT`/`PASSWORD`/`DB` |
 | `JWT_ACCESS_SECRET` | ✅ | `getOrThrow` |
 | `JWT_REFRESH_SECRET` | ✅ | `getOrThrow` |
-| `TELEGRAM_BOT_TOKEN` | ⚠️ **Effectively required** | `.env.example` says optional, but `TelegramModule` uses `getOrThrow` → **API won't boot without it** |
+| `TELEGRAM_BOT_TOKEN` | Optional | Unset → module registers with a dummy token and polling off; `TELEGRAM_NOTIFY` fails at run time |
 | `RESEND_API_KEY` / `RESEND_FROM_ADDRESS` | Optional | `SEND_EMAIL` fails gracefully without it |
 | `ADMIN_SECRET` | Optional | Unset → `/admin` returns 401 (never fails open) |
 | `PORT`, `CORS_ORIGIN`, `WORKER_CONCURRENCY` | Optional | Defaults 3000 / `http://localhost:5173` / 5 |
@@ -165,7 +167,7 @@ Enums: `WorkflowStatus` (DRAFT/ACTIVE/PAUSED/ARCHIVED) · `ExecutionStatus` (PEN
 | Template renders `{{payload.x}}` literally | Path unresolvable — deliberate fail-soft, check the actual payload in the execution detail |
 | Random logouts | Concurrent refresh spending the one-time token — verify single-flight in `api-client.ts` |
 | 400 on a valid-looking body | `forbidNonWhitelisted` — the field isn't on the DTO |
-| App won't boot | `TELEGRAM_BOT_TOKEN` missing (`getOrThrow`), or port 3000 taken |
+| App won't boot | Port 3000 taken (use `PORT=3001`) |
 
 ## High-risk areas
 
@@ -178,7 +180,8 @@ Change these only with care (full list in `AGENTS.md` §19):
 5. `WorkflowProcessor`'s rethrow and the `attemptsMade < maxAttempts` guard.
 6. Single-flight refresh in `api-client.ts`.
 7. `AdminGuard` throwing when `ADMIN_SECRET` is unset.
-8. Prisma schema without a matching migration — already broken twice.
+8. Prisma schema without a matching migration — broke twice before the baseline squash; CI's drift check now catches it.
+9. The `output` checkpoint in `WorkflowProcessor` — it must be written in the same transaction that marks a step `SUCCEEDED`, or a retry resumes with the wrong payload.
 
 ## Recent architectural decisions
 
@@ -189,32 +192,32 @@ Change these only with care (full list in `AGENTS.md` §19):
 | Idempotency fingerprint excludes timestamps | Correct dedup across real provider retry windows (GitHub 60s, Stripe 30–90s) |
 | Canvas is a vertical list, not a DAG editor | The engine runs a strict linear chain — the UI must not promise more |
 | Admin auth = shared secret, not a role | No admin role on `User`; single-tenant. Fails closed when unset |
-| `DELAY` blocks inline | Deliberate simplification, documented — but the executor's own comment contradicts it |
+| `DELAY` blocks inline | Deliberate simplification, documented in the processor and the executor |
+| Migrations squashed to one baseline (`20260926000000_baseline`) | History couldn't build a fresh DB; no production data to preserve. An existing dev DB needs its three old `_prisma_migrations` rows deleted, then `prisma migrate resolve --applied 20260926000000_baseline` |
+| Retries resume from the failed step | Google write actions (send mail, append row) must not repeat on retry; `output` doubles as the payload checkpoint |
+| Google is the identity provider (planned) | One OAuth grant for sign-in *and* app access, so users never connect Google twice |
 | Telegram via long polling | Works locally without a public webhook URL |
 
 ## Open TODOs
 
-- 🔴 Reconcile `schema.prisma` with migrations (`webhook_events`, `telegram_users` missing).
-- 🔴 Fix `delay.executor.ts` docstring.
-- 🟠 `TelegramModule` conditional registration.
+- 🟠 `TelegramModule` conditional registration (today it boots with a dummy token instead of not registering).
 - 🟠 Link `TelegramUser` → `User`.
-- 🟠 Populate `enrichedPayload` (start with `HttpRequestExecutor`).
+- 🟠 `enrichedPayload` for the remaining executors (`SEND_EMAIL` → message id, etc.).
 - 🟠 Validate action `type` against the executor registry at write time.
 - 🟠 Add the global exception filter that `ApiErrorResponse` already describes.
 - 🟠 `POST /workflows/:id/trigger/rotate-secret` (referenced in a comment, doesn't exist).
-- 🟡 First test suite + `.github/workflows/ci.yml`.
+- 🟡 Integration test for `WorkflowProcessor` against real Postgres + Redis (unit spec uses stubs).
 - 🟡 Shared `RedisModule` (4 ad-hoc clients, only 1 closes properly).
 - 🟡 Indexes on `workflow_executions.status` / `.created_at`.
 - 🟡 Extract the duplicated pagination helper and rate-limit key builder.
-- 🟡 Link `/admin` in `AppShell`.
 
 ## Roadmap
 
-- **Phase 0 — Reproducibility:** migrations, comment fix, optional Telegram, first tests, CI.
-- **Phase 1 — Make advertised features real:** payload chaining, non-blocking DELAY, type validation, exception filter, secret rotation, indexes.
+- **Phase 0 — Reproducibility:** ✅ migrations, comment fix, Telegram boot, first tests, CI, resume-on-retry, payload chaining (HTTP).
+- **Phase 1 — Make advertised features real:** non-blocking DELAY, type validation, exception filter, secret rotation, indexes.
 - **Phase 2 — Conditions & branching:** evaluate the dormant `conditions` table; the canvas becomes a real DAG editor **only** at this point.
-- **Phase 3 — Scale:** separate worker process, step-level idempotency, per-action retry policy, metrics + structured logs.
-- **Phase 4 — Multi-tenancy:** orgs/roles, **per-user credential vault** (biggest blocker to >1 user per instance), workflow versioning via the dormant `version` column, templates via `clone`.
+- **Phase 3 — Scale:** separate worker process, idempotency keys for the failing step itself, per-action retry policy, metrics + structured logs.
+- **Phase 4 — Multi-tenancy:** orgs/roles, per-user credential vault (**being pulled forward** for Google), workflow versioning via the dormant `version` column, templates via `clone`.
 - **Phase 5 — Integration breadth:** deliberately last, after the credential vault exists.
 
 ## Working notes

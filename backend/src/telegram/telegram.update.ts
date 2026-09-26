@@ -64,13 +64,10 @@ export class TelegramUpdate {
     const from = ctx.from;
     if (!from) return;
 
-    this.logger.log(
-      `[/id] user=${from.id} username=${from.username ?? 'N/A'}`,
-    );
+    this.logger.log(`[/id] user=${from.id} username=${from.username ?? 'N/A'}`);
 
-    await ctx.reply(
-      `🪪 Your Telegram ID is:\n\n<code>${from.id}</code>`,
-      { parse_mode: 'HTML' },
-    );
+    await ctx.reply(`🪪 Your Telegram ID is:\n\n<code>${from.id}</code>`, {
+      parse_mode: 'HTML',
+    });
   }
 }

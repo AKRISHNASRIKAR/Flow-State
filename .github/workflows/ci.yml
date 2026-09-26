@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    name: Lint, typecheck, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4 # version comes from package.json#packageManager
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter api exec prisma generate
+
+      # `pnpm lint` in backend runs eslint --fix, which would silently pass on
+      # fixable errors here — CI runs the non-fixing form.
+      - name: Lint (api)
+        run: pnpm --filter api exec eslint "src/**/*.ts"
+      - name: Typecheck (api)
+        run: pnpm --filter api exec tsc --noEmit
+      - name: Test (api)
+        run: pnpm --filter api test
+      - name: Typecheck (web)
+        run: pnpm --filter web lint
+      - name: Build
+        run: pnpm build
+
+  migrations:
+    # The migration history has broken twice from schema changes made without
+    # a migration. This rebuilds the database from migrations alone and fails
+    # if the result differs from schema.prisma in any way.
+    name: Migrations build a fresh DB matching the schema
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: flowstate
+          POSTGRES_PASSWORD: flowstate
+          POSTGRES_DB: flowstate
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U flowstate"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://flowstate:flowstate@localhost:5432/flowstate?schema=public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Apply migrations to an empty database
+        run: pnpm --filter api exec prisma migrate deploy
+      - name: Fail on drift between migrations and schema.prisma
+        run: >-
+          pnpm --filter api exec prisma migrate diff
+          --from-url "$DATABASE_URL"
+          --to-schema-datamodel prisma/schema.prisma
+          --exit-code
