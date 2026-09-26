@@ -39,18 +39,52 @@ enum TriggerType {
   SCHEDULED
 }
 
+enum ConnectionProvider {
+  GOOGLE
+}
+
+enum ConnectionStatus {
+  ACTIVE
+  NEEDS_REAUTH
+}
+
 model User {
   id            String         @id @default(uuid()) @db.Uuid
   email         String         @unique
-  passwordHash  String         @map("password_hash")
   name          String?
   createdAt     DateTime       @default(now()) @map("created_at")
   updatedAt     DateTime       @updatedAt @map("updated_at")
   workflows     Workflow[]
   refreshTokens RefreshToken[]
   auditLogs     AuditLog[]
+  connections   Connection[]
 
   @@map("users")
+}
+
+/// An external account a user has granted FlowState access to. For GOOGLE
+/// this is also the user's sign-in identity: (provider, providerAccountId)
+/// is how a returning Google login finds its user.
+model Connection {
+  id                   String             @id @default(uuid()) @db.Uuid
+  userId               String             @map("user_id") @db.Uuid
+  provider             ConnectionProvider
+  /// The provider's stable account ID (Google: the OIDC `sub` claim).
+  providerAccountId    String             @map("provider_account_id")
+  email                String
+  scopes               String[]
+  /// AES-256-GCM ciphertext (see TokenCipher) — never the raw token.
+  accessTokenEnc       String?            @map("access_token_enc")
+  refreshTokenEnc      String?            @map("refresh_token_enc")
+  accessTokenExpiresAt DateTime?          @map("access_token_expires_at")
+  status               ConnectionStatus   @default(ACTIVE)
+  createdAt            DateTime           @default(now()) @map("created_at")
+  updatedAt            DateTime           @updatedAt @map("updated_at")
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@unique([userId, provider])
+  @@map("connections")
 }
 
 model RefreshToken {

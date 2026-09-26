@@ -32,13 +32,14 @@ Webhook / Manual / Poll
 
 Second queue: `polling` (repeatable jobs) → `PollingWorker` → detects change → emits the same event.
 
-Redis also holds poll state (`poll:state:<triggerId>`, 24h TTL) and rate limits (`rate:exec:<userId>:<hour>`).
+Redis also holds poll state (`poll:state:<triggerId>`, 24h TTL) rate limits (`rate:exec:<userId>:<hour>`), and single-use Google sign-in state (`oauth:google:state:*`, 10 min; `oauth:google:handoff:*`, 60 s — read with `GETDEL`).
 
 ## Implementation status
 
 | Area | Status |
 |---|---|
-| Auth (Argon2, rotating refresh tokens, global guard) | ✅ Complete |
+| Auth — Google sign-in only (PKCE, nonce-bound handoff), rotating refresh tokens, global guard | ✅ Complete |
+| Credential store (`connections`, AES-256-GCM tokens) | ⚠️ Stores Google tokens at sign-in; no refresh/use path yet |
 | Workflow CRUD (soft delete, clone, pause/resume) | ✅ Complete |
 | Actions + reorder (linear chain) | ✅ Complete |
 | Triggers: WEBHOOK / MANUAL / SCHEDULED | ✅ Complete |
@@ -60,10 +61,11 @@ Redis also holds poll state (`poll:state:<triggerId>`, 24h TTL) and rate limits 
 
 Phase 0 (reproducibility) is done. Next up is **Google as the identity + integration platform**: users sign in with Google, and the same OAuth grant powers Gmail / Sheets / Calendar actions and triggers. That needs, in order:
 
-1. 🟠 **Per-user credential store** (`connections`, encrypted tokens, single-flight refresh) — the Phase 4 vault, pulled forward.
-2. 🟠 **Sign in with Google** alongside (or replacing) email+password; `User` gains a Google subject ID.
-3. 🟠 Google actions using the payload-chaining convention below (`gmail`, `sheets`, … keys).
-4. 🟠 Google triggers via the existing polling worker (Gmail `historyId` as poll state).
+1. ✅ **Sign in with Google** — replaces email+password. The `connections` row *is* the identity (no `googleSub` on `User`).
+2. 🟠 **Access-token refresh** for `connections` (single-flight via Redis lock; `invalid_grant` → `NEEDS_REAUTH`).
+3. 🟠 **Incremental scopes** — a "grant Gmail/Sheets access" flow reusing the same OAuth client, triggered when a user adds a Google action.
+4. 🟠 Google actions using the payload-chaining convention below (`gmail`, `sheets`, … keys).
+5. 🟠 Google triggers via the existing polling worker (Gmail `historyId` as poll state).
 
 ## Known limitations
 
@@ -71,10 +73,10 @@ Phase 0 (reproducibility) is done. Next up is **Google as the identity + integra
 - **`DELAY` blocks a worker slot** for its full duration (the processor sleeps inline).
 - **Payload chaining is namespaced.** An executor publishes to later steps via `enrichedPayload` under its own key — `HTTP_REQUEST` → `{{payload.http.status}}` / `{{payload.http.body.*}}`. A later step of the same type overwrites it. Only `HTTP_REQUEST` publishes today.
 - **Refresh token in `localStorage`** (XSS-exposed); documented trade-off while API and frontend are on different origins.
-- **No per-endpoint rate limiting** — `/auth/login` is unthrottled.
+- **No per-endpoint rate limiting** — `/auth/google/start` is unthrottled (each call writes a 10-minute Redis key).
 - **SSRF surface** — `HTTP_REQUEST` and polling fetch arbitrary user URLs with no allowlist.
 - **Shared credentials** — one Resend key and one Telegram bot for all users.
-- Polling minimum 30s. Email+password auth only. `conditions` table unused. `Workflow.version` never incremented. `Trigger.enabled` has no API.
+- Polling minimum 30s. Google is the only sign-in (no fallback if Google is down or unconfigured). `conditions` table unused. `Workflow.version` never incremented. `Trigger.enabled` has no API.
 
 ## Coding standards
 
@@ -127,15 +129,19 @@ Single `.env` at the repo root (backend reads `['.env', '../.env']`).
 | `RESEND_API_KEY` / `RESEND_FROM_ADDRESS` | Optional | `SEND_EMAIL` fails gracefully without it |
 | `ADMIN_SECRET` | Optional | Unset → `/admin` returns 401 (never fails open) |
 | `PORT`, `CORS_ORIGIN`, `WORKER_CONCURRENCY` | Optional | Defaults 3000 / `http://localhost:5173` / 5 |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | ✅ to sign in | Missing → API boots, `/auth/google/start` returns 503 |
+| `CREDENTIALS_ENCRYPTION_KEY` | ✅ to sign in | 32 bytes base64. **Rotating it orphans every stored Google token** |
+| `GOOGLE_REDIRECT_URI` | Optional | Default `http://localhost:$PORT/auth/google/callback`; must match the Google client exactly |
+| `FRONTEND_URL` | Optional | Default `http://localhost:5173`; post-sign-in redirect target |
 | `NEXT_PUBLIC_API_URL` | Frontend | Defaults `http://localhost:3000` |
 
 ## Database overview
 
-PostgreSQL, 11 models, all UUID PKs, all `snake_case` via `@@map`.
+PostgreSQL, 12 models, all UUID PKs, all `snake_case` via `@@map`.
 
-`users` · `refresh_tokens` (self-relation rotation chain) · `workflows` · `triggers` (`workflowId @unique` = one per workflow) · `webhook_events` (**`@@unique([workflowId, idempotencyKey])`** = race-safe dedup) · `polling_events` · `conditions` (unused) · `actions` (`position` ASC = order) · `workflow_executions` · `action_executions` (one row **per step per attempt**) · `audit_logs` (`action` is TEXT, not the enum) · `telegram_users` (**no FK to `users`**).
+`users` · `connections` (**`@@unique([provider, providerAccountId])`** = the Google identity; `@@unique([userId, provider])`) · `refresh_tokens` (self-relation rotation chain) · `workflows` · `triggers` (`workflowId @unique` = one per workflow) · `webhook_events` (**`@@unique([workflowId, idempotencyKey])`** = race-safe dedup) · `polling_events` · `conditions` (unused) · `actions` (`position` ASC = order) · `workflow_executions` · `action_executions` (one row **per step per attempt**) · `audit_logs` (`action` is TEXT, not the enum) · `telegram_users` (**no FK to `users`**).
 
-Enums: `WorkflowStatus` (DRAFT/ACTIVE/PAUSED/ARCHIVED) · `ExecutionStatus` (PENDING/RUNNING/SUCCEEDED/FAILED/CANCELLED) · `TriggerType` (WEBHOOK/MANUAL/SCHEDULED) · `AuditAction`.
+Enums: `WorkflowStatus` (DRAFT/ACTIVE/PAUSED/ARCHIVED) · `ExecutionStatus` (PENDING/RUNNING/SUCCEEDED/FAILED/CANCELLED) · `TriggerType` (WEBHOOK/MANUAL/SCHEDULED) · `ConnectionProvider` (GOOGLE) · `ConnectionStatus` (ACTIVE/NEEDS_REAUTH) · `AuditAction`.
 
 **Soft delete:** `DELETE /workflows/:id` sets `ARCHIVED`; reads filter it out via `findVisibleOwnedWorkflow`.
 
@@ -143,7 +149,8 @@ Enums: `WorkflowStatus` (DRAFT/ACTIVE/PAUSED/ARCHIVED) · `ExecutionStatus` (PEN
 
 | Service | Responsibility |
 |---|---|
-| `AuthService` | Argon2, token pair issue, rotation chain |
+| `AuthService` | `startSession`, token pair issue, Argon2-hashed rotation chain |
+| `GoogleAuthService` | OAuth start/callback/exchange, user + `Connection` upsert, account linking |
 | `WorkflowsService` | CRUD, soft delete, clone (fresh secret, DRAFT), poller sync |
 | `ActionsService` | Chain CRUD, transactional reorder |
 | `TriggersService` | Upsert with secret preservation, masking, poller registration |
@@ -168,6 +175,9 @@ Enums: `WorkflowStatus` (DRAFT/ACTIVE/PAUSED/ARCHIVED) · `ExecutionStatus` (PEN
 | Random logouts | Concurrent refresh spending the one-time token — verify single-flight in `api-client.ts` |
 | 400 on a valid-looking body | `forbidNonWhitelisted` — the field isn't on the DTO |
 | App won't boot | Port 3000 taken (use `PORT=3001`) |
+| Sign-in button → Google says "OAuth client was not found" / `redirect_uri_mismatch` | `GOOGLE_CLIENT_ID` wrong, or `GOOGLE_REDIRECT_URI` isn't listed on the Google client |
+| Sign-in lands on `/login?error=state_expired` | Took >10 min on Google's screen, or the callback was replayed |
+| Callback page says the link expired | Handoff is 60 s and single-use; or the sign-in was started in another tab (nonce is per-tab) |
 
 ## High-risk areas
 
@@ -182,6 +192,8 @@ Change these only with care (full list in `AGENTS.md` §19):
 7. `AdminGuard` throwing when `ADMIN_SECRET` is unset.
 8. Prisma schema without a matching migration — broke twice before the baseline squash; CI's drift check now catches it.
 9. The `output` checkpoint in `WorkflowProcessor` — it must be written in the same transaction that marks a step `SUCCEEDED`, or a retry resumes with the wrong payload.
+10. Google sign-in's nonce check in `GoogleAuthService.exchangeHandoff` and `sanitizeReturnTo` — removing either reopens login CSRF / open redirect.
+11. `CREDENTIALS_ENCRYPTION_KEY` — rotating it without re-encrypting makes every stored Google token undecryptable.
 
 ## Recent architectural decisions
 
@@ -195,7 +207,9 @@ Change these only with care (full list in `AGENTS.md` §19):
 | `DELAY` blocks inline | Deliberate simplification, documented in the processor and the executor |
 | Migrations squashed to one baseline (`20260926000000_baseline`) | History couldn't build a fresh DB; no production data to preserve. An existing dev DB needs its three old `_prisma_migrations` rows deleted, then `prisma migrate resolve --applied 20260926000000_baseline` |
 | Retries resume from the failed step | Google write actions (send mail, append row) must not repeat on retry; `output` doubles as the payload checkpoint |
-| Google is the identity provider (planned) | One OAuth grant for sign-in *and* app access, so users never connect Google twice |
+| Google is the only identity provider | One OAuth grant for sign-in *and* app access, so users never connect Google twice. Sign-in requests identity scopes only; app scopes come incrementally |
+| Nonce-bound handoff code, not tokens in the redirect | API and dashboard are cross-origin, so no shared cookie; tokens in a URL leak to history. The `sessionStorage` nonce ties the flow to the initiating tab (login-CSRF defence) |
+| ID token claims read without signature check | It came straight from Google's token endpoint over TLS (OIDC Core §3.1.3.7) — avoids a JWKS dependency. **Never reuse that helper on a browser-supplied token** |
 | Telegram via long polling | Works locally without a public webhook URL |
 
 ## Open TODOs
@@ -207,7 +221,7 @@ Change these only with care (full list in `AGENTS.md` §19):
 - 🟠 Add the global exception filter that `ApiErrorResponse` already describes.
 - 🟠 `POST /workflows/:id/trigger/rotate-secret` (referenced in a comment, doesn't exist).
 - 🟡 Integration test for `WorkflowProcessor` against real Postgres + Redis (unit spec uses stubs).
-- 🟡 Shared `RedisModule` (4 ad-hoc clients, only 1 closes properly).
+- 🟡 Move the 4 ad-hoc Redis clients onto the shared `RedisModule` (`REDIS_CLIENT`) — only auth uses it so far.
 - 🟡 Indexes on `workflow_executions.status` / `.created_at`.
 - 🟡 Extract the duplicated pagination helper and rate-limit key builder.
 

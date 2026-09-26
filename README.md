@@ -47,7 +47,7 @@ Think of it as the engine behind something like Zapier or n8n, except it's open 
 
 | | Feature | Details |
 |---|---|---|
-| 🔐 | **JWT Authentication** | Access tokens (15 min) + rotating refresh tokens (7 days), Argon2 password hashing |
+| 🔐 | **Sign in with Google** | Google OAuth (PKCE) is the only sign-in method; FlowState then issues its own access tokens (15 min) + rotating refresh tokens (7 days) |
 | 📋 | **Workflow CRUD** | Create, update, delete, pause, resume, and clone workflows with ownership enforcement |
 | ⚡ | **Three Trigger Types** | Webhook (HMAC-SHA256), Scheduled polling (pull-based), Manual fire |
 | 🔧 | **Five Action Executors** | HTTP request, email (Resend), Telegram notification, delay, log message |
@@ -70,7 +70,7 @@ Think of it as the engine behind something like Zapier or n8n, except it's open 
 | Framework | NestJS 11 |
 | Database | PostgreSQL 16 via Prisma 6 |
 | Queue / Cache | Redis 7 + BullMQ 5 |
-| Authentication | JWT (RS256 access + refresh), Argon2id |
+| Authentication | Google OAuth 2.0 / OIDC (PKCE), JWT access + refresh, Argon2id-hashed refresh tokens |
 | Email | Resend API |
 | Notifications | Telegram Bot API |
 | API Docs | Swagger / OpenAPI 3 |
@@ -164,8 +164,15 @@ cp .env.example .env
 | `RESEND_FROM_ADDRESS` | Optional | `noreply@example.com` | Verified sender address for outbound email |
 | `TELEGRAM_BOT_TOKEN` | Optional | — | Required to use the `TELEGRAM_NOTIFY` action |
 | `ADMIN_SECRET` | Optional | — | Enables admin/DLQ endpoints when set (sent as `X-Admin-Secret` header) |
+| `GOOGLE_CLIENT_ID` | ✅ to sign in | — | OAuth client ID (Google Cloud → APIs & Services → Credentials → *Web application*) |
+| `GOOGLE_CLIENT_SECRET` | ✅ to sign in | — | That client's secret |
+| `GOOGLE_REDIRECT_URI` | Optional | `http://localhost:$PORT/auth/google/callback` | Must exactly match an *Authorized redirect URI* on the OAuth client |
+| `CREDENTIALS_ENCRYPTION_KEY` | ✅ to sign in | — | 32 bytes, base64 (`openssl rand -base64 32`). Encrypts stored Google tokens. Changing it makes stored tokens unreadable |
+| `FRONTEND_URL` | Optional | `http://localhost:5173` | Where the API sends the browser after Google sign-in |
 
 > ⚠️ **Never commit `.env` to version control.** It is listed in `.gitignore`. Generate `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` with `openssl rand -hex 64`.
+
+**Google sign-in setup.** In Google Cloud Console: create an OAuth client of type *Web application*, add `http://localhost:3000/auth/google/callback` as an authorized redirect URI, and configure the consent screen. Sign-in only requests `openid email profile`, which needs no Google verification. Without the three required variables the API still starts, but `/auth/google/start` returns 503 and nobody can sign in.
 
 ### Running Locally
 
@@ -212,11 +219,11 @@ For a fully interactive reference, open the Swagger UI at `/api/docs` after star
 
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
-| `POST` | `/auth/register` | Public | Register, returns access + refresh token pair |
-| `POST` | `/auth/login` | Public | Login, returns access + refresh token pair |
+| `GET` | `/auth/google/start?nonce=&returnTo=` | Public | Browser navigation — redirects to Google (PKCE) |
+| `GET` | `/auth/google/callback` | Public | Google's redirect target — redirects to the dashboard with a one-time code, or to `/login?error=` |
+| `POST` | `/auth/google/exchange` | Public | Trade `{ code, nonce }` for an access + refresh token pair (single-use, 60 s) |
 | `POST` | `/auth/refresh` | Public | Rotate a refresh token |
 | `POST` | `/auth/logout` | 🔒 | Revoke the current refresh token |
-| `GET` | `/auth/me` | 🔒 | Get the authenticated user's profile |
 
 ### Workflows
 
@@ -406,7 +413,8 @@ Every string value in an action's `config` object supports `{{mustache}}`-style 
 
 | Concern | Implementation |
 |---|---|
-| Password storage | Argon2id hashing — no plaintext or bcrypt |
+| Sign-in | Google only (authorization code + PKCE, server-side). A dashboard-generated nonce bound to the browser tab blocks login CSRF; `returnTo` is restricted to same-origin paths |
+| Google tokens | AES-256-GCM encrypted at rest (`CREDENTIALS_ENCRYPTION_KEY`); never sent to the browser |
 | Refresh token storage | Stored as Argon2id hashes; the raw token is never persisted |
 | Token rotation | Each refresh issues a new pair and revokes the old one; chain tracked via `replacedByTokenId` |
 | Webhook authenticity | HMAC-SHA256 with `timingSafeEqual` — prevents both forgery and timing attacks |
@@ -457,7 +465,7 @@ flowstate/                      # pnpm workspace root (Turborepo)
 │       │   ├── trigger/        # Trigger config, test-fire, webhook events
 │       │   └── executions/     # Runs tables, stats widget
 │       ├── lib/                # API client (auth refresh), stores, helpers
-│       └── views/              # Page components (login/register, workflows, executions, admin)
+│       └── views/              # Page components (login + Google callback, workflows, executions)
 ├── packages/
 │   └── api-types/              # Shared TS types mirroring the API surface
 ├── pnpm-workspace.yaml
@@ -504,7 +512,7 @@ These are intentional simplifications. They are documented here rather than pape
 | **No per-endpoint rate limiting** | There are no request-rate guards on the API. |
 | **Single-region** | No built-in support for multi-region Redis or Postgres failover. |
 | **Polling minimum: 30 seconds** | Sub-30s intervals are rejected at the API layer to prevent runaway polling. |
-| **Email auth only** | No OAuth, magic links, or social login. Email + password only. |
+| **Google-only sign-in** | No email/password or other providers. Pre-Google accounts are linked on first sign-in when the Google account's verified email matches. |
 | **Conditions table unused** | The `conditions` table exists in the schema but the condition-evaluation step is not wired into the execution engine. |
 
 ---

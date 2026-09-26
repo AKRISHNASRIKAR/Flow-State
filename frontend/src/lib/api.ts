@@ -9,11 +9,10 @@ import type {
   ExecutionSummary,
   FailedJob,
   FireTriggerRequest,
+  GoogleExchangeRequest,
   HealthResponse,
-  LoginRequest,
   Paginated,
   PollingEvent,
-  RegisterRequest,
   Trigger,
   UpdateActionRequest,
   UpdateWorkflowRequest,
@@ -21,17 +20,29 @@ import type {
   WebhookEvent,
   Workflow,
 } from '@flowstate/api-types';
-import { api } from './api-client';
-import { getStoredRefreshToken, useAuthStore } from './auth-store';
+import { API_URL, api } from './api-client';
+import { createSignInNonce, getStoredRefreshToken, takeSignInNonce, useAuthStore } from './auth-store';
 
 export const authApi = {
-  async register(body: RegisterRequest) {
-    const tokens = await api.public.post<AuthTokensResponse>('/auth/register', body);
-    useAuthStore.getState().setTokens(tokens.accessToken, tokens.refreshToken);
-    return tokens;
+  /**
+   * Full-page navigation to the API, which redirects to Google. The nonce
+   * stays in this tab's sessionStorage and must come back with the handoff
+   * code — a sign-in link started anywhere else can't be completed here.
+   */
+  startGoogleSignIn(returnTo: string) {
+    const nonce = createSignInNonce();
+    const url = new URL(`${API_URL}/auth/google/start`);
+    url.searchParams.set('nonce', nonce);
+    url.searchParams.set('returnTo', returnTo);
+    window.location.assign(url.toString());
   },
-  async login(body: LoginRequest) {
-    const tokens = await api.public.post<AuthTokensResponse>('/auth/login', body);
+  async completeGoogleSignIn(code: string) {
+    const nonce = takeSignInNonce();
+    if (nonce === null) {
+      throw new Error('This sign-in was started in a different tab or has already been used.');
+    }
+    const body: GoogleExchangeRequest = { code, nonce };
+    const tokens = await api.public.post<AuthTokensResponse>('/auth/google/exchange', body);
     useAuthStore.getState().setTokens(tokens.accessToken, tokens.refreshToken);
     return tokens;
   },

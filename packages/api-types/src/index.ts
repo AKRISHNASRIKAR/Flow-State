@@ -56,16 +56,23 @@ export type WebhookEventStatus = (typeof WebhookEventStatus)[keyof typeof Webhoo
 // Auth
 // ---------------------------------------------------------------------------
 
-export interface RegisterRequest {
-  email: string;
-  password: string;
-  name?: string;
+/**
+ * Body of POST /auth/google/exchange. Google is the only sign-in method:
+ * the dashboard navigates to GET /auth/google/start?nonce=…&returnTo=…,
+ * and lands back on /auth/callback?code=…&returnTo=… on success or
+ * /login?error=<GoogleSignInError> on failure.
+ */
+export interface GoogleExchangeRequest {
+  code: string;
+  nonce: string;
 }
 
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
+export type GoogleSignInError =
+  | 'access_denied'
+  | 'state_expired'
+  | 'email_unverified'
+  | 'account_conflict'
+  | 'google_failed';
 
 export interface AuthTokensResponse {
   accessToken: string;

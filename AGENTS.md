@@ -79,8 +79,8 @@ Good examples to imitate:
 | Files (frontend components) | `PascalCase.tsx` | `FlowCanvas.tsx`, `StatusBadge.tsx` |
 | Files (frontend non-components) | `kebab-case.ts` | `api-client.ts`, `action-meta.ts`, `auth-store.ts` |
 | Classes | `PascalCase` + role suffix | `WorkflowsService`, `PollingWorker`, `AdminGuard` |
-| DB columns | `snake_case` via `@map` | `password_hash`, `workflow_id` |
-| Prisma fields | `camelCase` | `passwordHash`, `workflowId` |
+| DB columns | `snake_case` via `@map` | `provider_account_id`, `workflow_id` |
+| Prisma fields | `camelCase` | `providerAccountId`, `workflowId` |
 | API JSON | `camelCase` | `{ accessToken, workflowId }` |
 | Constants | `SCREAMING_SNAKE`, module-top | `MAX_LIMIT`, `WORKER_CONCURRENCY`, `HTTP_TIMEOUT_MS` |
 | Redis keys | `namespace:purpose:id` | `rate:exec:<userId>:<hour>`, `poll:state:<triggerId>` |
@@ -159,7 +159,7 @@ Use `onMutate` → snapshot → optimistic `setQueryData` → `onError` restore 
 
 ### Forms
 
-react-hook-form + `zodResolver`. **Mirror backend validation exactly and say so in a comment** — `RegisterPage.tsx:16` and `ScheduledConfigForm.tsx:10` both do this.
+react-hook-form + `zodResolver`. **Mirror backend validation exactly and say so in a comment** — `ScheduledConfigForm.tsx:10` does this.
 
 ### UI primitives
 
@@ -215,7 +215,8 @@ Every new endpoint needs all six of these:
 ## 8. Authentication flow
 
 ```
-Register/Login → { accessToken (15m, in memory), refreshToken (7d, localStorage) }
+Google sign-in  → /auth/google/start → Google → /auth/google/callback → dashboard /auth/callback?code
+                 → POST /auth/google/exchange { code, nonce } → { accessToken (15m, in memory), refreshToken (7d, localStorage) }
 Every request  → Authorization: Bearer <accessToken>
 On 401         → single-flight POST /auth/refresh → retry once
 Refresh        → old token revoked, replacedByTokenId set, new pair issued
@@ -225,7 +226,9 @@ On reload      → bootstrapSession() silently refreshes before rendering
 **Rules:**
 - The access token is **never** persisted. Only the refresh token goes to `localStorage`.
 - Refresh tokens are **one-time-use**. Anything that could fire concurrent refreshes must share the in-flight promise (`api-client.ts:35-58`). Breaking this logs users out at random.
-- Passwords and refresh tokens are hashed with **Argon2** (`argon2.hash` / `argon2.verify`). Never bcrypt, never SHA.
+- There are no passwords. Refresh tokens are hashed with **Argon2** (`argon2.hash` / `argon2.verify`). Never bcrypt, never SHA.
+- Google OAuth tokens are **encrypted** (not hashed — they must be usable) with `TokenCipher` (AES-256-GCM) before touching the DB. Never store or log them raw.
+- The sign-in nonce (dashboard `sessionStorage` → `/auth/google/start` → handoff → `/auth/google/exchange`) is what stops login CSRF. Don't drop it or move it to `localStorage`.
 - Secret comparison uses `crypto.timingSafeEqual` with a length check first. **Never `===`.**
 
 ---
@@ -401,7 +404,7 @@ Inferred from consistent patterns across the codebase:
 
 ## 23. Security expectations
 
-- Argon2 for all password/token hashing.
+- Argon2 for refresh-token hashing; `TokenCipher` for OAuth tokens that must be decrypted later.
 - `timingSafeEqual` for every secret comparison.
 - Secrets masked in **all** API responses; full values never returned, not even at creation.
 - Protected by default; `@Public()` requires justification.

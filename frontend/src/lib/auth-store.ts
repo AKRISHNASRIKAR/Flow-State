@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { AccessTokenPayload } from '@flowstate/api-types';
 
 const REFRESH_TOKEN_KEY = 'flowstate.refreshToken';
+const SIGN_IN_NONCE_KEY = 'flowstate.signInNonce';
 
 export interface AuthUser {
   id: string;
@@ -46,6 +47,21 @@ function storeRefreshToken(token: string | null) {
   } else {
     localStorage.setItem(REFRESH_TOKEN_KEY, token);
   }
+}
+
+// sessionStorage, not localStorage: the nonce must be scoped to the tab that
+// started sign-in, which is exactly what makes it useless to anyone else.
+export function createSignInNonce(): string {
+  const nonce = crypto.randomUUID();
+  sessionStorage.setItem(SIGN_IN_NONCE_KEY, nonce);
+  return nonce;
+}
+
+/** Read-once: a nonce is spent by the exchange attempt, success or not. */
+export function takeSignInNonce(): string | null {
+  const nonce = sessionStorage.getItem(SIGN_IN_NONCE_KEY);
+  sessionStorage.removeItem(SIGN_IN_NONCE_KEY);
+  return nonce;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({

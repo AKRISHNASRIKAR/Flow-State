@@ -9,6 +9,7 @@ import { EventsModule } from './events/events.module';
 import { ExecutionsModule } from './executions/executions.module';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { RedisModule } from './redis/redis.module';
 import { SchedulerModule } from './scheduler/scheduler.module';
 import { TriggersModule } from './triggers/triggers.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
@@ -22,6 +23,7 @@ import { TelegramModule } from './telegram/telegram.module';
       envFilePath: ['.env', '../.env'],
     }),
     PrismaModule,
+    RedisModule,
     AuthModule,
     ActionExecutorModule,
     EventsModule,

@@ -173,7 +173,7 @@ export default function Home() {
         <h2 className="text-3xl font-bold text-white">Ready to automate?</h2>
         <p className="mt-3 text-neutral-400">Deploy FlowState in minutes and start building workflows.</p>
         <div className="mt-8">
-          <Link href="/register" className={PRIMARY_BUTTON}>
+          <Link href="/login" className={PRIMARY_BUTTON}>
             Get Started — It&apos;s Free
           </Link>
         </div>

@@ -1,16 +1,10 @@
-import {
-  ConflictException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { AuditAction, User } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
-import { LoginDto } from './dto/login.dto';
-import { RegisterDto } from './dto/register.dto';
 import { AccessTokenPayload, RefreshTokenPayload } from './types/jwt-payload';
 
 const ACCESS_TOKEN_TTL = '15m';
@@ -25,35 +19,15 @@ export class AuthService {
     private readonly config: ConfigService,
   ) {}
 
-  async register(dto: RegisterDto) {
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email: dto.email },
-    });
-
-    if (existingUser) {
-      throw new ConflictException('Email is already registered');
-    }
-
-    const passwordHash = await argon2.hash(dto.password);
-    const user = await this.prisma.user.create({
-      data: {
-        email: dto.email,
-        passwordHash,
-        name: dto.name,
-      },
-    });
-
-    await this.writeAuditLog(user.id, AuditAction.CREATE, 'users', user.id);
-    return this.toAuthResponse(await this.issueTokenPair(user));
-  }
-
-  async login(dto: LoginDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
-    });
-
-    if (!user || !(await argon2.verify(user.passwordHash, dto.password))) {
-      throw new UnauthorizedException('Invalid credentials');
+  /**
+   * Issues a FlowState session for a user whose identity has already been
+   * established — today that only happens at the end of Google sign-in
+   * (GoogleAuthService). There is deliberately no password path.
+   */
+  async startSession(userId: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('Account no longer exists');
     }
 
     await this.writeAuditLog(user.id, AuditAction.LOGIN, 'users', user.id);
