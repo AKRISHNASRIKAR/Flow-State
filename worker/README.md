@@ -26,6 +26,19 @@ see "Rules" below).
 - A run that exhausts its retries simply ends **FAILED**; `/admin/failed-jobs` lists those, and retrying one starts a new instance that resumes after the steps that succeeded.
 - No Swagger UI (the NestJS backend still serves `/api/docs`).
 
+## This deployment
+
+| | |
+|---|---|
+| API | `https://flowstate-api.akrishnasrikar.workers.dev` (`/health` → `"db":"up"`) |
+| Database | D1 `flowstate`, id pinned in `wrangler.jsonc` |
+| Dashboard | `https://flow-state-fe.vercel.app` (Vercel, `NEXT_PUBLIC_API_URL` = the API above) |
+| Google OAuth | GCP project `flowstate-509818`, client `flowstate`; redirect URI `…workers.dev/auth/google/callback` |
+| Secrets set | `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `CREDENTIALS_ENCRYPTION_KEY` (freshly generated, not Render's), `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` |
+| Not set yet | `RESEND_*`, `TELEGRAM_*`, `ADMIN_SECRET` — email/Telegram steps and `/admin` are off until added |
+
+List what's set with `npx wrangler secret list` (names only).
+
 ## Cost: free
 
 Everything used here is on the **Workers Free plan** — Workers, D1, Workflows,
@@ -45,7 +58,7 @@ Past those, the $5/month Workers Paid plan lifts them — no code changes.
 ## Run it locally (free, no account)
 
 ```bash
-cp worker/.dev.vars.example worker/.dev.vars   # fill in the secrets you have
+cp worker/.dev.vars.example worker/.dev.vars   # fill in the secrets you have (it also points the URLs at localhost)
 pnpm --filter worker db:migrate:local          # create the local D1 tables (once)
 pnpm --filter worker dev                       # http://localhost:8787 — real workerd, D1, Workflows, DOs, alarms
 ```
@@ -64,13 +77,13 @@ SQL query against a D1 built from `migrations/` — also runs in CI), and
 From `worker/`:
 
 1. `npx wrangler login`
-2. **Set the URLs** in `wrangler.jsonc` → `vars`: `FRONTEND_URL` and `CORS_ORIGIN` (the dashboard), and `GOOGLE_REDIRECT_URI` = `https://flowstate-api.<your-subdomain>.workers.dev/auth/google/callback`.
+2. **Set the URLs** in `wrangler.jsonc` → `vars`: `FRONTEND_URL` and `CORS_ORIGIN` (the dashboard), and `GOOGLE_REDIRECT_URI` = `https://flowstate-api.<your-subdomain>.workers.dev/auth/google/callback`. These are production values; `.dev.vars` overrides them for `wrangler dev`.
 3. **Deploy**: `pnpm run deploy` (not `pnpm deploy`, a different built-in pnpm command). A deploy with no `database_id` **creates the D1 database**; Wrangler doesn't write the id back, so copy it from the deploy or `db:migrate:remote` output into `wrangler.jsonc` and commit it. (Already done for this repo's `flowstate` database — a fork should delete that `database_id` line first.)
 4. **Create the tables**: `pnpm run db:migrate:remote`.
-5. **Secrets**: fill in `.secrets.production.env` (gitignored), then `npx wrangler secret bulk .secrets.production.env` and delete the file. Required: `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `CREDENTIALS_ENCRYPTION_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`.
+5. **Secrets**: fill in `.secrets.production.env` (gitignored), then `npx wrangler secret bulk .secrets.production.env` and delete the file. Required: `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `CREDENTIALS_ENCRYPTION_KEY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`. Generate the first three with `openssl rand` straight into the file; take the Google pair from the client's **downloaded JSON**, not by copy-pasting (a dropped first character gives "OAuth client was not found"). Quoted values are fine.
 6. **Check**: `curl https://flowstate-api.<subdomain>.workers.dev/health` → `"db":"up"`.
 7. **Google Console**: add the `GOOGLE_REDIRECT_URI` from step 2 to the OAuth client's *Authorised redirect URIs*.
-8. **Dashboard**: set its `NEXT_PUBLIC_API_URL` to the Worker's URL and rebuild (Vercel: env var + Redeploy; or Cloudflare: `NEXT_PUBLIC_API_URL=… pnpm --filter web cf:deploy`).
+8. **Dashboard**: set its `NEXT_PUBLIC_API_URL` to the Worker's URL and rebuild (Vercel: env var + Redeploy; or Cloudflare: `NEXT_PUBLIC_API_URL=… pnpm --filter web cf:deploy`). It's baked in at build time, so an already-open tab keeps calling the old API until a hard refresh.
 9. **Telegram** (optional): add `TELEGRAM_BOT_TOKEN` + `TELEGRAM_WEBHOOK_SECRET` as secrets, then
    `curl "https://api.telegram.org/bot<token>/setWebhook" -d url=https://…workers.dev/telegram/webhook -d secret_token=<secret>`.
 
@@ -81,7 +94,7 @@ From `worker/`:
    DATABASE_URL="<Render external URL>" node scripts/postgres-to-d1.mjs > flowstate-data.sql
    npx wrangler d1 execute flowstate --remote --file=flowstate-data.sql
    ```
-2. **Reuse Render's** `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` and `CREDENTIALS_ENCRYPTION_KEY` in step 5, so signed-in sessions and stored Google tokens keep working.
+2. **Secrets:** reusing Render's `JWT_*` secrets would keep sessions alive, but the SHA-256 refresh-token switch ends them once anyway, so this deployment uses fresh ones — everyone signs in again. Reuse Render's `CREDENTIALS_ENCRYPTION_KEY` only if Render stored Google tokens you need; otherwise imported Google tokens become unreadable — harmless today, since nothing uses them yet, but a future Google feature will need those users to re-grant access.
 3. Switch the dashboard (step 8), repoint Telegram (step 9), then **suspend the Render service**.
 
 ⚠️ **Don't leave both running.** Each polls SCHEDULED triggers on its own, so

@@ -51,18 +51,18 @@ Redis also holds poll state (`poll:state:<triggerId>`, 24h TTL) rate limits (`ra
 | Dashboard | ✅ Redesigned: trigger set up on the canvas (side `Drawer`), per-workflow setup checklist, "What's new" panel, On/Off switches, plain-language statuses, every error a toast |
 | Admin / DLQ | ✅ API only — dashboard page removed in `8034c79` |
 | Telegram bot | ✅ Webhook mode (`POST /telegram/webhook`, secret header) on both runtimes; no Telegraf. Still no `User` link |
-| Cloudflare runtime (`worker/`) | ✅ Full API + engine on D1, Free plan; verified end to end on local workerd, SQL tested in CI. Deployed to `flowstate-api.akrishnasrikar.workers.dev` (Google secrets + data import pending) |
+| Cloudflare runtime (`worker/`) | ✅ **Production.** Full API + engine on D1, Free plan, live at `https://flowstate-api.akrishnasrikar.workers.dev` with Google sign-in configured. Verified end to end on local workerd; SQL tested in CI. Render data not imported (optional, `scripts/postgres-to-d1.mjs`) |
 | Conditions / branching | ❌ Schema only, never evaluated |
 | Tests | ⚠️ Unit only — `template.util`, `polling-config`, HMAC, `WorkflowProcessor` (stubbed Prisma). No integration/e2e |
 | CI | ✅ `.github/workflows/ci.yml` — lint, typecheck, test, build, migration-drift check |
-| Deployment | Backend on Render, dashboard on Vercel. Cloudflare: `worker/` (API) + `pnpm --filter web cf:deploy` (dashboard via OpenNext) — see `worker/README.md` |
+| Deployment | **API: Cloudflare Worker** `flowstate-api` + D1 `flowstate` (id pinned in `worker/wrangler.jsonc`). **Dashboard: Vercel** `https://flow-state-fe.vercel.app`, `NEXT_PUBLIC_API_URL` = the Worker. Google OAuth client in GCP project `flowstate-509818`. Old NestJS API on Render (`flow-state-i6u4.onrender.com`) — to be suspended. Deploy guide: `worker/README.md` |
 | Migrations | ✅ Squashed to one baseline (`20260926000000_baseline`); CI rebuilds a fresh DB and fails on drift |
 
 > Build history: `git log --oneline`. Commits are coarse — roughly one per subsystem, in the order listed in the status table above.
 
 ## Current priorities
 
-Phase 0 (reproducibility) is done, and the whole API + engine now also runs on **Cloudflare** (`worker/` — deployed, sign-in not yet configured; follow `worker/README.md`, then retire Render — never run both, see high-risk #14). New engine work should land in the shared `backend/src` modules so both runtimes get it.
+Phase 0 (reproducibility) is done, and **production now runs on Cloudflare** (`worker/`, Free plan) with the dashboard on Vercel. Remaining cut-over: optionally import Render's data, then suspend the Render service — never run both, see high-risk #14. Every API change must land on **both** runtimes (the NestJS backend is the reference and local-dev option); new engine logic goes in the shared `backend/src` modules.
 
 Next up is **Google as the identity + integration platform**: users sign in with Google, and the same OAuth grant powers Gmail / Sheets / Calendar actions and triggers. That needs, in order:
 
@@ -125,6 +125,12 @@ pnpm --filter worker dev                  # :8787, real workerd + D1 + Workflows
 pnpm --filter worker test                 # every worker SQL query against a D1 built from migrations/
 pnpm --filter worker build                # bundle exactly as deploy would
 DATABASE_URL=… node worker/scripts/postgres-to-d1.mjs > data.sql   # copy Postgres data into D1
+
+# Production (from worker/, needs `npx wrangler login`)
+pnpm run db:migrate:remote                # apply new D1 migrations — before deploying code that needs them
+pnpm run deploy                           # deploy the Worker
+npx wrangler tail                         # live production logs
+npx wrangler d1 execute flowstate --remote --command "SELECT …"
 ```
 
 Swagger: `http://localhost:3000/api/docs` · Dashboard: `http://localhost:5173`
@@ -148,7 +154,9 @@ Single `.env` at the repo root (backend reads `['.env', '../.env']`).
 | `CREDENTIALS_ENCRYPTION_KEY` | ✅ to sign in | 32 bytes base64. **Rotating it orphans every stored Google token** |
 | `GOOGLE_REDIRECT_URI` | Optional | Default `http://localhost:$PORT/auth/google/callback`; must match the Google client exactly |
 | `FRONTEND_URL` | Optional | Default `http://localhost:5173`; post-sign-in redirect target |
-| `NEXT_PUBLIC_API_URL` | Frontend | Defaults `http://localhost:3000` |
+| `NEXT_PUBLIC_API_URL` | Frontend | Defaults `http://localhost:3000`; baked in at build; trailing slashes stripped. Production: the Worker URL (set on Vercel) |
+
+**The Worker doesn't read `.env`.** Locally: `worker/.dev.vars` (template `.dev.vars.example`; it also overrides the production URLs in `wrangler.jsonc` `vars` with localhost ones). Production: public config in `worker/wrangler.jsonc` `vars` (`FRONTEND_URL`, `CORS_ORIGIN`, `GOOGLE_REDIRECT_URI`), secrets via `npx wrangler secret bulk .secrets.production.env` from `worker/` (gitignored file — delete after). It has no `DATABASE_URL`/`REDIS_*`/`PORT`/`WORKER_CONCURRENCY`. The production JWT secrets and `CREDENTIALS_ENCRYPTION_KEY` were freshly generated and differ from Render's.
 
 ## Database overview
 
@@ -192,7 +200,10 @@ Enums: `WorkflowStatus` (DRAFT/ACTIVE/PAUSED/ARCHIVED) · `ExecutionStatus` (PEN
 | An error toast never appears in a background tab | Expected: React Query pauses retries while the tab is hidden and resumes on focus |
 | 400 on a valid-looking body | `forbidNonWhitelisted` — the field isn't on the DTO |
 | App won't boot | Port 3000 taken (use `PORT=3001`) |
-| Sign-in button → Google says "OAuth client was not found" / `redirect_uri_mismatch` | `GOOGLE_CLIENT_ID` wrong, or `GOOGLE_REDIRECT_URI` isn't listed on the Google client |
+| Sign-in button → Google says "OAuth client was not found" / `redirect_uri_mismatch` | `GOOGLE_CLIENT_ID` wrong, or `GOOGLE_REDIRECT_URI` isn't listed on the Google client. Pasted IDs/secrets have lost their **first character** here twice — load them from the client's downloaded JSON instead. The live ID is visible in the `client_id=` of `/auth/google/start`'s redirect |
+| Dashboard sign-in goes to the wrong API (e.g. Render) | `NEXT_PUBLIC_API_URL` is baked in at build: change it on Vercel **and redeploy**, then hard-refresh (an open tab keeps the old bundle). `curl` the live `/_next/static` JS to see which URL a build contains |
+| Worker: `no such table` | D1 migrations not applied — `pnpm --filter worker db:migrate:remote` (`/health` says `db: up` without tables) |
+| Worker: logs / errors in production | `npx wrangler tail` in `worker/`, or the dashboard's Workers → flowstate-api → Logs (observability is on) |
 | Sign-in lands on `/login?error=state_expired` | Took >10 min on Google's screen, or the callback was replayed |
 | Callback page says the link expired | Handoff is 60 s and single-use; or the sign-in was started in another tab (nonce is per-tab) |
 
@@ -263,6 +274,9 @@ Change these only with care (full list in `AGENTS.md` §19):
 
 - The user commits their own checkpoints — **don't commit unless asked.** Git state can change mid-session.
 - Port 3000 is often taken on this machine; use `PORT=3001` to smoke-test.
+- **Secrets never go through chat, command arguments, or logs.** Generate them with `openssl rand` straight into the gitignored `worker/.secrets.production.env`, upload with `wrangler secret bulk`, delete the file. Check pasted values by shape (length, prefix) without printing them.
+- `python3` on this machine is blocked by an unaccepted Xcode license — script with `node` instead.
+- Wrangler is logged in (OAuth) as the account that owns `flowstate-api`; deploy with `pnpm run deploy` from `worker/` (`pnpm deploy` is a different built-in).
 - pnpm is strict: a direct import must be a declared dependency of that workspace.
 - `docs/` is gitignored (`.gitignore:64`) — never assume anything there is shared with collaborators or CI, and don't put decisions there that belong in these root docs.
 - **Don't build UI for backend features that haven't landed.** The dashboard is complete for what the engine actually does; conditions/branching and any Google/RSS/AI integrations have no backend, so no UI for them until they do.

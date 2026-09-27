@@ -25,8 +25,9 @@ Thank you for taking the time to contribute! This document explains how to get t
    pnpm install
    ```
 
-   This is a pnpm + Turborepo monorepo — the API lives in `backend/`, the web
-   dashboard in `frontend/`, shared types in `packages/api-types`.
+   This is a pnpm + Turborepo monorepo — the NestJS API lives in `backend/`,
+   the same API on Cloudflare in `worker/`, the web dashboard in `frontend/`,
+   shared types in `packages/api-types`.
 
 2. **Copy the environment file** and fill in the required values:
 
@@ -34,7 +35,7 @@ Thank you for taking the time to contribute! This document explains how to get t
    cp .env.example .env
    ```
 
-   At minimum you need `DATABASE_URL`, `REDIS_URL`, `JWT_ACCESS_SECRET`, and `JWT_REFRESH_SECRET`. Everything else is optional.
+   At minimum you need `DATABASE_URL`, `REDIS_URL`, `JWT_ACCESS_SECRET`, and `JWT_REFRESH_SECRET`. Signing in also needs `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `CREDENTIALS_ENCRYPTION_KEY` (see the README's Google setup). Everything else is optional.
 
 3. **Spin up the local infrastructure:**
 
@@ -51,13 +52,24 @@ Thank you for taking the time to contribute! This document explains how to get t
 
    The API will be at `http://localhost:3000` (Swagger UI at `/api/docs`) and the dashboard at `http://localhost:5173`.
 
+   **Or skip Docker and run the Cloudflare Worker** (no account needed):
+
+   ```bash
+   cp worker/.dev.vars.example worker/.dev.vars
+   pnpm --filter worker db:migrate:local
+   pnpm --filter worker dev                                  # :8787
+   NEXT_PUBLIC_API_URL=http://localhost:8787 pnpm dev:web
+   ```
+
 ---
 
 ## Development Workflow
 
 - Work on a feature branch: `git checkout -b feat/your-feature-name`
 - Commit messages should be descriptive and in the imperative mood: `Add HTTP timeout to polling worker`, not `added timeout`.
-- If your change is user-facing (new action type, new endpoint, new env var), update the relevant section in `README.md`.
+- If your change is user-facing (new action type, new endpoint, new env var), update the relevant section in `README.md`, and add a `frontend/src/lib/changelog.ts` entry once it works end to end.
+- **Keep both runtimes in step.** An API change lands in the NestJS backend, the Worker (`worker/src/routes`, `worker/src/repo`) and `packages/api-types`. Engine logic belongs in the shared framework-free modules in `backend/src` (listed in `AGENTS.md` §2).
+- **Schema changes** need a Prisma migration (`backend/prisma`) **and** a new D1 migration (`worker/migrations`).
 
 ### Adding a New Action Type
 
@@ -75,10 +87,11 @@ This project uses ESLint and Prettier. Before pushing, run:
 
 ```bash
 pnpm lint
+pnpm test
 pnpm --filter api format
 ```
 
-Both commands auto-fix most issues. The CI pipeline will reject code that fails linting.
+`pnpm lint` includes the Worker's type check, and `pnpm test` its D1 query tests. CI (`.github/workflows/ci.yml`) runs lint, type checks, tests, all builds and a Prisma migration-drift check, and rejects anything that fails.
 
 ---
 
