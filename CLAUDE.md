@@ -30,6 +30,8 @@ Webhook / Manual / Poll
 
 **Core rule: ingress never executes.** Controllers validate → persist → emit → return.
 
+**Two runtimes, one API.** The diagram is the NestJS backend (`backend/`, on Render). `worker/` is the same REST API and engine on **Cloudflare** — Hono + Workflows (one durable instance per run, one `step.do` per step) + Durable Objects (`Poller` per SCHEDULED trigger, `RateLimiter` per user, `OneTimeStore` for sign-in state) + **D1** (Cloudflare's SQLite; schema in `worker/migrations/`, a separate database from the backend's Postgres). All of it runs on the **Workers Free plan**, and `wrangler dev` runs it locally with no account. Same routes, JSON and errors (49/50 endpoints byte-identical in a side-by-side check), same JWT secrets and refresh-token hashing, so sessions work on either. Both import the engine's logic from framework-free files in `backend/src` (executors via `actions/run-action.ts`, `scheduler/poll-change.ts`, `webhooks/webhook-signature.ts`, `telegram/telegram-bot.ts`, `auth/refresh-token-hash.ts`, `auth/google/google-oauth.ts`, `common/crypto/token-cipher.ts`, `common/limits.ts`). Deploy guide: `worker/README.md`.
+
 Second queue: `polling` (repeatable jobs) → `PollingWorker` → detects change → emits the same event.
 
 Redis also holds poll state (`poll:state:<triggerId>`, 24h TTL) rate limits (`rate:exec:<userId>:<hour>`), and single-use Google sign-in state (`oauth:google:state:*`, 10 min; `oauth:google:handoff:*`, 60 s — read with `GETDEL`).
@@ -48,21 +50,24 @@ Redis also holds poll state (`poll:state:<triggerId>`, 24h TTL) rate limits (`ra
 | Execution engine (retry + DLQ, resume-from-failure, payload chaining) | ✅ Complete |
 | Dashboard | ✅ Redesigned: trigger set up on the canvas (side `Drawer`), per-workflow setup checklist, "What's new" panel, On/Off switches, plain-language statuses, every error a toast |
 | Admin / DLQ | ✅ API only — dashboard page removed in `8034c79` |
-| Telegram bot | ⚠️ Partial — no `User` link; boots without a token (dummy token, polling off) |
+| Telegram bot | ✅ Webhook mode (`POST /telegram/webhook`, secret header) on both runtimes; no Telegraf. Still no `User` link |
+| Cloudflare runtime (`worker/`) | ✅ Full API + engine on D1, Free plan; verified end to end on local workerd, SQL tested in CI. Deployed to `flowstate-api.akrishnasrikar.workers.dev` (Google secrets + data import pending) |
 | Conditions / branching | ❌ Schema only, never evaluated |
 | Tests | ⚠️ Unit only — `template.util`, `polling-config`, HMAC, `WorkflowProcessor` (stubbed Prisma). No integration/e2e |
 | CI | ✅ `.github/workflows/ci.yml` — lint, typecheck, test, build, migration-drift check |
-| Dockerfile / deployment | ❌ None exist |
+| Deployment | Backend on Render, dashboard on Vercel. Cloudflare: `worker/` (API) + `pnpm --filter web cf:deploy` (dashboard via OpenNext) — see `worker/README.md` |
 | Migrations | ✅ Squashed to one baseline (`20260926000000_baseline`); CI rebuilds a fresh DB and fails on drift |
 
 > Build history: `git log --oneline`. Commits are coarse — roughly one per subsystem, in the order listed in the status table above.
 
 ## Current priorities
 
-Phase 0 (reproducibility) is done. Next up is **Google as the identity + integration platform**: users sign in with Google, and the same OAuth grant powers Gmail / Sheets / Calendar actions and triggers. That needs, in order:
+Phase 0 (reproducibility) is done, and the whole API + engine now also runs on **Cloudflare** (`worker/` — deployed, sign-in not yet configured; follow `worker/README.md`, then retire Render — never run both, see high-risk #14). New engine work should land in the shared `backend/src` modules so both runtimes get it.
+
+Next up is **Google as the identity + integration platform**: users sign in with Google, and the same OAuth grant powers Gmail / Sheets / Calendar actions and triggers. That needs, in order:
 
 1. ✅ **Sign in with Google** — replaces email+password. The `connections` row *is* the identity (no `googleSub` on `User`).
-2. 🟠 **Access-token refresh** for `connections` (single-flight via Redis lock; `invalid_grant` → `NEEDS_REAUTH`).
+2. 🟠 **Access-token refresh** for `connections` (single-flight — a Durable Object on the worker, a Redis lock on NestJS; `invalid_grant` → `NEEDS_REAUTH`).
 3. 🟠 **Incremental scopes** — a "grant Gmail/Sheets access" flow reusing the same OAuth client, triggered when a user adds a Google action.
 4. 🟠 Google actions using the payload-chaining convention below (`gmail`, `sheets`, … keys).
 5. 🟠 Google triggers via the existing polling worker (Gmail `historyId` as poll state).
@@ -70,7 +75,7 @@ Phase 0 (reproducibility) is done. Next up is **Google as the identity + integra
 ## Known limitations
 
 - **At-least-once per step.** A retry (BullMQ or admin DLQ) resumes at the first action without a `SUCCEEDED` row, using the payload checkpointed in `workflow_executions.output`. The *failing* step itself can still repeat — if it had a side effect before erroring (e.g. a timeout after the remote accepted), that side effect repeats. The UI groups repeated steps into "attempts".
-- **`DELAY` blocks a worker slot** for its full duration (the processor sleeps inline).
+- **`DELAY` blocks a worker slot** on the NestJS engine (the processor sleeps inline). On the Cloudflare worker it's a durable `step.sleep` and holds nothing.
 - **Payload chaining is namespaced.** An executor publishes to later steps via `enrichedPayload` under its own key — `HTTP_REQUEST` → `{{payload.http.status}}` / `{{payload.http.body.*}}`. A later step of the same type overwrites it. Only `HTTP_REQUEST` publishes today.
 - **Refresh token in `localStorage`** (XSS-exposed); documented trade-off while API and frontend are on different origins.
 - **No per-endpoint rate limiting** — `/auth/google/start` is unthrottled (each call writes a 10-minute Redis key).
@@ -113,6 +118,13 @@ pnpm build | pnpm lint | pnpm test
 pnpm --filter api exec prisma migrate dev --name <name>
 pnpm --filter api prisma:studio
 pnpm --filter api exec prisma generate
+
+# Cloudflare worker — free, no account needed locally (see worker/README.md)
+pnpm --filter worker db:migrate:local     # create the local D1 tables (once)
+pnpm --filter worker dev                  # :8787, real workerd + D1 + Workflows + DOs
+pnpm --filter worker test                 # every worker SQL query against a D1 built from migrations/
+pnpm --filter worker build                # bundle exactly as deploy would
+DATABASE_URL=… node worker/scripts/postgres-to-d1.mjs > data.sql   # copy Postgres data into D1
 ```
 
 Swagger: `http://localhost:3000/api/docs` · Dashboard: `http://localhost:5173`
@@ -127,7 +139,8 @@ Single `.env` at the repo root (backend reads `['.env', '../.env']`).
 | `REDIS_URL` | ✅ | Or `REDIS_HOST`/`PORT`/`PASSWORD`/`DB` |
 | `JWT_ACCESS_SECRET` | ✅ | `getOrThrow` |
 | `JWT_REFRESH_SECRET` | ✅ | `getOrThrow` |
-| `TELEGRAM_BOT_TOKEN` | Optional | Unset → module registers with a dummy token and polling off; `TELEGRAM_NOTIFY` fails at run time |
+| `TELEGRAM_BOT_TOKEN` | Optional | Needed for `TELEGRAM_NOTIFY` and the bot's replies. Not needed to boot |
+| `TELEGRAM_WEBHOOK_SECRET` | With the bot | Must equal the `secret_token` given to `setWebhook`; unset → `/telegram/webhook` refuses everything |
 | `RESEND_API_KEY` / `RESEND_FROM_ADDRESS` | Optional | `SEND_EMAIL` fails gracefully without it |
 | `ADMIN_SECRET` | Optional | Unset → `/admin` returns 401 (never fails open) |
 | `PORT`, `CORS_ORIGIN`, `WORKER_CONCURRENCY` | Optional | Defaults 3000 / `http://localhost:5173` / 5 |
@@ -151,7 +164,7 @@ Enums: `WorkflowStatus` (DRAFT/ACTIVE/PAUSED/ARCHIVED) · `ExecutionStatus` (PEN
 
 | Service | Responsibility |
 |---|---|
-| `AuthService` | `startSession`, token pair issue, Argon2-hashed rotation chain |
+| `AuthService` | `startSession`, token pair issue, SHA-256-hashed rotation chain (`refresh-token-hash.ts`) |
 | `GoogleAuthService` | OAuth start/callback/exchange, user + `Connection` upsert, account linking |
 | `WorkflowsService` | CRUD, soft delete, clone (fresh secret, DRAFT), poller sync |
 | `ActionsService` | Chain CRUD, transactional reorder |
@@ -198,6 +211,9 @@ Change these only with care (full list in `AGENTS.md` §19):
 9. The `output` checkpoint in `WorkflowProcessor` — it must be written in the same transaction that marks a step `SUCCEEDED`, or a retry resumes with the wrong payload.
 10. Google sign-in's nonce check in `GoogleAuthService.exchangeHandoff` and `sanitizeReturnTo` — removing either reopens login CSRF / open redirect.
 11. `CREDENTIALS_ENCRYPTION_KEY` — rotating it without re-encrypting makes every stored Google token undecryptable.
+12. Worker (D1) conventions — timestamps are ISO-8601 UTC text from `now()` in `worker/src/db.ts`, never SQL `CURRENT_TIMESTAMP`; IDs come from `crypto.randomUUID()`; atomic writes go in one `db.batch()` (D1 has no interactive transactions). Schema changes are a new file in `worker/migrations/`, mirrored in `backend/prisma` while the NestJS backend still runs.
+13. Shared `backend/src` files the worker imports must stay free of NestJS/Prisma — a Nest import still bundles, then fails at runtime in workerd.
+14. Don't run the NestJS backend and the worker against one database at the same time in production — both poll SCHEDULED triggers, so every change would start two runs.
 
 ## Recent architectural decisions
 
@@ -217,11 +233,13 @@ Change these only with care (full list in `AGENTS.md` §19):
 | Google is the only identity provider | One OAuth grant for sign-in *and* app access, so users never connect Google twice. Sign-in requests identity scopes only; app scopes come incrementally |
 | Nonce-bound handoff code, not tokens in the redirect | API and dashboard are cross-origin, so no shared cookie; tokens in a URL leak to history. The `sessionStorage` nonce ties the flow to the initiating tab (login-CSRF defence) |
 | ID token claims read without signature check | It came straight from Google's token endpoint over TLS (OIDC Core §3.1.3.7) — avoids a JWKS dependency. **Never reuse that helper on a browser-supplied token** |
-| Telegram via long polling | Works locally without a public webhook URL |
+| Telegram in webhook mode, not long polling | No always-running process — required for Workers, and a sleeping Render instance just wakes on the request |
+| Refresh tokens hashed with SHA-256, not argon2 | They're random 122-bit JWT ids — nothing to brute-force, so a slow hash adds nothing, and argon2 is a native module Workers can't load. Pre-switch sessions end once |
+| Worker on D1, not Postgres + Hyperdrive | Keeps the whole backend on Cloudflare's Free plan and local dev account-free. Separate schema (`worker/migrations/`); `scripts/postgres-to-d1.mjs` moves existing data once |
+| Pollers on Durable Object alarms, not Cron | Cron's minimum is 1 minute; FlowState allows 30s polling |
 
 ## Open TODOs
 
-- 🟠 `TelegramModule` conditional registration (today it boots with a dummy token instead of not registering).
 - 🟠 Link `TelegramUser` → `User`.
 - 🟠 `enrichedPayload` for the remaining executors (`SEND_EMAIL` → message id, etc.).
 - 🟠 Validate action `type` against the executor registry at write time.

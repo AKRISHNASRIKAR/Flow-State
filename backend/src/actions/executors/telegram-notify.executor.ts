@@ -1,6 +1,6 @@
-import { ConfigService } from '@nestjs/config';
 import {
   ActionResult,
+  ConfigReader,
   IActionExecutor,
 } from '../interfaces/action-executor.interface';
 
@@ -19,7 +19,7 @@ interface TelegramApiResponse {
 }
 
 export class TelegramNotifyExecutor implements IActionExecutor {
-  constructor(private readonly configService: ConfigService) {}
+  constructor(private readonly configService: ConfigReader) {}
 
   async execute(config: Record<string, unknown>): Promise<ActionResult> {
     const { chatId, message, parseMode } =

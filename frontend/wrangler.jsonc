@@ -1,0 +1,12 @@
+// The dashboard on Cloudflare Workers via the OpenNext adapter. Optional —
+// `next build` (Vercel) is unaffected. NEXT_PUBLIC_API_URL is baked in at
+// build time, so set it in the shell (or CI) before `pnpm cf:build`.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "flowstate-web",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-09-20",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "observability": { "enabled": true }
+}

@@ -2,9 +2,9 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { AuditAction, User } from '@prisma/client';
-import * as argon2 from 'argon2';
 import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { hashRefreshToken, refreshTokenMatches } from './refresh-token-hash';
 import { AccessTokenPayload, RefreshTokenPayload } from './types/jwt-payload';
 
 const ACCESS_TOKEN_TTL = '15m';
@@ -45,7 +45,7 @@ export class AuthService {
       !storedToken ||
       storedToken.revokedAt ||
       storedToken.expiresAt <= new Date() ||
-      !(await argon2.verify(storedToken.tokenHash, refreshToken))
+      !refreshTokenMatches(refreshToken, storedToken.tokenHash)
     ) {
       throw new UnauthorizedException('Invalid refresh token');
     }
@@ -102,7 +102,7 @@ export class AuthService {
     await this.prisma.refreshToken.create({
       data: {
         id: refreshTokenId,
-        tokenHash: await argon2.hash(refreshToken),
+        tokenHash: hashRefreshToken(refreshToken),
         userId: user.id,
         expiresAt: new Date(Date.now() + REFRESH_TOKEN_TTL_MS),
       },

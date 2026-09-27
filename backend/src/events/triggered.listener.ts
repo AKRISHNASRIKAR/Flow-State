@@ -13,8 +13,10 @@ import {
 } from '../executions/execution-queue.module';
 import { WorkflowTriggeredEvent } from './workflow-triggered.event';
 
-const MAX_CONCURRENT_EXECUTIONS_PER_WORKFLOW = 3;
-const MAX_EXECUTIONS_PER_USER_PER_HOUR = 100;
+import {
+  MAX_CONCURRENT_EXECUTIONS_PER_WORKFLOW,
+  MAX_EXECUTIONS_PER_USER_PER_HOUR,
+} from '../common/limits';
 
 /**
  * Bridges the fire-and-forget event bus to the durable execution queue.

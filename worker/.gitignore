@@ -1,0 +1,7 @@
+node_modules
+.wrangler
+.dev.vars
+dist
+
+# Production secrets for `wrangler secret bulk` — never commit
+.secrets.production.env

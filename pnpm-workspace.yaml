@@ -1,13 +1,14 @@
 packages:
   - backend
   - frontend
+  - worker
   - packages/*
 
 onlyBuiltDependencies:
-  - argon2
   - prisma
   - '@prisma/client'
   - '@prisma/engines'
   - esbuild
+  - workerd
   - '@tailwindcss/oxide'
   - '@nestjs/core'

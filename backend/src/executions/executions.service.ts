@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { ExecutionStatus } from '@prisma/client';
 import { Queue } from 'bullmq';
 import Redis from 'ioredis';
+import { MAX_EXECUTIONS_PER_USER_PER_HOUR } from '../common/limits';
 import { PrismaService } from '../prisma/prisma.service';
 import { getRedisConnectionOptions } from '../scheduler/redis-options';
 import {
@@ -18,7 +19,6 @@ import {
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
-const MAX_EXECUTIONS_PER_USER_PER_HOUR = 100;
 const DURATION_SAMPLE_SIZE = 500;
 const RECENT_FAILED_JOB_SAMPLE = 1000;
 

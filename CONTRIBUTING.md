@@ -62,7 +62,7 @@ Thank you for taking the time to contribute! This document explains how to get t
 ### Adding a New Action Type
 
 1. Create a new executor in `backend/src/actions/executors/` implementing `IActionExecutor`.
-2. Register it in `ActionExecutorService`'s constructor map in `backend/src/actions/action-executor.service.ts`.
+2. Register it in `createExecutorRegistry` in `backend/src/actions/run-action.ts` — both the NestJS engine and the Cloudflare worker build their registry from it. Keep the executor free of NestJS/Prisma imports.
 3. Add the new type to the **Action Types** table in `README.md`.
 4. If the executor requires a new env var, add it to `.env.example` with a comment.
 5. Add its config type to `packages/api-types` and a form + metadata entry in `frontend/src/features/flow/action-meta.ts` so the dashboard can configure it.

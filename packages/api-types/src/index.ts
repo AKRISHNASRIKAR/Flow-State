@@ -299,7 +299,8 @@ export interface ExecutionStats {
   avgDurationMs: number | null;
   failedJobsInDLQ: number;
   rateLimitRemaining: number | null;
-  activeWorkers: { configuredConcurrency: number };
+  /** NestJS backend only — the Cloudflare worker has no fixed worker pool. */
+  activeWorkers?: { configuredConcurrency: number };
 }
 
 // ---------------------------------------------------------------------------

@@ -1,7 +1,7 @@
-import { Logger } from '@nestjs/common';
 import {
   ActionResult,
   IActionExecutor,
+  StepLogger,
 } from '../interfaces/action-executor.interface';
 
 interface LogMessageConfig {
@@ -10,7 +10,7 @@ interface LogMessageConfig {
 }
 
 export class LogMessageExecutor implements IActionExecutor {
-  private readonly logger = new Logger('WorkflowAction:LOG_MESSAGE');
+  constructor(private readonly logger: StepLogger) {}
 
   execute(config: Record<string, unknown>): Promise<ActionResult> {
     const { message, level = 'info' } = config as unknown as LogMessageConfig;

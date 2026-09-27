@@ -1,0 +1,29 @@
+{
+  "name": "worker",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FlowState API + execution engine on Cloudflare Workers (Hono, Workflows, Durable Objects, Hyperdrive)",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "lint": "tsc --noEmit",
+    "cf-typegen": "wrangler types",
+    "test": "vitest run",
+    "db:migrate:local": "wrangler d1 migrations apply flowstate --local",
+    "db:migrate:remote": "wrangler d1 migrations apply flowstate --remote"
+  },
+  "dependencies": {
+    "hono": "^4.13.9",
+    "jsonpath-plus": "^10.4.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260926.1",
+    "@types/node": "^24.13.3",
+    "miniflare": "4.20260730.0",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.2",
+    "wrangler": "^4.141.0"
+  }
+}

@@ -2,7 +2,9 @@ import type { ApiErrorResponse, RefreshResponse } from '@flowstate/api-types';
 import { getStoredRefreshToken, useAuthStore } from './auth-store';
 import { toast } from './toast';
 
-export const API_URL: string = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+// Trailing slashes stripped: every path is appended with a leading `/`, and
+// `//auth/…` 404s on the API — an easy mistake to make in a hosting dashboard.
+export const API_URL: string = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000').replace(/\/+$/, '');
 
 /** statusCode used when the request never got an HTTP response at all. */
 export const NETWORK_ERROR_STATUS = 0;

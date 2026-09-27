@@ -33,6 +33,15 @@ jobs:
         run: pnpm --filter api test
       - name: Typecheck (web)
         run: pnpm --filter web lint
+      - name: Typecheck (worker)
+        run: pnpm --filter worker lint
+      # Every worker SQL query against a local D1 built from worker/migrations
+      # (Miniflare) — no database server needed.
+      - name: Test (worker)
+        run: pnpm --filter worker test
+      # Includes the worker: `wrangler deploy --dry-run` bundles it exactly as
+      # a deploy would (no Cloudflare credentials needed), so an import the
+      # Workers runtime can't load fails here, not in production.
       - name: Build
         run: pnpm build
 

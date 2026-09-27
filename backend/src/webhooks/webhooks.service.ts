@@ -7,8 +7,11 @@ import {
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma, TriggerType, WorkflowStatus } from '@prisma/client';
-import { createHash, createHmac, timingSafeEqual } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  isValidWebhookSignature,
+  webhookFingerprint,
+} from './webhook-signature';
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
@@ -200,15 +203,7 @@ export class WebhooksService {
     };
   }
 
-  /**
-   * Verify HMAC-SHA256 signature.
-   *
-   * The sender computes: sha256=HMAC(rawBody, secret)
-   * We recompute the same and compare using timingSafeEqual
-   * to prevent timing attacks (never use === for secret comparison).
-   *
-   * Format of X-FlowForge-Signature header: "sha256=<hex>"
-   */
+  /** HMAC check — the comparison itself lives in webhook-signature.ts. */
   private verifyHmac(
     rawBody: Buffer,
     secret: string,
@@ -217,17 +212,7 @@ export class WebhooksService {
     if (!signature) {
       throw new UnauthorizedException({ error: 'Missing signature' });
     }
-
-    const expected =
-      'sha256=' + createHmac('sha256', secret).update(rawBody).digest('hex');
-
-    const expectedBuffer = Buffer.from(expected);
-    const receivedBuffer = Buffer.from(signature);
-
-    if (
-      expectedBuffer.length !== receivedBuffer.length ||
-      !timingSafeEqual(expectedBuffer, receivedBuffer)
-    ) {
+    if (!isValidWebhookSignature(rawBody, secret, signature)) {
       throw new UnauthorizedException({ error: 'Invalid signature' });
     }
   }
@@ -236,12 +221,6 @@ export class WebhooksService {
     workflowId: string,
     parsedBody: Record<string, unknown>,
   ) {
-    // Deterministic hash — no timestamp. Two identical payloads sent at any
-    // interval map to the same key, enabling dedup across real retry windows
-    // (GitHub retries at 60s, Stripe at 30-90s). Senders with legitimately
-    // identical payloads must supply an explicit X-Idempotency-Key header.
-    return createHash('sha256')
-      .update(workflowId + JSON.stringify(parsedBody))
-      .digest('hex');
+    return webhookFingerprint(workflowId, parsedBody);
   }
 }

@@ -226,7 +226,7 @@ On reload      → bootstrapSession() silently refreshes before rendering
 **Rules:**
 - The access token is **never** persisted. Only the refresh token goes to `localStorage`.
 - Refresh tokens are **one-time-use**. Anything that could fire concurrent refreshes must share the in-flight promise (`api-client.ts:35-58`). Breaking this logs users out at random.
-- There are no passwords. Refresh tokens are hashed with **Argon2** (`argon2.hash` / `argon2.verify`). Never bcrypt, never SHA.
+- There are no passwords. Refresh tokens are stored as a **SHA-256** digest (`auth/refresh-token-hash.ts`, compared with `timingSafeEqual`). Fine because they're high-entropy random JWT ids — never use a fast hash for anything a human chose.
 - Google OAuth tokens are **encrypted** (not hashed — they must be usable) with `TokenCipher` (AES-256-GCM) before touching the DB. Never store or log them raw.
 - The sign-in nonce (dashboard `sessionStorage` → `/auth/google/start` → handoff → `/auth/google/exchange`) is what stops login CSRF. Don't drop it or move it to `localStorage`.
 - Secret comparison uses `crypto.timingSafeEqual` with a length check first. **Never `===`.**
@@ -409,7 +409,7 @@ Inferred from consistent patterns across the codebase:
 
 ## 23. Security expectations
 
-- Argon2 for refresh-token hashing; `TokenCipher` for OAuth tokens that must be decrypted later.
+- SHA-256 for refresh tokens (high-entropy); `TokenCipher` for OAuth tokens that must be decrypted later.
 - `timingSafeEqual` for every secret comparison.
 - Secrets masked in **all** API responses; full values never returned, not even at creation.
 - Protected by default; `@Public()` requires justification.

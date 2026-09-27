@@ -70,7 +70,7 @@ Think of it as the engine behind something like Zapier or n8n, except it's open 
 | Framework | NestJS 11 |
 | Database | PostgreSQL 16 via Prisma 6 |
 | Queue / Cache | Redis 7 + BullMQ 5 |
-| Authentication | Google OAuth 2.0 / OIDC (PKCE), JWT access + refresh, Argon2id-hashed refresh tokens |
+| Authentication | Google OAuth 2.0 / OIDC (PKCE), JWT access + refresh, SHA-256-hashed refresh tokens |
 | Email | Resend API |
 | Notifications | Telegram Bot API |
 | API Docs | Swagger / OpenAPI 3 |
@@ -162,7 +162,8 @@ cp .env.example .env
 | `WORKER_CONCURRENCY` | ✅ | `5` | Parallel jobs per worker instance |
 | `RESEND_API_KEY` | Optional | — | Required to use the `SEND_EMAIL` action |
 | `RESEND_FROM_ADDRESS` | Optional | `noreply@example.com` | Verified sender address for outbound email |
-| `TELEGRAM_BOT_TOKEN` | Optional | — | Required to use the `TELEGRAM_NOTIFY` action |
+| `TELEGRAM_BOT_TOKEN` | Optional | — | Required to use the `TELEGRAM_NOTIFY` action and the bot |
+| `TELEGRAM_WEBHOOK_SECRET` | With the bot | — | `secret_token` for Telegram's `setWebhook`; the bot runs in webhook mode at `POST /telegram/webhook` |
 | `ADMIN_SECRET` | Optional | — | Enables admin/DLQ endpoints when set (sent as `X-Admin-Secret` header) |
 | `GOOGLE_CLIENT_ID` | ✅ to sign in | — | OAuth client ID (Google Cloud → APIs & Services → Credentials → *Web application*) |
 | `GOOGLE_CLIENT_SECRET` | ✅ to sign in | — | That client's secret |
@@ -415,7 +416,7 @@ Every string value in an action's `config` object supports `{{mustache}}`-style 
 |---|---|
 | Sign-in | Google only (authorization code + PKCE, server-side). A dashboard-generated nonce bound to the browser tab blocks login CSRF; `returnTo` is restricted to same-origin paths |
 | Google tokens | AES-256-GCM encrypted at rest (`CREDENTIALS_ENCRYPTION_KEY`); never sent to the browser |
-| Refresh token storage | Stored as Argon2id hashes; the raw token is never persisted |
+| Refresh token storage | Stored as SHA-256 digests (the tokens are high-entropy random ids); the raw token is never persisted |
 | Token rotation | Each refresh issues a new pair and revokes the old one; chain tracked via `replacedByTokenId` |
 | Webhook authenticity | HMAC-SHA256 with `timingSafeEqual` — prevents both forgery and timing attacks |
 | Resource ownership | `WorkflowOwnerGuard` on all per-workflow routes — cross-user access returns 403 |

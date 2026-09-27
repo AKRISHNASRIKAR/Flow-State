@@ -1,0 +1,27 @@
+# Copy to .dev.vars for `wrangler dev` (gitignored). In production set each of
+# these with `npx wrangler secret put NAME` instead.
+#
+# No database settings: `wrangler dev` uses a local D1 (SQLite) file under
+# .wrangler/. Create its tables once with `pnpm --filter worker db:migrate:local`.
+
+# Must match the NestJS backend's values while both run, so sessions work on either.
+JWT_ACCESS_SECRET=
+JWT_REFRESH_SECRET=
+
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+# 32 bytes base64 — must be the SAME key the backend used, or stored Google
+# tokens can't be decrypted.
+CREDENTIALS_ENCRYPTION_KEY=
+
+# Optional
+RESEND_API_KEY=
+RESEND_FROM_ADDRESS=
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_WEBHOOK_SECRET=
+ADMIN_SECRET=
+
+# wrangler.jsonc "vars" hold the production URLs; these keep `wrangler dev` local.
+FRONTEND_URL=http://localhost:5173
+CORS_ORIGIN=http://localhost:5173
+GOOGLE_REDIRECT_URI=http://localhost:8787/auth/google/callback

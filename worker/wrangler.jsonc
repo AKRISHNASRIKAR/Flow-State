@@ -1,0 +1,57 @@
+// FlowState on Cloudflare: API (Hono) + execution engine (Workflows) +
+// scheduling (Durable Object alarms) + database (D1) in one Worker. Every
+// piece is on the Workers Free plan, and `wrangler dev` runs all of it
+// locally with no account.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "flowstate-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-20",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+
+  // Created by the first deploy (automatic provisioning); the id pins every
+  // later deploy to that database. Locally, `wrangler dev` uses a SQLite file
+  // under .wrangler/. Schema: migrations/.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "flowstate",
+      "database_id": "e3a2cf6a-efe9-48a8-b89c-5f672a35eb83",
+      "migrations_dir": "migrations"
+    }
+  ],
+
+  // One durable instance per run. Each step is persisted, so a retry resumes
+  // after the steps that already succeeded — see src/engine/run-workflow.ts.
+  "workflows": [
+    { "name": "flowstate-run", "binding": "RUN_WORKFLOW", "class_name": "RunWorkflow" }
+  ],
+
+  "durable_objects": {
+    "bindings": [
+      // One per SCHEDULED trigger: its alarm is the polling timer, its storage
+      // the last-seen state. Keeps the 30s minimum (Cron can't go below 60s).
+      { "name": "POLLER", "class_name": "Poller" },
+      // One per user: the hourly run limit as an atomic counter.
+      { "name": "RATE_LIMITER", "class_name": "RateLimiter" },
+      // Single instance: single-use sign-in state and handoff codes.
+      { "name": "ONE_TIME_STORE", "class_name": "OneTimeStore" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["Poller", "RateLimiter", "OneTimeStore"] }
+  ],
+
+  // Safety net: re-arms every active poller in case an alarm was ever lost.
+  "triggers": { "crons": ["*/15 * * * *"] },
+
+  // Non-secret config. Secrets (JWT_*, GOOGLE_CLIENT_*, CREDENTIALS_ENCRYPTION_KEY,
+  // RESEND_*, TELEGRAM_*, ADMIN_SECRET) go in via `wrangler secret put` —
+  // see .dev.vars.example for the full list.
+  "vars": {
+    "FRONTEND_URL": "https://flow-state-fe.vercel.app",
+    "CORS_ORIGIN": "https://flow-state-fe.vercel.app",
+    "GOOGLE_REDIRECT_URI": "https://flowstate-api.akrishnasrikar.workers.dev/auth/google/callback"
+  }
+}
