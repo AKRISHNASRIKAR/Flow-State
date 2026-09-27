@@ -328,9 +328,15 @@ Validation lives in **three** places and they must agree:
 
 ## 13. Styling rules
 
-- **Tailwind utility classes inline.** No CSS modules, no styled-components, no `@apply`. `globals.css` is 5 lines.
-- Palette: `slate` for neutrals, `indigo` for primary/interactive, `emerald` success, `red` danger, `amber` warning.
-- Cards: `rounded-xl bg-white p-5 shadow-sm ring-1 ring-slate-200`. Use `ring-*`, not `border-*`, for card outlines.
+- **Tailwind utility classes inline.** No CSS modules, no styled-components. Design tokens and the few shared utilities live in `app/globals.css`.
+- **Colours come only from the semantic tokens** in `globals.css` — never a raw palette class (`neutral-*`, `indigo-*`…):
+  - surfaces `paper` / `card` / `paper-2`; text `ink` / `graphite` / `muted` / `faint`; borders `rule` / `rule-soft`;
+  - `signal` (blue) is the **one accent and means "moving or live right now"**: the running step, a packet on a connection, focus, template tokens. Primary buttons are `ink`, not blue;
+  - `ok` / `wait` / `fail` (+ `-soft`) are for **execution state only**.
+- **Type has three voices:** `font-serif` (Newsreader) for headlines and workflow names; `font-sans` (IBM Plex Sans) for the UI; `font-mono` (Plex Mono) for data, logs, templates and the `label-caps` utility.
+- **Small radii** (`rounded-[3px]`–`rounded-md`) and 1px `border-rule`; a border or shadow only where something is a real object. No pill buttons, glass, or gradients.
+- **Nodes** come from `components/flow-visuals.tsx` (`FlowNodeCard`, `StateChip`, `Connector`) and glyphs from `lib/glyphs.ts` — the landing page and the builder must stay the same system.
+- **Motion must explain something** (state, causality, hierarchy, interaction). Landing-page scroll motion goes through `useScrollProgress` (writes an eased `--p`; no React re-render) and the `.sp*` utilities. Respect `prefers-reduced-motion`.
 - Numeric columns get `tabular-nums`.
 - **Colour must never be the sole carrier of meaning.** `StatusBadge` pairs every colour with text; `StatsWidget` pairs every bar segment with a label and count (there is a comment documenting CVD validation).
 - Responsive prefixes `sm:` / `lg:` on grids and tables.

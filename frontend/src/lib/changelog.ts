@@ -16,6 +16,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-28-watch-it-run',
+    date: '2026-09-28',
+    title: 'A new look — and runs you can watch',
+    body:
+      'FlowState has a new, lighter design. In the builder, the step you click opens beside the canvas instead of over it, and a Test run now plays out on the canvas itself: each step lights up as it runs, shows how long it took, and turns amber while it retries. The top of each workflow tells you whether it’s ready to run, and flags any step that still needs setting up.',
+    href: '/workflows',
+  },
+  {
     id: '2026-09-26-simpler-dashboard',
     date: '2026-09-26',
     title: 'A simpler dashboard',

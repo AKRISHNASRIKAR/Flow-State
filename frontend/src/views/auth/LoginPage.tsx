@@ -7,7 +7,10 @@ import { authApi } from '../../lib/api';
 import { useAuthStore } from '../../lib/auth-store';
 import { Button } from '../../components/ui';
 import { toast } from '../../lib/toast';
-import { LogoMark } from '../../components/Logo';
+import Link from 'next/link';
+import { BrandLockup } from '../../components/Logo';
+import { Connector, FlowNodeCard, type RunTone } from '../../components/flow-visuals';
+import { GLYPHS } from '../../lib/glyphs';
 
 const SIGN_IN_ERRORS: Record<GoogleSignInError, string> = {
   access_denied: 'Google sign-in was cancelled.',
@@ -53,20 +56,20 @@ export function LoginPage() {
   };
 
   return (
-    <AuthLayout title="Sign in to FlowState">
-      <div className="space-y-4">
+    <AuthLayout title="Sign in to FlowState" step={redirecting ? 1 : 0}>
+      <div className="space-y-5">
         <Button
           variant="secondary"
           size="lg"
-          className="w-full justify-center gap-3"
+          className="w-full gap-3 py-3 text-[15px]"
           onClick={signIn}
           disabled={redirecting}
         >
           <GoogleMark />
           {redirecting ? 'Redirecting to Google…' : 'Continue with Google'}
         </Button>
-        <p className="text-center text-xs text-neutral-500">
-          New here? Signing in creates your account. FlowState only asks Google for your name and email.
+        <p className="text-[13px] leading-relaxed text-muted">
+          New here? Signing in creates your account — there’s no separate sign-up.
         </p>
       </div>
     </AuthLayout>
@@ -97,73 +100,72 @@ function GoogleMark() {
   );
 }
 
-// Claims kept to what the engine actually does — no branching, no integration
-// catalogue. See the "constrain the UI to the engine" rule in CLAUDE.md.
-const BRAND_POINTS = [
-  'Webhook, schedule, and manual triggers',
-  'HMAC verification, idempotency, and retries',
-  'Every run recorded step by step',
+export type SignInStep = 0 | 1 | 2 | 3;
+
+// Signing in is itself a small flow; the left panel shows where you are in it.
+// The login page sits at step 0; the callback page advances it as the
+// handoff completes, and marks the step that failed if it doesn't.
+const SIGN_IN_FLOW = [
+  { kind: 'trigger' as const, label: 'Trigger', title: 'You choose Continue with Google', glyph: GLYPHS.manual },
+  { kind: 'step' as const, label: 'Step 1 · Google', title: 'Google confirms it’s you', glyph: GLYPHS.person },
+  { kind: 'step' as const, label: 'Step 2 · FlowState', title: 'Your session starts', glyph: GLYPHS.bolt },
+  { kind: 'result' as const, label: 'Result', title: 'Your workflows', glyph: GLYPHS.check },
 ];
 
-const CHECK_PATH = 'M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z';
+function stepState(i: number, step: SignInStep, failed: boolean): { tone: RunTone; text: string } {
+  if (failed && i === step) return { tone: 'fail', text: 'didn’t finish' };
+  if (i < step) return { tone: 'ok', text: 'done' };
+  if (i === step) return { tone: 'running', text: i === 0 ? 'ready' : 'in progress' };
+  return { tone: 'idle', text: 'next' };
+}
 
-export function AuthLayout({ title, children }: { title: string; children: React.ReactNode }) {
+export function AuthLayout({
+  title,
+  step = 0,
+  failed = false,
+  children,
+}: {
+  title: string;
+  step?: SignInStep;
+  failed?: boolean;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex min-h-screen">
-      <div className="relative hidden flex-1 flex-col justify-center overflow-hidden bg-black p-12 md:flex">
-        {/* Depth stack, back to front: panning grid, glow orb, vignette. All
-            decorative — the panel reads fine if any of them fail to paint. */}
-        <div
-          aria-hidden
-          className="animate-grid-pan absolute inset-0 bg-[linear-gradient(to_right,#262626_1px,transparent_1px),linear-gradient(to_bottom,#262626_1px,transparent_1px)] bg-[size:24px_24px]"
-        />
-        <div
-          aria-hidden
-          className="absolute -left-24 top-1/4 size-[32rem] rounded-full bg-indigo-500/30 blur-[110px]"
-        />
-        <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/50" />
-        <div className="relative max-w-md">
-          <div className="flex items-center gap-3 text-white">
-            <span className="flex size-11 items-center justify-center rounded-2xl bg-indigo-500 shadow-lg shadow-indigo-500/30">
-              <LogoMark className="size-6" />
-            </span>
-            <span className="text-2xl font-semibold tracking-tight">FlowState</span>
-          </div>
-          <h2 className="mt-10 text-3xl font-semibold leading-tight text-white">
-            Automate your workflows, on your own infrastructure.
-          </h2>
-          <ul className="mt-8 space-y-4">
-            {BRAND_POINTS.map((point) => (
-              <li key={point} className="flex items-start gap-3 text-sm text-neutral-300">
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={1.5}
-                  aria-hidden
-                  className="mt-px size-5 shrink-0 text-indigo-400"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d={CHECK_PATH} />
-                </svg>
-                {point}
-              </li>
-            ))}
-          </ul>
+    <div className="flex min-h-screen bg-paper">
+      <div className="grid-paper relative hidden flex-1 flex-col justify-between border-r border-rule p-12 md:flex">
+        <Link href="/" aria-label="FlowState home">
+          <BrandLockup />
+        </Link>
+        <div className="mx-auto w-full max-w-[360px]">
+          {SIGN_IN_FLOW.map((n, i) => (
+            <div key={n.label}>
+              {i > 0 && <Connector height={24} flowing={!failed && i === step} drawn={i <= step ? 1 : 0.35} />}
+              <FlowNodeCard
+                kind={n.kind}
+                label={n.label}
+                title={n.title}
+                glyph={n.glyph}
+                state={stepState(i, step, failed)}
+                active={!failed && i === step}
+                alert={failed && i === step}
+                className={i > step ? 'opacity-60' : ''}
+              />
+            </div>
+          ))}
         </div>
+        <p className="max-w-[40ch] text-[13px] leading-relaxed text-muted">
+          FlowState only asks Google for your name and email. Access to Gmail, Sheets or Calendar will always be a separate,
+          explicit choice.
+        </p>
       </div>
 
-      <div className="flex flex-1 items-center justify-center bg-black p-6 sm:p-8">
-        <div className="w-full max-w-sm">
-          <div className="mb-8 flex items-center justify-center gap-2.5 text-lg font-semibold text-white md:hidden">
-            <span className="flex size-9 items-center justify-center rounded-xl bg-indigo-500 text-white shadow-lg shadow-indigo-500/20">
-              <LogoMark className="size-5" />
-            </span>
-            FlowState
-          </div>
-          <div className="rounded-2xl bg-neutral-900 p-8 shadow-2xl ring-1 ring-neutral-800 sm:p-10">
-            <h1 className="mb-6 text-lg font-semibold text-white">{title}</h1>
-            {children}
-          </div>
+      <div className="flex flex-1 items-center justify-center p-6 sm:p-10">
+        <div className="w-full max-w-[380px]">
+          <Link href="/" className="mb-10 inline-flex md:hidden" aria-label="FlowState home">
+            <BrandLockup />
+          </Link>
+          <h1 className="font-serif text-[40px] leading-[1.05] tracking-[-0.015em] text-ink">{title}</h1>
+          <div className="mt-8">{children}</div>
         </div>
       </div>
     </div>

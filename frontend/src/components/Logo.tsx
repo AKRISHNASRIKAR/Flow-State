@@ -28,3 +28,18 @@ export function LogoMark({ className = 'size-5', strokeWidth = 2 }: { className?
     </svg>
   );
 }
+
+/** The mark on an ink tile, beside the serif wordmark — the one brand lockup. */
+export function BrandLockup({ size = 'md', wordmark = true }: { size?: 'sm' | 'md'; wordmark?: boolean }) {
+  const tile = size === 'sm' ? 'size-7 rounded-[5px]' : 'size-8 rounded-[6px]';
+  return (
+    <span className="inline-flex items-center gap-2.5">
+      <span className={`flex shrink-0 items-center justify-center bg-ink text-paper ${tile}`}>
+        <LogoMark className={size === 'sm' ? 'size-4' : 'size-[18px]'} />
+      </span>
+      {wordmark && (
+        <span className={`font-serif leading-none text-ink ${size === 'sm' ? 'text-[20px]' : 'text-[22px]'}`}>FlowState</span>
+      )}
+    </span>
+  );
+}

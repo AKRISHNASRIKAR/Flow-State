@@ -9,7 +9,7 @@ import { formatMs } from '../../lib/format';
 // is paired with a visible label + count so color never carries meaning alone).
 const STATUS_ORDER: ExecutionStatus[] = ['PENDING', 'RUNNING', 'SUCCEEDED', 'FAILED', 'CANCELLED'];
 // Lifted a step from the light-mode values so each segment stays vivid on the
-// neutral-900 card; the gray steps remain the desaturated pair.
+// card surface; the gray steps remain the desaturated pair.
 const STATUS_COLOR: Record<ExecutionStatus, string> = {
   PENDING: '#94a3b8',
   RUNNING: '#3b82f6',
@@ -59,7 +59,7 @@ export function StatsWidget() {
       </div>
 
       {barTotal > 0 && (
-        <div className="rounded-xl bg-neutral-900 p-5 shadow-lg ring-1 ring-neutral-800">
+        <div className="rounded-md bg-card p-5 shadow-[0_10px_24px_-20px_rgba(15,27,45,0.5)] ring-1 ring-rule">
           <div className="flex h-5 w-full gap-0.5 overflow-hidden rounded-lg" role="img" aria-label="Runs by status">
             {byStatus
               .filter((s) => s.count > 0)
@@ -74,14 +74,14 @@ export function StatsWidget() {
                 />
               ))}
           </div>
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-neutral-300">
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-graphite">
             {byStatus.map((s) => (
               <span key={s.status} className="inline-flex items-center gap-1.5">
                 <span className="size-2 rounded-full" style={{ backgroundColor: STATUS_COLOR[s.status] }} />
                 {EXECUTION_STATUS_LABEL[s.status]}{' '}
                 <span
                   className={`font-medium tabular-nums ${
-                    s.status === 'RUNNING' && running > 0 ? 'animate-pulse text-blue-400' : 'text-neutral-100'
+                    s.status === 'RUNNING' && running > 0 ? 'animate-pulse text-signal' : 'text-ink'
                   }`}
                 >
                   {s.count}
@@ -97,12 +97,12 @@ export function StatsWidget() {
 
 function StatTile({ label, value, alert }: { label: string; value: string; alert?: string }) {
   return (
-    <div className="rounded-xl bg-neutral-900 p-5 shadow-lg ring-1 ring-neutral-800">
-      <p className="text-xs font-medium uppercase tracking-wide text-neutral-400">{label}</p>
-      <p className={`mt-1 text-2xl font-semibold tabular-nums ${alert ? 'text-red-400' : 'text-white'}`}>
+    <div className="rounded-md bg-card p-5 shadow-[0_10px_24px_-20px_rgba(15,27,45,0.5)] ring-1 ring-rule">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted">{label}</p>
+      <p className={`mt-1 text-2xl font-semibold tabular-nums ${alert ? 'text-fail' : 'text-ink'}`}>
         {value}
       </p>
-      {alert && <p className="mt-1 text-xs text-red-400">⚠ {alert}</p>}
+      {alert && <p className="mt-1 text-xs text-fail">⚠ {alert}</p>}
     </div>
   );
 }

@@ -18,18 +18,18 @@ export function CrashScreen({ error, reset }: { error: Error & { digest?: string
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center px-6 text-center">
-      <span className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-red-500/10 text-red-400 ring-1 ring-red-500/30">
+      <span className="mb-4 flex size-12 items-center justify-center rounded-md bg-fail-soft text-fail ring-1 ring-fail/30">
         <Icon path={ICON_PATHS.warning} className="size-6" />
       </span>
-      <h1 className="text-lg font-semibold text-white">Something broke on this page</h1>
-      <p className="mt-1.5 max-w-md text-sm text-neutral-300">
+      <h1 className="text-lg font-semibold text-ink">Something broke on this page</h1>
+      <p className="mt-1.5 max-w-md text-sm text-graphite">
         Your workflows are safe — this is a display problem. Try again, or head back to your workflows.
       </p>
       <div className="mt-6 flex gap-3">
         <Button variant="primary" onClick={reset}>
           Try again
         </Button>
-        <Link href="/workflows" className="rounded-lg px-3.5 py-2 text-sm font-medium text-neutral-300 hover:bg-neutral-800 hover:text-white">
+        <Link href="/workflows" className="rounded-lg px-3.5 py-2 text-sm font-medium text-graphite hover:bg-paper-2 hover:text-ink">
           Go to workflows
         </Link>
       </div>

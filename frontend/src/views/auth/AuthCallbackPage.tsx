@@ -53,13 +53,16 @@ export function AuthCallbackPage() {
   }, [router, searchParams]);
 
   return (
-    <AuthLayout title={error === null ? 'Signing you in…' : 'Sign-in didn’t complete'}>
+    <AuthLayout title={error === null ? 'Signing you in…' : 'Sign-in didn’t finish'} step={2} failed={error !== null}>
       {error === null ? (
         <Spinner label="Finishing Google sign-in…" />
       ) : (
         <div className="space-y-4">
-          <p className="text-sm text-neutral-300">{error}</p>
-          <Link href="/login" className="block text-center text-sm font-medium text-indigo-400 hover:text-indigo-300">
+          <p className="text-[15px] leading-relaxed text-graphite">{error}</p>
+          <Link
+            href="/login"
+            className="inline-flex items-center justify-center rounded-[5px] bg-ink px-4 py-2.5 text-sm font-medium text-paper hover:bg-graphite"
+          >
             Back to sign in
           </Link>
         </div>

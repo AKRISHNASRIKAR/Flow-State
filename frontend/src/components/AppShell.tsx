@@ -7,10 +7,10 @@ import { useEffect, useState } from 'react';
 import { WhatsNewDrawer, useWhatsNewUnread } from '../features/help/WhatsNew';
 import { authApi, workflowsApi } from '../lib/api';
 import { useAuthStore } from '../lib/auth-store';
-import { LogoMark } from './Logo';
+import { BrandLockup } from './Logo';
 import { ICON_PATHS } from './ui';
 
-const SIDEBAR_WIDTH = 'w-64'; // 256px — paired with md:pl-64 on the content column.
+const SIDEBAR_WIDTH = 'w-60'; // 240px — paired with md:pl-60 on the content column.
 
 // 24x24 Heroicons outline path data, inlined: there is no icon package in this
 // workspace and adding one for five glyphs isn't worth the dependency. The
@@ -59,13 +59,13 @@ function NavItem({
       href={href}
       onClick={onNavigate}
       aria-current={isActive ? 'page' : undefined}
-      className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium ring-1 transition-colors ${
-        isActive
-          ? 'bg-indigo-500/10 text-indigo-400 ring-indigo-500/20'
-          : 'text-neutral-300 ring-transparent hover:bg-neutral-800 hover:text-white'
+      // Active is ink with a marker, not blue: signal blue means "running now".
+      className={`relative flex items-center gap-3 rounded-[5px] px-3 py-2 text-sm font-medium transition-colors ${
+        isActive ? 'bg-card text-ink ring-1 ring-rule' : 'text-graphite hover:bg-paper-2 hover:text-ink'
       }`}
     >
-      <Icon path={icon} />
+      {isActive && <span aria-hidden className="absolute -left-3 top-2 bottom-2 w-[3px] rounded-r bg-ink" />}
+      <Icon path={icon} className={`size-[18px] ${isActive ? 'text-ink' : 'text-muted'}`} />
       {label}
     </Link>
   );
@@ -126,6 +126,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   });
 
   const crumbs = useCrumbs(pathname);
+  // The builder is a full-bleed working surface; list pages keep a reading width.
+  const wide = /^\/workflows\/[^/]+/.test(pathname);
 
   const openWhatsNew = () => {
     setMenuOpen(false);
@@ -137,37 +139,33 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen">
       {menuOpen && (
         <div
-          className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-30 bg-ink/20 md:hidden"
           onClick={() => setMenuOpen(false)}
           aria-hidden
         />
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex ${SIDEBAR_WIDTH} flex-col border-r border-neutral-800 bg-neutral-950 transition-transform duration-200 md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex ${SIDEBAR_WIDTH} flex-col border-r border-rule bg-paper transition-transform duration-200 md:translate-x-0 ${
           menuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="flex h-14 items-center gap-2.5 px-4">
-          <Link href="/workflows" className="flex items-center gap-2.5 text-white">
-            <span className="flex size-8 items-center justify-center rounded-xl bg-indigo-500 shadow-lg shadow-indigo-500/20">
-              {/* Heavier stroke than the default: at 18px the hairline reads
-                  too light next to the semibold wordmark. */}
-              <LogoMark className="size-[18px]" strokeWidth={2.4} />
-            </span>
-            <span className="text-base font-semibold tracking-tight">FlowState</span>
+          <Link href="/workflows" aria-label="FlowState — your workflows">
+            <BrandLockup size="sm" />
           </Link>
           <button
             type="button"
             onClick={() => setMenuOpen(false)}
             aria-label="Close navigation"
-            className="ml-auto rounded-lg p-1 text-neutral-300 hover:bg-neutral-800 hover:text-white md:hidden"
+            className="ml-auto rounded-[5px] p-1 text-graphite hover:bg-paper-2 hover:text-ink md:hidden"
           >
             <Icon path={ICONS.close} />
           </button>
         </div>
 
-        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-3">
+        <p className="label-caps px-6 pt-5 text-faint">Build</p>
+        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-2">
           {NAV_ITEMS.map((item) => (
             <NavItem key={item.href} {...item} onNavigate={() => setMenuOpen(false)} />
           ))}
@@ -177,24 +175,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <button
             type="button"
             onClick={openWhatsNew}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-neutral-300 transition-colors hover:bg-neutral-800 hover:text-white"
+            className="flex w-full items-center gap-3 rounded-[5px] px-3 py-2 text-sm font-medium text-graphite transition-colors hover:bg-paper-2 hover:text-ink"
           >
-            <Icon path={ICON_PATHS.sparkles} />
+            <Icon path={ICON_PATHS.sparkles} className="size-[18px] text-muted" />
             What’s new
             {unread && (
-              <span className="ml-auto flex items-center gap-1.5 rounded-full bg-indigo-500/15 px-2 py-0.5 text-[11px] font-semibold text-indigo-300 ring-1 ring-indigo-500/30">
-                <span aria-hidden className="size-1.5 rounded-full bg-indigo-400" />
-                New
+              <span className="ml-auto flex items-center gap-1.5 font-mono text-[11px] font-medium text-signal">
+                <span aria-hidden className="size-1.5 rounded-full bg-signal" />
+                new
               </span>
             )}
           </button>
         </div>
 
-        <div className="flex items-center gap-2.5 border-t border-neutral-800 px-3 py-3">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-neutral-800 text-sm font-semibold uppercase text-white ring-1 ring-neutral-700">
+        <div className="flex items-center gap-2.5 border-t border-rule px-3 py-3">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-card font-serif text-[15px] uppercase text-ink ring-1 ring-rule">
             {user?.email?.charAt(0) ?? '?'}
           </span>
-          <span className="min-w-0 flex-1 truncate text-xs text-neutral-400" title={user?.email}>
+          <span className="min-w-0 flex-1 truncate text-xs text-muted" title={user?.email}>
             {user?.email ?? 'Signed in'}
           </span>
           <button
@@ -203,35 +201,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             disabled={logout.isPending}
             aria-label="Log out"
             title="Log out"
-            className="rounded-lg p-1.5 text-neutral-300 transition-colors hover:bg-neutral-800 hover:text-white disabled:opacity-50"
+            className="rounded-[5px] p-1.5 text-muted transition-colors hover:bg-paper-2 hover:text-ink disabled:opacity-50"
           >
             <Icon path={ICONS.logout} />
           </button>
         </div>
       </aside>
 
-      <div className="flex min-h-screen flex-col bg-black md:pl-64">
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-neutral-800 bg-black/80 px-4 backdrop-blur-md sm:px-8">
+      <div className="flex min-h-screen flex-col bg-paper md:pl-60">
+        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-rule bg-paper/95 px-4 sm:px-8">
           <button
             type="button"
             onClick={() => setMenuOpen(true)}
             aria-label="Open navigation"
-            className="-ml-1 rounded-lg p-1.5 text-neutral-300 hover:bg-neutral-800 hover:text-white md:hidden"
+            className="-ml-1 rounded-[5px] p-1.5 text-graphite hover:bg-paper-2 hover:text-ink md:hidden"
           >
             <Icon path={ICONS.menu} />
           </button>
           <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-sm">
             {crumbs.map((crumb, i) => (
               <span key={i} className="flex min-w-0 items-center gap-1.5">
-                {i > 0 && <span className="text-neutral-600">/</span>}
+                {i > 0 && <span className="text-faint">/</span>}
                 {crumb.href ? (
-                  <Link href={crumb.href} className="truncate text-neutral-400 hover:text-white">
+                  <Link href={crumb.href} className="truncate text-muted hover:text-ink">
                     {crumb.label}
                   </Link>
                 ) : (
                   <span
                     aria-current={i === crumbs.length - 1 ? 'page' : undefined}
-                    className={`truncate ${i === crumbs.length - 1 ? 'font-medium text-neutral-100' : 'text-neutral-400'}`}
+                    className={`truncate ${i === crumbs.length - 1 ? 'font-medium text-ink' : 'text-muted'}`}
                   >
                     {crumb.label}
                   </span>
@@ -240,8 +238,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             ))}
           </nav>
         </header>
-        <main className="flex-1 px-4 py-8 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-6xl">{children}</div>
+        <main className={`flex-1 ${wide ? 'px-4 py-6 sm:px-6' : 'px-4 py-10 sm:px-6 lg:px-10'}`}>
+          <div className={wide ? '' : 'mx-auto max-w-6xl'}>{children}</div>
         </main>
       </div>
 

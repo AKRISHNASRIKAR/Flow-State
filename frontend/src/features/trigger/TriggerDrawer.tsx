@@ -53,7 +53,7 @@ export function TriggerDrawer({ workflowId, onClose }: { workflowId: string; onC
         <Spinner label="Loading…" />
       ) : triggerQuery.isError ? (
         <div className="py-8 text-center">
-          <p className="text-sm text-neutral-300">Couldn’t load the current trigger.</p>
+          <p className="text-sm text-graphite">Couldn’t load the current trigger.</p>
           <Button className="mt-3" onClick={() => void triggerQuery.refetch()}>
             Try again
           </Button>
@@ -103,7 +103,7 @@ function TriggerEditor({
   return (
     <div className="space-y-6">
       <fieldset>
-        <legend className="mb-3 text-sm font-medium text-neutral-200">Run this workflow…</legend>
+        <legend className="mb-3 text-sm font-medium text-ink">Run this workflow…</legend>
         <div className="space-y-2">
           {TRIGGER_OPTIONS.map((option) => {
             const selected = selectedType === option.type;
@@ -113,29 +113,29 @@ function TriggerEditor({
                 type="button"
                 onClick={() => setSelectedType(option.type)}
                 aria-pressed={selected}
-                className={`flex w-full items-start gap-3 rounded-xl p-4 text-left ring-1 transition ${
+                className={`flex w-full items-start gap-3 rounded-md p-4 text-left ring-1 transition ${
                   selected
-                    ? 'bg-indigo-500/10 ring-2 ring-indigo-500'
-                    : 'bg-neutral-900 ring-neutral-800 hover:bg-neutral-800 hover:ring-neutral-700'
+                    ? 'bg-signal-soft ring-2 ring-signal'
+                    : 'bg-card ring-rule hover:bg-paper-2 hover:ring-rule'
                 }`}
               >
                 <span
                   className={`flex size-9 shrink-0 items-center justify-center rounded-lg ${
-                    selected ? 'bg-indigo-500 text-white' : 'bg-neutral-800 text-neutral-300'
+                    selected ? 'bg-signal text-paper' : 'bg-paper-2 text-graphite'
                   }`}
                 >
                   <Icon path={TRIGGER_ICONS[option.type]} />
                 </span>
                 <span className="min-w-0">
-                  <span className="flex items-center gap-2 text-sm font-medium text-white">
+                  <span className="flex items-center gap-2 text-sm font-medium text-ink">
                     {option.label}
                     {trigger?.type === option.type && (
-                      <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-300 ring-1 ring-emerald-500/30">
+                      <span className="rounded-full bg-ok-soft px-2 py-0.5 text-[11px] font-semibold text-ok ring-1 ring-ok/30">
                         Current
                       </span>
                     )}
                   </span>
-                  <span className="mt-0.5 block text-xs text-neutral-400">{option.description}</span>
+                  <span className="mt-0.5 block text-xs text-muted">{option.description}</span>
                 </span>
               </button>
             );
@@ -153,7 +153,7 @@ function TriggerEditor({
       )}
 
       {selectedType === 'SCHEDULED' && (
-        <div className="border-t border-neutral-800 pt-6">
+        <div className="border-t border-rule pt-6">
           <ScheduledConfigForm
             trigger={trigger?.type === 'SCHEDULED' ? trigger : null}
             saving={upsert.isPending}
@@ -163,9 +163,9 @@ function TriggerEditor({
       )}
 
       {selectedType === 'MANUAL' && (
-        <div className="space-y-4 border-t border-neutral-800 pt-6">
-          <p className="text-sm text-neutral-300">
-            The workflow runs only when you press <span className="font-medium text-white">Test run</span> at the top of
+        <div className="space-y-4 border-t border-rule pt-6">
+          <p className="text-sm text-graphite">
+            The workflow runs only when you press <span className="font-medium text-ink">Test run</span> at the top of
             the page.
           </p>
           {trigger?.type !== 'MANUAL' && (
@@ -204,8 +204,8 @@ function WebhookSection({
 }) {
   if (!trigger) {
     return (
-      <div className="space-y-4 border-t border-neutral-800 pt-6">
-        <p className="text-sm text-neutral-300">
+      <div className="space-y-4 border-t border-rule pt-6">
+        <p className="text-sm text-graphite">
           FlowState will create a unique URL for this workflow, plus a secret the sending app uses to sign its requests.
         </p>
         <Button variant="primary" disabled={saving} onClick={onCreate}>
@@ -216,15 +216,15 @@ function WebhookSection({
   }
 
   return (
-    <div className="space-y-6 border-t border-neutral-800 pt-6">
+    <div className="space-y-6 border-t border-rule pt-6">
       <div>
-        <p className="mb-1.5 text-sm font-medium text-neutral-200">Webhook URL</p>
+        <p className="mb-1.5 text-sm font-medium text-ink">Webhook URL</p>
         <CopyField value={webhookUrlFor(workflowId, API_URL)} label="webhook URL" />
-        <p className="mt-1.5 text-xs text-neutral-400">Paste this into the other app’s webhook settings.</p>
+        <p className="mt-1.5 text-xs text-muted">Paste this into the other app’s webhook settings.</p>
       </div>
       <div>
-        <p className="mb-1.5 text-sm font-medium text-neutral-200">Signing secret</p>
-        <code className="inline-block rounded-lg bg-black px-3 py-2 font-mono text-xs text-neutral-200 ring-1 ring-neutral-800">
+        <p className="mb-1.5 text-sm font-medium text-ink">Signing secret</p>
+        <code className="inline-block rounded-lg bg-paper px-3 py-2 font-mono text-xs text-ink ring-1 ring-rule">
           {trigger.secret ?? '—'}
         </code>
         <div className="mt-3">
@@ -242,8 +242,8 @@ function WebhookSection({
         </div>
       </div>
       <div>
-        <p className="text-sm font-medium text-neutral-200">Recent deliveries</p>
-        <p className="mt-0.5 text-xs text-neutral-400">
+        <p className="text-sm font-medium text-ink">Recent deliveries</p>
+        <p className="mt-0.5 text-xs text-muted">
           Every request to the URL and what happened to it. If a delivery didn’t start a run, the reason is here.
         </p>
         <WebhookEventsTable workflowId={workflowId} />

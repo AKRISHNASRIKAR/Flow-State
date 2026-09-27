@@ -14,11 +14,11 @@ const STATUSES: ExecutionStatus[] = ['PENDING', 'RUNNING', 'SUCCEEDED', 'FAILED'
 // Row accent — a redundant cue alongside the status badge in each row, so the
 // in-flight and failed rows are findable while scanning a long page.
 const ROW_ACCENT: Record<ExecutionStatus, string> = {
-  PENDING: 'border-l-amber-500',
-  RUNNING: 'border-l-blue-500',
-  SUCCEEDED: 'border-l-emerald-500',
-  FAILED: 'border-l-red-500',
-  CANCELLED: 'border-l-neutral-600',
+  PENDING: 'border-l-wait',
+  RUNNING: 'border-l-signal',
+  SUCCEEDED: 'border-l-ok',
+  FAILED: 'border-l-fail',
+  CANCELLED: 'border-l-faint',
 };
 
 interface ExecutionsTableProps {
@@ -46,7 +46,7 @@ export function ExecutionsTable({ workflowId, extraFilters }: ExecutionsTablePro
   });
 
   return (
-    <div className="rounded-2xl bg-neutral-900 p-5 shadow-xl ring-1 ring-neutral-800">
+    <div className="rounded-md bg-card p-5 shadow-xl ring-1 ring-rule">
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="w-44">
           <select
@@ -92,9 +92,9 @@ export function ExecutionsTable({ workflowId, extraFilters }: ExecutionsTablePro
 
       {data && data.data.length > 0 && (
         <>
-          <table className="w-full text-left text-sm text-neutral-200">
+          <table className="w-full text-left text-sm text-ink">
             <thead>
-              <tr className="border-b border-neutral-800 text-xs uppercase tracking-wide text-neutral-400">
+              <tr className="border-b border-rule text-xs uppercase tracking-wide text-muted">
                 <th className="py-2 pl-3 pr-4 font-medium">Workflow</th>
                 <th className="py-2 pr-4 font-medium">Status</th>
                 <th className="py-2 pr-4 font-medium">Started</th>
@@ -106,18 +106,18 @@ export function ExecutionsTable({ workflowId, extraFilters }: ExecutionsTablePro
               {data.data.map((e) => (
                 <tr
                   key={e.id}
-                  className={`border-b border-l-4 border-b-neutral-800/70 transition-colors duration-150 hover:bg-neutral-800/50 ${ROW_ACCENT[e.status]}`}
+                  className={`border-b border-l-4 border-b-rule/70 transition-colors duration-150 hover:bg-paper-2 ${ROW_ACCENT[e.status]}`}
                 >
-                  <td className="max-w-52 truncate py-2.5 pl-3 pr-4 font-medium text-white">{e.workflowName}</td>
+                  <td className="max-w-52 truncate py-2.5 pl-3 pr-4 font-medium text-ink">{e.workflowName}</td>
                   <td className="py-2.5 pr-4">
                     <ExecutionStatusBadge status={e.status} />
                   </td>
-                  <td className="whitespace-nowrap py-2.5 pr-4 text-neutral-300">{formatDateTime(e.startedAt)}</td>
-                  <td className="whitespace-nowrap py-2.5 pr-4 tabular-nums text-neutral-300">
+                  <td className="whitespace-nowrap py-2.5 pr-4 text-graphite">{formatDateTime(e.startedAt)}</td>
+                  <td className="whitespace-nowrap py-2.5 pr-4 tabular-nums text-graphite">
                     {formatDuration(e.startedAt, e.finishedAt)}
                   </td>
                   <td className="py-2.5 text-right">
-                    <Link href={`/executions/${e.id}`} className="text-xs font-medium text-indigo-400 hover:text-indigo-300">
+                    <Link href={`/executions/${e.id}`} className="text-xs font-medium text-signal hover:text-signal">
                       View steps →
                     </Link>
                   </td>

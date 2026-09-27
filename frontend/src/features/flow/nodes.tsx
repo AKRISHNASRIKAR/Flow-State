@@ -1,49 +1,47 @@
 import { Handle, Position } from '@xyflow/react';
 import type { NodeProps } from '@xyflow/react';
 import type { Action, Trigger } from '@flowstate/api-types';
+import { FlowNodeCard } from '../../components/flow-visuals';
 import { Icon, ICON_PATHS } from '../../components/ui';
-import { TRIGGER_ICONS } from '../trigger/TriggerDrawer';
-import { ACTION_META } from './action-meta';
+import { ACTION_GLYPH, GLYPHS, TRIGGER_GLYPH } from '../../lib/glyphs';
 import { truncate } from '../../lib/format';
+import type { StepRunState } from '../workflow/useLatestRun';
+import { ACTION_META } from './action-meta';
 
 export const NODE_WIDTH = 340;
 
-// Per-type accent so a long chain is scannable by color before it is read.
-// Falls back to plain gray for a type the frontend doesn't know yet.
-const ACTION_ACCENT: Record<string, { border: string; chip: string }> = {
-  LOG_MESSAGE: { border: 'border-l-neutral-500', chip: 'bg-neutral-500/15' },
-  DELAY: { border: 'border-l-amber-500', chip: 'bg-amber-500/15' },
-  HTTP_REQUEST: { border: 'border-l-blue-500', chip: 'bg-blue-500/15' },
-  SEND_EMAIL: { border: 'border-l-emerald-500', chip: 'bg-emerald-500/15' },
-  TELEGRAM_NOTIFY: { border: 'border-l-sky-400', chip: 'bg-sky-400/15' },
+// Edges attach to these, but the builder never lets you draw one by hand — the
+// engine runs a straight chain — so the handles are invisible.
+const HIDDEN_HANDLE = '!h-px !w-px !min-h-0 !min-w-0 !border-0 !bg-transparent';
+
+const TRIGGER_KIND: Record<string, string> = {
+  WEBHOOK: 'webhook',
+  MANUAL: 'manual',
+  SCHEDULED: 'URL check',
 };
-const DEFAULT_ACCENT = { border: 'border-l-neutral-600', chip: 'bg-neutral-500/15' };
 
 const triggerSummaries: Record<string, (t: Trigger) => string> = {
-  WEBHOOK: () => 'When another app sends a request to this workflow’s webhook URL',
-  MANUAL: () => 'Only when you press Test run',
+  WEBHOOK: () => 'Another app sends a request',
+  MANUAL: () => 'You press Test run',
   SCHEDULED: (t) => {
     const interval = (t.configuration as { interval?: number }).interval;
     const endpoint = (t.configuration as { endpoint?: string }).endpoint;
-    return `When ${endpoint ?? '(no URL)'} changes — checked every ${interval ?? '?'}s`;
+    return `${endpoint ?? '(no URL)'} changes · every ${interval ?? '?'}s`;
   },
-};
-
-const TRIGGER_TITLES: Record<string, string> = {
-  WEBHOOK: 'Webhook',
-  MANUAL: 'Test run button',
-  SCHEDULED: 'URL check',
 };
 
 export interface TriggerNodeData {
   /** null → nothing chosen yet; the node becomes the call to action. */
   trigger: Trigger | null;
   onEdit: () => void;
+  selected: boolean;
+  /** e.g. "fired 2 min ago" — from the latest run. */
+  lastFired?: string;
   [key: string]: unknown;
 }
 
 export function TriggerNode({ data }: NodeProps) {
-  const { trigger, onEdit } = data as TriggerNodeData;
+  const { trigger, onEdit, selected, lastFired } = data as TriggerNodeData;
 
   if (!trigger) {
     return (
@@ -51,38 +49,31 @@ export function TriggerNode({ data }: NodeProps) {
         type="button"
         onClick={onEdit}
         style={{ width: NODE_WIDTH }}
-        className="rounded-xl border-2 border-dashed border-indigo-500/60 bg-indigo-500/5 p-4 text-left transition hover:border-indigo-400 hover:bg-indigo-500/10"
+        className="rounded-md border border-dashed border-signal/60 bg-card/80 p-4 text-left transition-colors hover:border-signal hover:bg-card"
       >
-        <span className="flex items-center gap-2.5 text-sm font-semibold text-indigo-300">
-          <Icon path={ICON_PATHS.bolt} className="size-5" />
+        <span className="label-caps text-signal">Trigger</span>
+        <span className="mt-2 flex items-center gap-2 text-[15px] font-medium text-ink">
+          <Icon path={ICON_PATHS.bolt} className="size-4 text-signal" />
           Choose what starts this workflow
         </span>
-        <span className="mt-1.5 block text-xs text-neutral-400">A webhook, a URL check on a schedule, or a button.</span>
-        <Handle type="source" position={Position.Bottom} className="!bg-indigo-400" />
+        <span className="mt-1 block text-[13px] text-muted">A webhook, a URL check on a schedule, or a button.</span>
+        <Handle type="source" position={Position.Bottom} className={HIDDEN_HANDLE} />
       </button>
     );
   }
 
   return (
-    <button
-      type="button"
-      onClick={onEdit}
-      style={{ width: NODE_WIDTH }}
-      className="rounded-xl bg-indigo-950 p-4 text-left text-white shadow-[0_0_20px_-5px_rgba(99,102,241,0.4)] ring-1 ring-indigo-500/50 transition hover:bg-indigo-900"
-      title="Change what starts this workflow"
-    >
-      <div className="flex items-center gap-2.5">
-        <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-indigo-500/20 text-indigo-300 ring-1 ring-indigo-500/30">
-          <Icon path={TRIGGER_ICONS[trigger.type] ?? ICON_PATHS.bolt} className="size-4" />
-        </span>
-        <span className="rounded-md bg-indigo-500/20 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-indigo-300">
-          Starts
-        </span>
-        <span className="text-sm font-semibold">{TRIGGER_TITLES[trigger.type] ?? trigger.type}</span>
-        <span className="ml-auto text-xs text-indigo-300/80">Edit</span>
-      </div>
-      <p className="mt-2 text-xs text-indigo-200/70">{truncate((triggerSummaries[trigger.type] ?? (() => ''))(trigger), 90)}</p>
-      <Handle type="source" position={Position.Bottom} className="!bg-indigo-400" />
+    <button type="button" onClick={onEdit} style={{ width: NODE_WIDTH }} className="block text-left" title="Change what starts this workflow">
+      <FlowNodeCard
+        kind="trigger"
+        label={`Trigger · ${TRIGGER_KIND[trigger.type] ?? trigger.type.toLowerCase()}`}
+        title={truncate((triggerSummaries[trigger.type] ?? (() => trigger.type))(trigger), 72)}
+        glyph={TRIGGER_GLYPH[trigger.type] ?? GLYPHS.bolt}
+        state={lastFired ? { tone: 'idle', text: lastFired } : undefined}
+        active={selected}
+        className="hover:border-faint"
+      />
+      <Handle type="source" position={Position.Bottom} className={HIDDEN_HANDLE} />
     </button>
   );
 }
@@ -92,6 +83,11 @@ export interface ActionNodeData {
   index: number;
   isFirst: boolean;
   isLast: boolean;
+  selected: boolean;
+  /** How this step did in the latest run, if it ran. */
+  run?: StepRunState;
+  /** Settings that wouldn't pass the step form. */
+  problem?: string;
   onEdit: () => void;
   onDelete: () => void;
   onMove: (direction: -1 | 1) => void;
@@ -118,8 +114,8 @@ function NodeButton({
       disabled={disabled}
       aria-label={label}
       title={label}
-      className={`nodrag rounded-md p-1 text-neutral-400 transition disabled:opacity-30 ${
-        danger ? 'hover:bg-red-500/10 hover:text-red-400' : 'hover:bg-neutral-800 hover:text-white'
+      className={`nodrag rounded-[4px] p-1 text-muted transition-colors disabled:opacity-30 ${
+        danger ? 'hover:bg-fail-soft hover:text-fail' : 'hover:bg-paper-2 hover:text-ink'
       }`}
     >
       <Icon path={path} className="size-4" />
@@ -128,40 +124,35 @@ function NodeButton({
 }
 
 export function ActionNode({ data, dragging }: NodeProps) {
-  const { action, index, isFirst, isLast, onEdit, onDelete, onMove } = data as ActionNodeData;
+  const { action, index, isFirst, isLast, onEdit, onDelete, onMove, selected, run, problem } = data as ActionNodeData;
   const meta = ACTION_META[action.type as keyof typeof ACTION_META];
-  const accent = ACTION_ACCENT[action.type] ?? DEFAULT_ACCENT;
+  const glyph = ACTION_GLYPH[action.type as keyof typeof ACTION_GLYPH] ?? GLYPHS.bolt;
+  const summary = meta ? meta.summarize(action.configuration ?? {}) : action.type;
+
   return (
-    <div
-      style={{ width: NODE_WIDTH }}
-      className={`group rounded-xl border-l-4 bg-neutral-900 p-4 shadow-lg ring-1 transition ${accent.border} ${
-        dragging ? 'shadow-2xl ring-indigo-500/60' : 'ring-neutral-700 hover:ring-indigo-500/50'
-      }`}
-    >
-      <Handle type="target" position={Position.Top} className="!bg-neutral-600" />
-      <div className="flex items-start gap-3">
-        <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-neutral-800 text-xs font-bold text-neutral-200 ring-1 ring-neutral-700">
-          {index + 1}
-        </span>
-        <button type="button" onClick={onEdit} className="nodrag min-w-0 flex-1 text-left" title="Edit step">
-          <p className="flex items-center gap-2 text-sm font-semibold text-white">
-            <span className={`flex size-6 shrink-0 items-center justify-center rounded-md text-xs ${accent.chip}`}>
-              {meta?.icon ?? '⚙️'}
-            </span>
-            {meta?.label ?? action.type}
-          </p>
-          <p className="mt-1 truncate text-xs text-neutral-300">
-            {meta ? truncate(meta.summarize(action.configuration), 60) : ''}
-          </p>
-        </button>
-        {/* Shown on hover and on keyboard focus, so they're reachable without a mouse. */}
-        <div className="flex shrink-0 items-center opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100">
-          <NodeButton label="Move up" path={ICON_PATHS.arrowUp} onClick={() => onMove(-1)} disabled={isFirst} />
-          <NodeButton label="Move down" path={ICON_PATHS.arrowDown} onClick={() => onMove(1)} disabled={isLast} />
-          <NodeButton label="Delete step" path={ICON_PATHS.trash} onClick={onDelete} danger />
-        </div>
+    <div style={{ width: NODE_WIDTH }} className={`group relative ${dragging ? 'rotate-[0.4deg]' : ''}`}>
+      <Handle type="target" position={Position.Top} className={HIDDEN_HANDLE} />
+      <button type="button" onClick={onEdit} className="nodrag block w-full text-left" title="Edit step">
+        <FlowNodeCard
+          kind="step"
+          label={`Step ${index + 1} · ${meta?.label.toLowerCase() ?? action.type}`}
+          title={<span className="block truncate">{truncate(summary, 60)}</span>}
+          glyph={glyph}
+          state={problem ? { tone: 'setup', text: 'needs setup' } : run ? { tone: run.tone, text: run.text } : undefined}
+          active={selected || run?.tone === 'running'}
+          alert={Boolean(problem) || run?.tone === 'fail'}
+          className={dragging ? 'shadow-[0_24px_40px_-20px_rgba(15,27,45,0.5)]' : 'group-hover:border-faint'}
+        >
+          {problem && <p className="mt-2 pl-11 text-[12px] leading-snug text-fail">{problem}</p>}
+        </FlowNodeCard>
+      </button>
+      {/* Shown on hover and on keyboard focus, so they're reachable without a mouse. */}
+      <div className="absolute -right-2 top-1/2 flex -translate-y-1/2 translate-x-full flex-col gap-0.5 rounded-[5px] border border-rule bg-card p-0.5 opacity-0 shadow-sm transition-opacity group-focus-within:opacity-100 group-hover:opacity-100">
+        <NodeButton label="Move up" path={ICON_PATHS.arrowUp} onClick={() => onMove(-1)} disabled={isFirst} />
+        <NodeButton label="Move down" path={ICON_PATHS.arrowDown} onClick={() => onMove(1)} disabled={isLast} />
+        <NodeButton label="Delete step" path={ICON_PATHS.trash} onClick={onDelete} danger />
       </div>
-      <Handle type="source" position={Position.Bottom} className="!bg-neutral-600" />
+      <Handle type="source" position={Position.Bottom} className={HIDDEN_HANDLE} />
     </div>
   );
 }
@@ -175,12 +166,12 @@ export interface AddNodeData {
 export function AddActionNode({ data }: NodeProps) {
   const { onAdd, isFirst } = data as AddNodeData;
   return (
-    <div style={{ width: NODE_WIDTH }} className="flex justify-center">
-      <Handle type="target" position={Position.Top} className="!bg-neutral-600" />
+    <div style={{ width: NODE_WIDTH }}>
+      <Handle type="target" position={Position.Top} className={HIDDEN_HANDLE} />
       <button
         type="button"
         onClick={onAdd}
-        className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-neutral-700 bg-neutral-900/50 py-4 text-sm font-medium text-neutral-300 transition-all hover:border-indigo-500/50 hover:bg-neutral-800 hover:text-indigo-400"
+        className="flex w-full items-center justify-center gap-2 rounded-md border border-dashed border-faint/70 bg-card/60 py-3.5 text-sm font-medium text-graphite transition-colors hover:border-ink hover:bg-card hover:text-ink"
       >
         <Icon path={ICON_PATHS.plus} className="size-4" strokeWidth={2} />
         {isFirst ? 'Add your first step' : 'Add a step'}

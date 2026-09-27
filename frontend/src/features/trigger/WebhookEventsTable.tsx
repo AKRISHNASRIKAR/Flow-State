@@ -24,14 +24,14 @@ export function WebhookEventsTable({ workflowId }: { workflowId: string }) {
     );
   }
   if (data.data.length === 0) {
-    return <p className="mt-4 text-sm text-neutral-400">Nothing received yet.</p>;
+    return <p className="mt-4 text-sm text-muted">Nothing received yet.</p>;
   }
 
   return (
     <div className="mt-4">
-      <table className="w-full text-left text-sm text-neutral-200">
+      <table className="w-full text-left text-sm text-ink">
         <thead>
-          <tr className="border-b border-neutral-800 text-xs uppercase tracking-wide text-neutral-400">
+          <tr className="border-b border-rule text-xs uppercase tracking-wide text-muted">
             <th className="py-2 pr-4 font-medium">Received</th>
             <th className="py-2 pr-4 font-medium">Status</th>
             <th className="py-2 font-medium">Data</th>
@@ -42,8 +42,8 @@ export function WebhookEventsTable({ workflowId }: { workflowId: string }) {
             const json = formatJson(event.payload);
             const expanded = expandedId === event.id;
             return (
-              <tr key={event.id} className="border-b border-neutral-800/70 align-top">
-                <td className="whitespace-nowrap py-2.5 pr-4 text-neutral-300">{formatDateTime(event.receivedAt)}</td>
+              <tr key={event.id} className="border-b border-rule/70 align-top">
+                <td className="whitespace-nowrap py-2.5 pr-4 text-graphite">{formatDateTime(event.receivedAt)}</td>
                 <td className="py-2.5 pr-4">
                   <WebhookEventStatusBadge status={event.status} />
                 </td>
@@ -55,11 +55,11 @@ export function WebhookEventsTable({ workflowId }: { workflowId: string }) {
                     title={expanded ? 'Collapse' : 'Expand'}
                   >
                     {expanded ? (
-                      <pre className="max-h-64 overflow-auto rounded-lg bg-black p-3 font-mono text-xs text-emerald-400 ring-1 ring-neutral-800">
+                      <pre className="max-h-64 overflow-auto rounded-lg bg-paper p-3 font-mono text-xs text-ok ring-1 ring-rule">
                         {json}
                       </pre>
                     ) : (
-                      <code className="font-mono text-xs text-neutral-400">{truncate(json.replaceAll('\n', ' '), 80)}</code>
+                      <code className="font-mono text-xs text-muted">{truncate(json.replaceAll('\n', ' '), 80)}</code>
                     )}
                   </button>
                 </td>

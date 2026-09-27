@@ -85,3 +85,5 @@ PROJECT_OVERVIEW.md
 .agents/
 skills/
 /skills/
+# Walkthrough-video pipeline (local only)
+/video/

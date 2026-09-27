@@ -8,12 +8,21 @@ import { triggersApi } from '../../lib/api';
 import { toast } from '../../lib/toast';
 
 /**
- * "Test run" — POST /workflows/:id/trigger/fire with sample data, then jump
- * to the Runs tab so the new run is visible as it moves Queued → Running →
- * Succeeded/Failed.
+ * "Test run" — POST /workflows/:id/trigger/fire with sample data. From the
+ * builder's Flow tab the run then plays out on the canvas itself
+ * (`watchOnCanvas`); anywhere else it jumps to the Runs tab so the new run is
+ * visible as it moves Queued → Running → Succeeded/Failed.
  */
-export function TestFireModal({ workflowId, onClose }: { workflowId: string; onClose: () => void }) {
-  const [payloadText, setPayloadText] = useState('{\n  "example": "hello"\n}');
+export function TestFireModal({
+  workflowId,
+  onClose,
+  watchOnCanvas = false,
+}: {
+  workflowId: string;
+  onClose: () => void;
+  watchOnCanvas?: boolean;
+}) {
+  const [payloadText, setPayloadText] = useState('{\n "example": "hello"\n}');
   const [jsonError, setJsonError] = useState<string | undefined>();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -22,11 +31,13 @@ export function TestFireModal({ workflowId, onClose }: { workflowId: string; onC
     mutationFn: (payload: Record<string, unknown>) => triggersApi.fire(workflowId, { payload }),
     meta: { errorContext: 'Couldn’t start the test run' },
     onSuccess: () => {
-      toast.success('Test run started', { description: 'It appears in Runs within a few seconds.' });
+      toast.success('Test run started', {
+        description: watchOnCanvas ? 'Watch each step light up as it runs.' : 'It appears in Runs within a few seconds.',
+      });
       void queryClient.invalidateQueries({ queryKey: ['executions'] });
       void queryClient.invalidateQueries({ queryKey: ['webhook-events', workflowId] });
       onClose();
-      router.push(`/workflows/${workflowId}?tab=runs`);
+      if (!watchOnCanvas) router.push(`/workflows/${workflowId}?tab=runs`);
     },
   });
 
@@ -50,7 +61,7 @@ export function TestFireModal({ workflowId, onClose }: { workflowId: string; onC
     <Modal title="Test run" onClose={onClose}>
       <div className="space-y-4">
         <div>
-          <label htmlFor="tf-payload" className="mb-1.5 block text-sm font-medium text-neutral-200">
+          <label htmlFor="tf-payload" className="mb-1.5 block text-sm font-medium text-ink">
             Sample data
           </label>
           <textarea
@@ -58,14 +69,14 @@ export function TestFireModal({ workflowId, onClose }: { workflowId: string; onC
             rows={7}
             spellCheck={false}
             aria-invalid={jsonError !== undefined}
-            className="block w-full rounded-lg border-0 bg-black px-3 py-2 font-mono text-xs text-emerald-400 ring-1 ring-inset ring-neutral-800 focus:ring-2 focus:ring-inset focus:ring-indigo-500"
+            className="block w-full rounded-lg border-0 bg-paper px-3 py-2 font-mono text-xs text-ok ring-1 ring-inset ring-rule focus:ring-2 focus:ring-inset focus:ring-signal"
             value={payloadText}
             onChange={(e) => setPayloadText(e.target.value)}
           />
           <FieldError message={jsonError} />
           <p className={hintClass}>
             Your steps receive this as the trigger’s data — a step can use{' '}
-            <code className="font-mono text-neutral-300">{'{{payload.example}}'}</code> to insert a value.
+            <code className="font-mono text-graphite">{'{{payload.example}}'}</code> to insert a value.
           </p>
         </div>
         <div className="flex justify-end gap-2">

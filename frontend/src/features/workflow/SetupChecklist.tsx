@@ -12,6 +12,8 @@ interface SetupChecklistProps {
   onTurnOn: () => void;
   onTestRun: () => void;
   turningOn: boolean;
+  /** Inside the builder's inspector: no card of its own. */
+  compact?: boolean;
 }
 
 interface Item {
@@ -29,7 +31,7 @@ interface Item {
  * unless the workflow is on (manual fire requires ACTIVE), so "turn it on"
  * has to come before "send a test run".
  */
-export function SetupChecklist({ workflow, onChooseTrigger, onAddStep, onTurnOn, onTestRun, turningOn }: SetupChecklistProps) {
+export function SetupChecklist({ workflow, onChooseTrigger, onAddStep, onTurnOn, onTestRun, turningOn, compact = false }: SetupChecklistProps) {
   const trigger = useTrigger(workflow.id);
   const actions = useActions(workflow.id);
   const hasRun = useHasRun(workflow.id);
@@ -94,45 +96,49 @@ export function SetupChecklist({ workflow, onChooseTrigger, onAddStep, onTurnOn,
   const nextId = items.find((i) => !i.done)?.id;
 
   return (
-    <section aria-labelledby="setup-heading" className="mb-6 rounded-2xl bg-neutral-900 p-5 ring-1 ring-neutral-800">
-      <div className="flex items-center justify-between gap-4">
-        <h2 id="setup-heading" className="text-sm font-semibold text-white">
-          Finish setting up
-        </h2>
-        <span className="text-xs text-neutral-400">
-          {doneCount} of {items.length} done
+    <section
+      aria-labelledby="setup-heading"
+      className={compact ? '' : 'mb-6 rounded-md border border-rule bg-card p-5'}
+    >
+      <div className="flex items-baseline justify-between gap-4">
+        <div>
+          <p className="label-caps text-signal">Setup</p>
+          <h2 id="setup-heading" className="mt-2 font-serif text-[22px] leading-tight text-ink">
+            Finish setting up
+          </h2>
+        </div>
+        <span className="font-mono text-[12px] text-muted tabular-nums">
+          {doneCount} of {items.length}
         </span>
       </div>
-      <div className="mt-2 h-1 overflow-hidden rounded-full bg-neutral-800" aria-hidden>
-        <div className="h-full rounded-full bg-indigo-500 transition-[width]" style={{ width: `${(doneCount / items.length) * 100}%` }} />
-      </div>
-      <ol className="mt-4 space-y-1">
+      {/* The checklist is itself a little flow: done steps are filled, the
+          next one is live, the rest wait below it on the rail. */}
+      <ol className="relative mt-4">
+        <span aria-hidden className="absolute bottom-4 left-[11px] top-4 w-px bg-rule" />
         {items.map((item, index) => {
           const isNext = item.id === nextId;
           return (
-            <li
-              key={item.id}
-              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 ${isNext ? 'bg-indigo-500/10 ring-1 ring-indigo-500/30' : ''}`}
-            >
+            <li key={item.id} className={`relative flex items-start gap-3 py-2 ${compact ? '' : 'sm:items-center'}`}>
               <span
-                className={`flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+                className={`relative z-10 mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full font-mono text-[11px] font-medium ${
                   item.done
-                    ? 'bg-emerald-500/20 text-emerald-300'
+                    ? 'bg-ink text-paper'
                     : isNext
-                      ? 'bg-indigo-500 text-white'
-                      : 'bg-neutral-800 text-neutral-400'
+                      ? 'bg-card text-signal ring-2 ring-signal'
+                      : 'bg-card text-muted ring-1 ring-rule'
                 }`}
               >
                 {item.done ? <Icon path={ICON_PATHS.check} className="size-3.5" strokeWidth={2.5} /> : index + 1}
               </span>
               <div className="min-w-0 flex-1">
-                <p className={`text-sm font-medium ${item.done ? 'text-neutral-400 line-through' : 'text-white'}`}>
+                <p className={`text-sm font-medium ${item.done ? 'text-muted line-through decoration-rule' : 'text-ink'}`}>
                   {item.title}
                   {item.done && <span className="sr-only"> (done)</span>}
                 </p>
-                {isNext && <p className="mt-0.5 text-xs text-neutral-300">{item.hint}</p>}
+                {isNext && <p className="mt-0.5 text-[13px] leading-snug text-graphite">{item.hint}</p>}
+                {isNext && compact && <div className="mt-2.5">{item.action}</div>}
               </div>
-              {isNext && item.action}
+              {isNext && !compact && <div className="shrink-0">{item.action}</div>}
             </li>
           );
         })}

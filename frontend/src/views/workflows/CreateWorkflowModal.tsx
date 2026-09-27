@@ -57,7 +57,7 @@ export function CreateWorkflowModal({ onClose }: { onClose: () => void }) {
         </div>
         <div>
           <label htmlFor="wf-description" className={labelClass}>
-            Description <span className="font-normal text-neutral-400">(optional)</span>
+            Description <span className="font-normal text-muted">(optional)</span>
           </label>
           <textarea id="wf-description" rows={2} className={inputClass} {...register('description')} />
           <FieldError message={errors.description?.message} />

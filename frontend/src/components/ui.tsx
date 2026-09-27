@@ -1,5 +1,5 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { toast, useToastStore, type ToastKind } from '../lib/toast';
 
 // ---------------------------------------------------------------------------
@@ -26,6 +26,9 @@ export const ICON_PATHS = {
   sparkles:
     'M9.813 15.904 9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09ZM18.259 8.715 18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456Z',
   search: 'M21 21l-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z',
+  arrowRight: 'M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3',
+  clock: 'M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
+  xCircle: 'm9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z',
 } as const;
 
 export function Icon({
@@ -51,14 +54,14 @@ export function Icon({
 type ButtonVariant = 'primary' | 'secondary' | 'danger' | 'ghost';
 
 const buttonVariants: Record<ButtonVariant, string> = {
+  // Primary is ink, not blue: signal blue is reserved for "moving right now",
+  // so the main action reads as the product's own voice.
   primary:
-    // Disabled goes neutral, not a paler indigo: on a black page a half-strength
-    // indigo button still reads as clickable.
-    'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 hover:bg-indigo-500 disabled:bg-neutral-800 disabled:text-neutral-500 disabled:shadow-none disabled:ring-1 disabled:ring-neutral-700 focus-visible:outline-indigo-500',
+    'bg-ink text-paper hover:bg-graphite disabled:bg-paper-2 disabled:text-faint disabled:ring-1 disabled:ring-rule focus-visible:outline-signal',
   secondary:
-    'bg-neutral-800 text-white ring-1 ring-neutral-700 hover:bg-neutral-700 disabled:text-neutral-400 disabled:hover:bg-neutral-800',
-  danger: 'bg-red-600 text-white shadow-lg shadow-red-500/20 hover:bg-red-500 disabled:bg-red-600/50',
-  ghost: 'text-neutral-300 hover:bg-neutral-800 hover:text-white disabled:text-neutral-500',
+    'bg-card text-ink ring-1 ring-rule hover:bg-paper-2 hover:ring-faint/60 disabled:text-faint disabled:hover:bg-card focus-visible:outline-signal',
+  danger: 'bg-fail text-paper hover:bg-fail/90 disabled:bg-fail/40 focus-visible:outline-fail',
+  ghost: 'text-graphite hover:bg-paper-2 hover:text-ink disabled:text-faint focus-visible:outline-signal',
 };
 
 const buttonSizes = {
@@ -76,7 +79,7 @@ export function Button({ variant = 'secondary', size = 'md', className = '', ...
   return (
     <button
       type="button"
-      className={`inline-flex items-center gap-1.5 rounded-lg font-medium transition-[color,background-color,box-shadow,transform] cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:active:scale-100 ${buttonSizes[size]} ${buttonVariants[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-[5px] font-medium transition-[color,background-color,box-shadow,transform] duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 active:translate-y-px disabled:cursor-not-allowed disabled:active:translate-y-0 ${buttonSizes[size]} ${buttonVariants[variant]} ${className}`}
       {...rest}
     />
   );
@@ -88,8 +91,8 @@ export function Button({ variant = 'secondary', size = 'md', className = '', ...
 
 export function Spinner({ label }: { label?: string }) {
   return (
-    <div role="status" className="flex items-center justify-center gap-2.5 py-10 text-sm text-neutral-300">
-      <span className="size-6 animate-spin rounded-full border-2 border-neutral-800 border-t-indigo-500" />
+    <div role="status" className="flex items-center justify-center gap-2.5 py-10 text-sm text-muted">
+      <span className="size-5 animate-spin rounded-full border-2 border-rule border-t-signal" />
       {label ?? 'Loading…'}
     </div>
   );
@@ -116,7 +119,7 @@ function CloseButton({ onClose }: { onClose: () => void }) {
       type="button"
       onClick={onClose}
       aria-label="Close"
-      className="rounded-lg p-1 text-neutral-400 hover:bg-neutral-800 hover:text-white"
+      className="rounded-[5px] p-1 text-muted transition-colors hover:bg-paper-2 hover:text-ink"
     >
       <Icon path={ICON_PATHS.close} />
     </button>
@@ -133,16 +136,16 @@ interface ModalProps {
 export function Modal({ title, onClose, children, wide = false }: ModalProps) {
   useEscape(onClose);
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/60 p-4 pt-[8vh] backdrop-blur-md">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/25 p-4 pt-[8vh]">
       <div className="absolute inset-0" onClick={onClose} aria-hidden />
       <div
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`relative w-full ${wide ? 'max-w-2xl' : 'max-w-md'} rounded-2xl bg-neutral-900 p-6 shadow-2xl ring-1 ring-neutral-800`}
+        className={`relative w-full animate-fade-up ${wide ? 'max-w-2xl' : 'max-w-md'} rounded-md bg-card p-6 shadow-[0_24px_60px_-24px_rgba(15,27,45,0.45)] ring-1 ring-rule`}
       >
         <div className="mb-4 flex items-start justify-between gap-4">
-          <h2 className="text-lg font-semibold text-white">{title}</h2>
+          <h2 className="font-serif text-2xl leading-tight text-ink">{title}</h2>
           <CloseButton onClose={onClose} />
         </div>
         {children}
@@ -161,25 +164,52 @@ interface DrawerProps {
   footer?: ReactNode;
 }
 
+/**
+ * Where a Drawer renders. The workflow builder docks panels beside its canvas
+ * on wide screens ('inline'); everywhere else — and in the builder on small
+ * screens — they slide over the page ('overlay'). The panel components don't
+ * know or care which.
+ */
+export const DrawerModeContext = createContext<'overlay' | 'inline'>('overlay');
+
 export function Drawer({ title, subtitle, onClose, children, footer }: DrawerProps) {
   useEscape(onClose);
+  const mode = useContext(DrawerModeContext);
+  if (mode === 'inline') {
+    return (
+      <section
+        aria-label={typeof title === 'string' ? title : undefined}
+        className="flex h-full min-h-0 animate-fade-up flex-col overflow-hidden rounded-md border border-rule bg-card"
+      >
+        <div className="flex items-start justify-between gap-4 border-b border-rule px-5 py-4">
+          <div className="min-w-0">
+            <h2 className="font-serif text-[22px] leading-tight text-ink">{title}</h2>
+            {subtitle && <p className="mt-1 text-[13px] leading-snug text-muted">{subtitle}</p>}
+          </div>
+          <CloseButton onClose={onClose} />
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
+        {footer && <div className="border-t border-rule bg-paper px-5 py-3">{footer}</div>}
+      </section>
+    );
+  }
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} aria-hidden />
+      <div className="absolute inset-0 bg-ink/20" onClick={onClose} aria-hidden />
       <div
         role="dialog"
         aria-modal="true"
-        className="relative flex h-full w-full max-w-xl animate-drawer-in flex-col border-l border-neutral-800 bg-neutral-950 shadow-2xl"
+        className="relative flex h-full w-full max-w-xl animate-drawer-in flex-col border-l border-rule bg-card shadow-[-24px_0_60px_-30px_rgba(15,27,45,0.35)]"
       >
-        <div className="flex items-start justify-between gap-4 border-b border-neutral-800 px-6 py-5">
+        <div className="flex items-start justify-between gap-4 border-b border-rule px-6 py-5">
           <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-white">{title}</h2>
-            {subtitle && <p className="mt-1 text-sm text-neutral-400">{subtitle}</p>}
+            <h2 className="font-serif text-2xl leading-tight text-ink">{title}</h2>
+            {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
           </div>
           <CloseButton onClose={onClose} />
         </div>
         <div className="flex-1 overflow-y-auto px-6 py-5">{children}</div>
-        {footer && <div className="border-t border-neutral-800 px-6 py-4">{footer}</div>}
+        {footer && <div className="border-t border-rule bg-paper px-6 py-4">{footer}</div>}
       </div>
     </div>
   );
@@ -198,7 +228,7 @@ interface ConfirmDialogProps {
 export function ConfirmDialog({ title, body, confirmLabel, danger, busy, onConfirm, onClose }: ConfirmDialogProps) {
   return (
     <Modal title={title} onClose={onClose}>
-      <div className="text-sm text-neutral-300">{body}</div>
+      <div className="text-sm leading-relaxed text-graphite">{body}</div>
       <div className="mt-5 flex justify-end gap-2">
         <Button onClick={onClose}>Cancel</Button>
         <Button variant={danger ? 'danger' : 'primary'} onClick={onConfirm} disabled={busy}>
@@ -232,15 +262,15 @@ export function Switch({
       aria-checked={checked}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className="group inline-flex items-center gap-2.5 rounded-full text-sm font-medium text-neutral-200 disabled:opacity-60"
+      className="group inline-flex items-center gap-2 rounded-full text-sm font-medium text-graphite focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal disabled:opacity-60"
     >
       <span
-        className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full ring-1 transition-colors ${
-          checked ? 'bg-emerald-500 ring-emerald-400/50' : 'bg-neutral-700 ring-neutral-600'
+        className={`relative inline-flex h-[22px] w-10 shrink-0 items-center rounded-full ring-1 ring-inset transition-colors duration-200 ${
+          checked ? 'bg-ok ring-ok' : 'bg-paper-2 ring-rule'
         }`}
       >
         <span
-          className={`size-5 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-[22px]' : 'translate-x-0.5'}`}
+          className={`size-4 rounded-full bg-card shadow-[0_1px_2px_rgba(15,27,45,0.3)] transition-transform duration-200 ${checked ? 'translate-x-[21px]' : 'translate-x-[3px]'}`}
         />
       </span>
       {label}
@@ -287,14 +317,14 @@ export function Menu({ label, items }: { label: string; items: MenuItem[] }) {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen(!open)}
-        className="rounded-lg p-1.5 text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-white"
+        className="rounded-[5px] p-1.5 text-muted transition-colors hover:bg-paper-2 hover:text-ink"
       >
         <Icon path={ICON_PATHS.dots} strokeWidth={2} />
       </button>
       {open && (
         <ul
           role="menu"
-          className="absolute right-0 top-9 z-30 w-44 overflow-hidden rounded-xl bg-neutral-800 py-1 text-sm shadow-2xl ring-1 ring-neutral-700"
+          className="absolute right-0 top-9 z-30 w-44 animate-fade-up overflow-hidden rounded-md bg-card py-1 text-sm shadow-[0_16px_40px_-18px_rgba(15,27,45,0.45)] ring-1 ring-rule"
         >
           {items.map((item) => (
             <li key={item.label} role="none">
@@ -306,8 +336,8 @@ export function Menu({ label, items }: { label: string; items: MenuItem[] }) {
                   setOpen(false);
                   item.onSelect();
                 }}
-                className={`w-full px-3 py-2 text-left transition-colors disabled:cursor-not-allowed disabled:text-neutral-500 ${
-                  item.danger ? 'text-red-400 hover:bg-red-500/10' : 'text-neutral-200 hover:bg-neutral-700 hover:text-white'
+                className={`w-full px-3 py-2 text-left transition-colors disabled:cursor-not-allowed disabled:text-faint ${
+                  item.danger ? 'text-fail hover:bg-fail-soft' : 'text-graphite hover:bg-paper-2 hover:text-ink'
                 }`}
               >
                 {item.label}
@@ -334,7 +364,7 @@ export function Tabs<T extends string>({
   onChange: (id: T) => void;
 }) {
   return (
-    <div role="tablist" className="mb-6 flex gap-1 border-b border-neutral-800">
+    <div role="tablist" className="mb-6 flex gap-1 border-b border-rule">
       {tabs.map((t) => (
         <button
           key={t.id}
@@ -342,10 +372,8 @@ export function Tabs<T extends string>({
           role="tab"
           aria-selected={active === t.id}
           onClick={() => onChange(t.id)}
-          className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
-            active === t.id
-              ? 'border-indigo-500 text-indigo-400'
-              : 'border-transparent text-neutral-400 hover:border-neutral-700 hover:text-neutral-200'
+          className={`-mb-px border-b-2 px-3.5 py-2 text-sm font-medium transition-colors ${
+            active === t.id ? 'border-ink text-ink' : 'border-transparent text-muted hover:border-rule hover:text-ink'
           }`}
         >
           {t.label}
@@ -361,14 +389,14 @@ export function Tabs<T extends string>({
 // ---------------------------------------------------------------------------
 
 const noticeStyles = {
-  info: { box: 'bg-indigo-500/10 text-indigo-100 ring-indigo-500/20', icon: 'text-indigo-300', path: ICON_PATHS.info },
-  warning: { box: 'bg-amber-500/10 text-amber-100 ring-amber-500/20', icon: 'text-amber-300', path: ICON_PATHS.warning },
+  info: { box: 'bg-paper-2 text-graphite ring-rule', icon: 'text-muted', path: ICON_PATHS.info },
+  warning: { box: 'bg-wait-soft text-graphite ring-wait/25', icon: 'text-wait', path: ICON_PATHS.warning },
 } as const;
 
 export function Notice({ tone = 'info', children }: { tone?: keyof typeof noticeStyles; children: ReactNode }) {
   const style = noticeStyles[tone];
   return (
-    <div className={`flex gap-2.5 rounded-lg p-3 text-xs leading-relaxed ring-1 ring-inset ${style.box}`}>
+    <div className={`flex gap-2.5 rounded-[5px] p-3 text-xs leading-relaxed ring-1 ring-inset ${style.box}`}>
       <Icon path={style.path} className={`mt-px size-4 shrink-0 ${style.icon}`} />
       <div className="min-w-0 space-y-1">{children}</div>
     </div>
@@ -382,15 +410,15 @@ export function Notice({ tone = 'info', children }: { tone?: keyof typeof notice
 /** Field-level validation message, shown under the field it belongs to. */
 export function FieldError({ message }: { message?: string }) {
   if (!message) return null;
-  return <p className="mt-1 text-xs text-red-400">{message}</p>;
+  return <p className="mt-1 text-xs text-fail">{message}</p>;
 }
 
 export const inputClass =
-  'block w-full rounded-lg border-0 bg-black px-3 py-2 text-sm text-white ring-1 ring-inset ring-neutral-800 transition-shadow placeholder:text-neutral-500 focus:ring-2 focus:ring-inset focus:ring-indigo-500';
+  'block w-full rounded-[5px] border-0 bg-card px-3 py-2 text-sm text-ink ring-1 ring-inset ring-rule transition-shadow placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-inset focus:ring-signal';
 
-export const labelClass = 'block text-sm font-medium text-neutral-200 mb-1.5';
+export const labelClass = 'block text-sm font-medium text-ink mb-1.5';
 
-export const hintClass = 'mt-1.5 text-xs text-neutral-400';
+export const hintClass = 'mt-1.5 text-xs leading-relaxed text-muted';
 
 // ---------------------------------------------------------------------------
 // Empty state
@@ -409,14 +437,14 @@ export function EmptyState({
   icon?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-neutral-800 bg-neutral-900/50 px-6 py-16 text-center">
-      <span className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-neutral-800/80 text-neutral-400 ring-1 ring-neutral-700">
+    <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-faint/60 px-6 py-16 text-center">
+      <span className="mb-4 flex size-11 items-center justify-center rounded-[5px] bg-card text-muted ring-1 ring-rule">
         {icon ?? (
           <Icon path="M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H6.911a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661Z" className="size-6" />
         )}
       </span>
-      <p className="text-sm font-semibold text-white">{title}</p>
-      {body && <div className="mt-1.5 max-w-md text-sm text-neutral-300">{body}</div>}
+      <p className="font-serif text-2xl text-ink">{title}</p>
+      {body && <div className="mt-2 max-w-md text-sm leading-relaxed text-graphite">{body}</div>}
       {action && <div className="mt-5">{action}</div>}
     </div>
   );
@@ -436,7 +464,7 @@ interface PaginationProps {
 export function Pagination({ page, totalPages, total, onPage }: PaginationProps) {
   if (totalPages <= 1) return null;
   return (
-    <div className="flex items-center justify-between pt-4 text-sm text-neutral-300">
+    <div className="flex items-center justify-between pt-4 text-sm text-muted tabular-nums">
       <span>
         Page {page} of {totalPages} · {total} total
       </span>
@@ -457,9 +485,9 @@ export function Pagination({ page, totalPages, total, onPage }: PaginationProps)
 // ---------------------------------------------------------------------------
 
 const toastStyles: Record<ToastKind, { ring: string; icon: string; path: string }> = {
-  success: { ring: 'ring-emerald-500/30', icon: 'text-emerald-400', path: ICON_PATHS.checkCircle },
-  error: { ring: 'ring-red-500/40', icon: 'text-red-400', path: ICON_PATHS.warning },
-  info: { ring: 'ring-neutral-700', icon: 'text-indigo-300', path: ICON_PATHS.info },
+  success: { ring: 'ring-rule', icon: 'text-ok', path: ICON_PATHS.checkCircle },
+  error: { ring: 'ring-fail/40', icon: 'text-fail', path: ICON_PATHS.warning },
+  info: { ring: 'ring-rule', icon: 'text-muted', path: ICON_PATHS.info },
 };
 
 export function ToastContainer() {
@@ -475,12 +503,12 @@ export function ToastContainer() {
             key={t.id}
             role={t.kind === 'error' ? 'alert' : 'status'}
             aria-live={t.kind === 'error' ? 'assertive' : 'polite'}
-            className={`pointer-events-auto flex animate-toast-in items-start gap-3 rounded-xl bg-neutral-900 p-4 text-sm shadow-2xl ring-1 ${style.ring}`}
+            className={`pointer-events-auto flex animate-toast-in items-start gap-3 rounded-md bg-card p-4 text-sm shadow-[0_18px_40px_-20px_rgba(15,27,45,0.45)] ring-1 ${style.ring}`}
           >
             <Icon path={style.path} className={`mt-px size-5 shrink-0 ${style.icon}`} />
             <div className="min-w-0 flex-1">
-              <p className="font-medium text-white">{t.title}</p>
-              {t.description && <p className="mt-0.5 break-words text-neutral-300">{t.description}</p>}
+              <p className="font-medium text-ink">{t.title}</p>
+              {t.description && <p className="mt-0.5 break-words text-graphite">{t.description}</p>}
               {t.action && (
                 <button
                   type="button"
@@ -488,7 +516,7 @@ export function ToastContainer() {
                     dismiss(t.id);
                     t.action?.onClick();
                   }}
-                  className="mt-2 text-sm font-medium text-indigo-400 hover:text-indigo-300"
+                  className="mt-2 text-sm font-medium text-signal hover:text-signal-strong"
                 >
                   {t.action.label}
                 </button>
@@ -498,7 +526,7 @@ export function ToastContainer() {
               type="button"
               onClick={() => dismiss(t.id)}
               aria-label="Dismiss"
-              className="-m-1 rounded-md p-1 text-neutral-500 hover:bg-neutral-800 hover:text-white"
+              className="-m-1 rounded-[5px] p-1 text-faint hover:bg-paper-2 hover:text-ink"
             >
               <Icon path={ICON_PATHS.close} className="size-4" />
             </button>
@@ -528,7 +556,7 @@ export function CopyField({ value, mono = true, label = 'value' }: { value: stri
   return (
     <div className="flex items-center gap-2">
       <code
-        className={`min-w-0 flex-1 truncate rounded-lg bg-black px-3 py-2 text-xs text-neutral-200 ring-1 ring-inset ring-neutral-800 ${mono ? 'font-mono' : ''}`}
+        className={`min-w-0 flex-1 truncate rounded-[5px] bg-paper px-3 py-2 text-xs text-ink ring-1 ring-inset ring-rule ${mono ? 'font-mono' : ''}`}
         title={value}
       >
         {value}

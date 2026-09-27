@@ -33,8 +33,8 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (mounted && unreachable && accessToken === null) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center px-6 text-center">
-        <h1 className="text-lg font-semibold text-white">Can’t reach FlowState</h1>
-        <p className="mt-1.5 max-w-sm text-sm text-neutral-300">
+        <h1 className="text-lg font-semibold text-ink">Can’t reach FlowState</h1>
+        <p className="mt-1.5 max-w-sm text-sm text-graphite">
           Check your connection. If you run FlowState yourself, make sure the API is running — you’re still signed in.
         </p>
         <Button variant="primary" className="mt-5" onClick={() => void bootstrapSession()}>

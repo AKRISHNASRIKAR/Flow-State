@@ -21,12 +21,12 @@ export function VariableChips({ workflowId, onInsert }: { workflowId: string; on
   const paths = collectPaths(payload);
 
   return (
-    <div className="rounded-lg bg-black p-3 text-xs text-neutral-300 ring-1 ring-neutral-800">
+    <div className="rounded-lg bg-paper p-3 text-xs text-graphite ring-1 ring-rule">
       <p>
         Text fields accept{' '}
-        <code className="rounded bg-neutral-800 px-1 font-mono text-neutral-100">{'{{payload.field}}'}</code>{' '}
+        <code className="rounded bg-paper-2 px-1 font-mono text-ink">{'{{payload.field}}'}</code>{' '}
         to insert the trigger’s data. After an HTTP request step, its reply is available as{' '}
-        <code className="rounded bg-neutral-800 px-1 font-mono text-neutral-100">{'{{payload.http.body.…}}'}</code>.
+        <code className="rounded bg-paper-2 px-1 font-mono text-ink">{'{{payload.http.body.…}}'}</code>.
       </p>
       {paths.length > 0 ? (
         <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -36,7 +36,7 @@ export function VariableChips({ workflowId, onInsert }: { workflowId: string; on
               key={p}
               type="button"
               onClick={() => onInsert(`{{payload.${p}}}`)}
-              className="rounded bg-indigo-500/10 px-1.5 py-0.5 font-mono text-indigo-300 ring-1 ring-indigo-500/30 hover:bg-indigo-500/20"
+              className="rounded bg-signal-soft px-1.5 py-0.5 font-mono text-signal ring-1 ring-signal/30 hover:bg-signal-soft"
               title={`Insert {{payload.${p}}} into the focused field`}
             >
               {p}

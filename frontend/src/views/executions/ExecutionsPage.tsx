@@ -19,8 +19,8 @@ export function ExecutionsPage() {
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-white">Runs</h1>
-        <p className="mt-1.5 text-sm text-neutral-300">
+        <h1 className="font-serif text-[40px] leading-tight tracking-[-0.01em] text-ink">Runs</h1>
+        <p className="mt-1.5 text-sm text-graphite">
           Every time a workflow ran, newest first. Open one to see what each step received and returned.
         </p>
       </div>

@@ -48,7 +48,7 @@ Redis also holds poll state (`poll:state:<triggerId>`, 24h TTL) rate limits (`ra
 | Webhook ingress (HMAC + idempotency) | ✅ Complete — strongest area |
 | Polling (3 change modes) | ✅ Complete |
 | Execution engine (retry + DLQ, resume-from-failure, payload chaining) | ✅ Complete |
-| Dashboard | ✅ Redesigned: trigger set up on the canvas (side `Drawer`), per-workflow setup checklist, "What's new" panel, On/Off switches, plain-language statuses, every error a toast |
+| Dashboard | ✅ Light "paper & ink" identity (2026-09-28): scroll-story landing page, sign-in shown as a flow, builder with docked inspector, live run state on the canvas, readiness check, run dock. Every error a toast |
 | Admin / DLQ | ✅ API only — dashboard page removed in `8034c79` |
 | Telegram bot | ✅ Webhook mode (`POST /telegram/webhook`, secret header) on both runtimes; no Telegraf. Still no `User` link |
 | Cloudflare runtime (`worker/`) | ✅ **Production.** Full API + engine on D1, Free plan, live at `https://flowstate-api.akrishnasrikar.workers.dev` with Google sign-in configured. Verified end to end on local workerd; SQL tested in CI. Render data not imported (optional, `scripts/postgres-to-d1.mjs`) |
@@ -93,7 +93,7 @@ Next up is **Google as the identity + integration platform**: users sign in with
 - Services `serialize()` before returning; never leak raw Prisma models.
 - Executors never throw — return `ActionResult`.
 - Every external call gets an `AbortController` timeout.
-- Frontend: TanStack Query for server state, Zustand for client state, `components/ui.tsx` primitives only.
+- Frontend: TanStack Query for server state, Zustand for client state, `components/ui.tsx` primitives only. Colours only from the semantic tokens in `globals.css` (`signal` = "live now", state colours = run state only); nodes from `components/flow-visuals.tsx` — see AGENTS.md §13.
 - Frontend errors: never `onError: toast.error(...)` — set `meta: { errorContext }` and the global handler in `app/providers.tsx` toasts it (details in `AGENTS.md` §Frontend).
 - Shipping a user-visible feature? Add a `lib/changelog.ts` entry in the same change — and only for things that work end to end.
 
@@ -160,7 +160,7 @@ Single `.env` at the repo root (backend reads `['.env', '../.env']`).
 
 ## Database overview
 
-PostgreSQL, 12 models, all UUID PKs, all `snake_case` via `@@map`.
+PostgreSQL, 13 models, all UUID PKs, all `snake_case` via `@@map`.
 
 `users` · `connections` (**`@@unique([provider, providerAccountId])`** = the Google identity; `@@unique([userId, provider])`) · `refresh_tokens` (self-relation rotation chain) · `workflows` · `triggers` (`workflowId @unique` = one per workflow) · `webhook_events` (**`@@unique([workflowId, idempotencyKey])`** = race-safe dedup) · `polling_events` · `conditions` (unused) · `actions` (`position` ASC = order) · `workflow_executions` · `action_executions` (one row **per step per attempt**) · `audit_logs` (`action` is TEXT, not the enum) · `telegram_users` (**no FK to `users`**).
 

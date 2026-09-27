@@ -44,18 +44,18 @@ function formatDate(iso: string) {
 export function WhatsNewDrawer({ onClose }: { onClose: () => void }) {
   return (
     <Drawer title="What’s new" subtitle="Recent changes to FlowState." onClose={onClose}>
-      <ol className="relative space-y-8 border-l border-neutral-800 pl-6">
+      <ol className="relative space-y-8 border-l border-rule pl-6">
         {CHANGELOG.map((entry) => (
           <li key={entry.id} className="relative">
-            <span aria-hidden className="absolute -left-[29px] top-1.5 size-2.5 rounded-full bg-indigo-500 ring-4 ring-neutral-950" />
-            <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">{formatDate(entry.date)}</p>
-            <h3 className="mt-1 text-sm font-semibold text-white">{entry.title}</h3>
-            <p className="mt-1.5 text-sm leading-relaxed text-neutral-300">{entry.body}</p>
+            <span aria-hidden className="absolute -left-[29px] top-1.5 size-2.5 rounded-full bg-signal ring-4 ring-rule" />
+            <p className="text-xs font-medium uppercase tracking-wide text-faint">{formatDate(entry.date)}</p>
+            <h3 className="mt-1 text-sm font-semibold text-ink">{entry.title}</h3>
+            <p className="mt-1.5 text-sm leading-relaxed text-graphite">{entry.body}</p>
             {entry.href && (
               <Link
                 href={entry.href}
                 onClick={onClose}
-                className="mt-2 inline-block text-sm font-medium text-indigo-400 hover:text-indigo-300"
+                className="mt-2 inline-block text-sm font-medium text-signal hover:text-signal"
               >
                 Take a look →
               </Link>

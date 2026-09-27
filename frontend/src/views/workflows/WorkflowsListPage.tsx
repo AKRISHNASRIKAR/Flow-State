@@ -77,8 +77,8 @@ export function WorkflowsListPage() {
     <div>
       <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white">Workflows</h1>
-          <p className="mt-1.5 max-w-xl text-sm text-neutral-300">
+          <h1 className="font-serif text-[40px] leading-tight tracking-[-0.01em] text-ink">Workflows</h1>
+          <p className="mt-1.5 max-w-xl text-sm text-graphite">
             A workflow waits for something to happen, then runs its steps in order.
           </p>
         </div>
@@ -87,7 +87,7 @@ export function WorkflowsListPage() {
             <div className="relative">
               <Icon
                 path={ICON_PATHS.search}
-                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-neutral-400"
+                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted"
               />
               <input
                 type="search"
@@ -152,7 +152,7 @@ export function WorkflowsListPage() {
             {visible.map((wf) => (
               <li
                 key={wf.id}
-                className="group relative flex flex-col rounded-2xl bg-neutral-900 p-5 ring-1 ring-neutral-800 transition hover:ring-indigo-500/50"
+                className="group relative flex flex-col rounded-md bg-card p-5 ring-1 ring-rule transition hover:ring-signal/50"
               >
                 <div className="flex items-start gap-3">
                   <div className="min-w-0 flex-1">
@@ -161,12 +161,12 @@ export function WorkflowsListPage() {
                         above it (they're positioned with a z-index). */}
                     <Link
                       href={`/workflows/${wf.id}`}
-                      className="block truncate text-base font-semibold text-white after:absolute after:inset-0 after:rounded-2xl group-hover:text-indigo-300"
+                      className="block truncate font-serif text-[22px] leading-tight text-ink underline decoration-transparent underline-offset-4 transition-colors after:absolute after:inset-0 after:rounded-md group-hover:decoration-rule"
                       title={wf.name}
                     >
                       {wf.name}
                     </Link>
-                    <p className="mt-1 line-clamp-2 min-h-10 text-sm text-neutral-400">
+                    <p className="mt-1 line-clamp-2 min-h-10 text-sm text-muted">
                       {wf.description || 'No description'}
                     </p>
                   </div>
@@ -183,7 +183,7 @@ export function WorkflowsListPage() {
                     />
                   </div>
                 </div>
-                <div className="mt-4 flex items-center justify-between gap-3 border-t border-neutral-800 pt-4">
+                <div className="mt-4 flex items-center justify-between gap-3 border-t border-rule pt-4">
                   <div className="relative z-10">
                     <Switch
                       checked={wf.status === 'ACTIVE'}
@@ -196,7 +196,7 @@ export function WorkflowsListPage() {
                     {wf.status !== 'ACTIVE' && <WorkflowStatusBadge status={wf.status} />}
                     {/* updatedAt is the last edit, not the last run — the list
                         endpoint has no run timestamp, so the label says so. */}
-                    <span className="truncate text-xs text-neutral-500" title={formatDateTime(wf.updatedAt)}>
+                    <span className="truncate text-xs text-faint" title={formatDateTime(wf.updatedAt)}>
                       Edited {formatDateTime(wf.updatedAt)}
                     </span>
                   </div>
