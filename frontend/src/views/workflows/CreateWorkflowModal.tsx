@@ -41,6 +41,7 @@ export function CreateWorkflowModal({ onClose }: { onClose: () => void }) {
 
   return (
     <Modal title="New workflow" onClose={onClose}>
+      <p className="mb-6 text-sm leading-relaxed text-muted">Start with a name. Next, choose what starts the flow and the steps that follow.</p>
       <form onSubmit={handleSubmit((values) => create.mutate(values))} className="space-y-4" noValidate>
         <div>
           <label htmlFor="wf-name" className={labelClass}>

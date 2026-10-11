@@ -81,13 +81,13 @@ export function ExecutionDetailPage() {
 
   return (
     <div>
-      <div className="mb-1 text-sm">
-        <Link href="/executions" className="text-signal hover:text-signal">
+      <div className="mb-5 text-sm">
+        <Link href="/executions" className="text-ink underline decoration-rule underline-offset-4 hover:decoration-ink">
           ← All runs
         </Link>
       </div>
-      <div className="mb-6 flex flex-wrap items-center gap-3">
-        <h1 className="font-serif text-[32px] leading-tight text-ink">
+      <div className="mb-8 flex flex-wrap items-center gap-4">
+        <h1 className="font-serif text-[44px] leading-tight text-ink">
           {execution.workflowName ?? 'Run'}{' '}
           <span className="align-middle font-mono text-[13px] font-normal text-muted">run {execution.id.slice(0, 8)}</span>
         </h1>
@@ -99,24 +99,24 @@ export function ExecutionDetailPage() {
         )}
         <Link
           href={`/workflows/${execution.workflowId}?tab=runs`}
-          className="ml-auto text-sm font-medium text-signal hover:text-signal"
+          className="ml-auto text-sm font-medium text-ink underline decoration-rule underline-offset-4 hover:decoration-ink"
         >
           View workflow →
         </Link>
       </div>
 
-      <div className="mb-6 grid gap-4 rounded-md bg-card p-5 text-sm shadow-xl ring-1 ring-rule sm:grid-cols-3">
+      <div className="mb-9 grid gap-6 rounded-[5px] border border-rule bg-card p-6 text-sm sm:p-8 sm:grid-cols-3">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-muted">Started</p>
-          <p className="mt-0.5 text-ink">{formatDateTime(execution.startedAt)}</p>
+          <p className="mt-3 text-ink">{formatDateTime(execution.startedAt)}</p>
         </div>
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-muted">Finished</p>
-          <p className="mt-0.5 text-ink">{formatDateTime(execution.finishedAt)}</p>
+          <p className="mt-3 text-ink">{formatDateTime(execution.finishedAt)}</p>
         </div>
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-muted">Duration</p>
-          <p className="mt-0.5 tabular-nums text-ink">{formatDuration(execution.startedAt, execution.finishedAt)}</p>
+          <p className="mt-3 font-mono tabular-nums text-ink">{formatDuration(execution.startedAt, execution.finishedAt)}</p>
         </div>
         {execution.error && (
           <div className="sm:col-span-3">
@@ -129,7 +129,7 @@ export function ExecutionDetailPage() {
       {attempts.length === 0 ? (
         <EmptyState title="No action steps recorded" body="This run hasn't executed any actions yet." />
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-8"><div className="border-b border-rule pb-4"><p className="label-caps text-muted">The path through this run</p><h2 className="mt-3 font-serif text-3xl">Step by step.</h2></div>
           {attempts.map((attempt, i) => (
             <section key={i}>
               {attempts.length > 1 && (
@@ -215,7 +215,7 @@ function ActionStep({
   const inFlight = ae.status === 'PENDING' || ae.status === 'RUNNING';
 
   return (
-    <li className="relative rounded-md border border-rule bg-card">
+    <li className="relative rounded-[5px] border border-rule bg-card transition-colors hover:border-faint">
       {/* Rail marker, centred on the rail at x=28px. Decorative — the row's
           status badge carries the state. */}
       <span aria-hidden className="absolute -left-9 top-5">
@@ -228,7 +228,7 @@ function ActionStep({
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-3 p-4 text-left"
+        className="flex w-full items-center gap-3 p-5 text-left"
         aria-expanded={open}
       >
         <span className="w-5 shrink-0 font-mono text-[12px] text-muted tabular-nums">{String(index + 1).padStart(2, '0')}</span>
@@ -256,13 +256,13 @@ function ActionStep({
         </svg>
       </button>
       {open && (
-        <div className="grid gap-3 border-t border-rule p-4 lg:grid-cols-2">
+        <div className="dashboard-expand grid gap-4 border-t border-rule p-5 lg:grid-cols-2">
           <JsonBlock label="Input" value={ae.input} />
           <JsonBlock label="Output" value={ae.output} />
           {ae.error && (
             <div className="lg:col-span-2">
               <p className="mb-1 text-xs font-medium uppercase tracking-wide text-fail">Error</p>
-              <pre className="overflow-auto rounded-lg bg-fail-soft p-4 font-mono text-xs text-fail ring-1 ring-fail/20">
+              <pre className="overflow-auto rounded-[4px] bg-fail-soft p-4 font-mono text-xs text-fail ring-1 ring-fail/20">
                 {ae.error}
               </pre>
             </div>
@@ -280,7 +280,7 @@ function JsonBlock({ label, value }: { label: string; value: unknown }) {
   return (
     <div className="flex min-w-0 flex-col">
       <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted">{label}</p>
-      <pre className="max-h-56 flex-1 overflow-auto rounded-lg bg-paper p-4 font-mono text-xs text-ok ring-1 ring-rule">
+      <pre className="max-h-56 flex-1 overflow-auto rounded-[4px] bg-paper p-4 font-mono text-xs text-graphite ring-1 ring-rule">
         {value == null ? 'null' : formatJson(value)}
       </pre>
     </div>

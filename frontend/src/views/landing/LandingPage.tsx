@@ -81,17 +81,17 @@ function WorkflowDemo() {
 export function LandingPage() {
   return (
     <div className="landing-page min-h-screen bg-paper">
-      <header className="absolute inset-x-0 top-0 z-20">
-        <nav aria-label="Main navigation" className={`${SHELL} flex h-24 items-center justify-between gap-6`}>
-          <Link href="/" aria-label="FlowState home" className="rounded-[3px] bg-paper px-3 py-2.5"><BrandLockup size="sm" /></Link>
-          <div className="hidden gap-7 rounded-[3px] bg-paper px-6 py-3 text-sm text-graphite md:flex"><a className="hover:text-ink" href="#how-it-works">How it works</a><a className="hover:text-ink" href="#possibilities">What you can build</a><a className="hover:text-ink" href={GITHUB_URL} target="_blank" rel="noreferrer">GitHub ↗</a></div>
+      <header className="relative z-20 border-b border-rule bg-paper">
+        <nav aria-label="Main navigation" className={`${SHELL} flex h-20 items-center justify-between gap-6`}>
+          <Link href="/" aria-label="FlowState home"><BrandLockup size="sm" /></Link>
+          <div className="hidden gap-7 text-sm text-graphite md:flex"><a className="hover:text-ink" href="#how-it-works">How it works</a><a className="hover:text-ink" href="#possibilities">What you can build</a><a className="hover:text-ink" href={GITHUB_URL} target="_blank" rel="noreferrer">GitHub ↗</a></div>
           <Link href="/login" className={CTA}>Get started <span aria-hidden>↗</span></Link>
         </nav>
       </header>
       <main>
         <section className="relative isolate overflow-hidden border-b border-rule">
-          <Image src="/images/pixel-river.jpg" alt="Pixel-art trees and a wooden bridge over a calm river" fill priority sizes="100vw" className="-z-10 object-cover object-center" />
-          <div className={`${SHELL} flex min-h-[780px] items-start pb-24 pt-40 sm:min-h-[860px] sm:pt-44`}>
+          <Image src="/images/pixel-hero-bridge.jpg" alt="Pixel-art woodland bridge over a pond with orange fish" fill priority sizes="100vw" className="-z-10 object-cover object-center" />
+          <div className={`${SHELL} flex min-h-[700px] items-start pb-24 pt-20 sm:min-h-[780px] sm:pt-24`}>
             <div className="landing-hero-copy max-w-[600px]">
               <p className="landing-hero-text label-caps text-paper">A little less busywork. A little more flow.</p>
               <h1 className="landing-hero-text mt-6 font-serif text-[clamp(52px,6vw,84px)] leading-[1.06] tracking-[-0.035em] text-paper">Let your work<br />find its flow.</h1>

@@ -437,13 +437,13 @@ export function EmptyState({
   icon?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-md border border-dashed border-faint/60 px-6 py-16 text-center">
-      <span className="mb-4 flex size-11 items-center justify-center rounded-[5px] bg-card text-muted ring-1 ring-rule">
+    <div className="flex flex-col items-center justify-center rounded-md border border-rule bg-card px-6 py-16 text-center">
+      <span className="mb-6 flex size-14 items-center justify-center rounded-[5px] bg-card text-muted ring-1 ring-rule">
         {icon ?? (
           <Icon path="M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H6.911a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661Z" className="size-6" />
         )}
       </span>
-      <p className="font-serif text-2xl text-ink">{title}</p>
+      <p className="font-serif text-3xl text-ink">{title}</p>
       {body && <div className="mt-2 max-w-md text-sm leading-relaxed text-graphite">{body}</div>}
       {action && <div className="mt-5">{action}</div>}
     </div>

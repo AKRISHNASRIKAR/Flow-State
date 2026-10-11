@@ -254,10 +254,10 @@ export function WorkflowDetailPage() {
     ) : null;
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-6">
       {/* Builder top bar: where am I, is it on, is it ready, run it. */}
-      <header className="flex flex-wrap items-start gap-x-6 gap-y-4">
-        <div className="min-w-0 basis-full sm:basis-auto sm:flex-1">
+      <header className="flex flex-wrap items-start gap-x-6 gap-y-4 border-b border-rule pb-6">
+        <div className="min-w-0 basis-full sm:basis-auto sm:flex-1"><p className="label-caps mb-3 text-muted">Workflow studio</p>
           <div className="flex flex-wrap items-center gap-3">
             {editingName ? (
               <input
@@ -271,12 +271,12 @@ export function WorkflowDetailPage() {
                   if (e.key === 'Enter') submitName();
                   if (e.key === 'Escape') setEditingName(false);
                 }}
-                className="min-w-0 flex-1 rounded-[5px] border-0 bg-card px-2 py-0.5 font-serif text-[32px] leading-tight text-ink ring-2 ring-signal focus:outline-none"
+                className="min-w-0 flex-1 rounded-[5px] border-0 bg-card px-2 py-0.5 font-serif text-[40px] leading-tight text-ink ring-2 ring-signal focus:outline-none"
               />
             ) : (
               <button
                 type="button"
-                className="min-w-0 truncate rounded-[5px] px-1 -mx-1 text-left font-serif text-[32px] leading-tight text-ink hover:bg-paper-2"
+                className="min-w-0 truncate rounded-[5px] px-1 -mx-1 text-left font-serif text-[40px] leading-tight text-ink hover:bg-paper-2"
                 title="Click to rename"
                 onClick={() => {
                   setNameDraft(workflow.name);
@@ -326,9 +326,9 @@ export function WorkflowDetailPage() {
         <>
           {/* Phones and tablets: the checklist sits above the canvas. */}
           {!docked && checklist(false)}
-          <div className="-mt-1 grid gap-4 lg:h-[calc(100dvh-15.5rem)] lg:min-h-[560px] lg:grid-cols-[minmax(0,1fr)_380px]">
-            <div className="flex min-h-[520px] flex-col overflow-hidden rounded-md border border-rule lg:min-h-0">
-              <div className="min-h-0 flex-1">
+          <div className="-mt-1 grid gap-4 lg:h-[calc(100dvh-19rem)] lg:min-h-[560px] lg:grid-cols-[minmax(0,1fr)_380px]">
+            <div className="flex min-h-[520px] flex-col overflow-hidden rounded-[5px] border border-rule bg-card lg:min-h-0">
+              <div className="flex items-center justify-between border-b border-rule bg-card px-5 py-3"><p className="label-caps text-muted">Your flow</p><span className="text-xs text-muted">Trigger → steps → outcome</span></div><div className="min-h-0 flex-1">
                 <FlowCanvas
                   workflowId={workflowId}
                   onEditTrigger={() => setPanel({ kind: 'trigger' })}
@@ -346,7 +346,7 @@ export function WorkflowDetailPage() {
               <aside className="min-h-0">
                 <DrawerModeContext.Provider value="inline">
                   {panelContent ?? (
-                    <div className="h-full overflow-y-auto rounded-md border border-rule bg-card p-5">
+                    <div className="h-full overflow-y-auto rounded-[5px] border border-rule bg-card p-6">
                       {checklist(true) ?? null}
                       <InspectorOverview readiness={readiness} />
                     </div>

@@ -87,7 +87,7 @@ const webhookEventStyles: Record<string, string> = {
   PROCESSED: 'bg-ok-soft text-ok ring-ok/30',
   MANUAL: 'bg-signal-soft text-signal ring-signal/30',
   SKIPPED: 'bg-wait-soft text-wait ring-wait/30',
-  SKIPPED_CONCURRENCY_LIMIT: 'bg-orange-500/15 text-orange-300 ring-orange-500/30',
+  SKIPPED_CONCURRENCY_LIMIT: 'bg-wait-soft text-wait ring-wait/30',
   SKIPPED_RATE_LIMIT: 'bg-fail-soft text-fail ring-fail/30',
 };
 

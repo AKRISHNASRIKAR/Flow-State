@@ -4,25 +4,29 @@ import type { ExecutionStatus } from '@flowstate/api-types';
 import { executionsApi } from '../../lib/api';
 import { formatMs } from '../../lib/format';
 
-// Status palette (semantic, fixed — validated for CVD separation; the gray
-// steps are intentionally desaturated for the inert states, and every segment
-// is paired with a visible label + count so color never carries meaning alone).
+// Every segment is paired with a label and count; state remains readable
+// without color, including for readers with color-vision differences.
 const STATUS_ORDER: ExecutionStatus[] = ['PENDING', 'RUNNING', 'SUCCEEDED', 'FAILED', 'CANCELLED'];
-// Lifted a step from the light-mode values so each segment stays vivid on the
-// card surface; the gray steps remain the desaturated pair.
+// The same semantic state colors appear in the run list and canvas.
 const STATUS_COLOR: Record<ExecutionStatus, string> = {
-  PENDING: '#94a3b8',
-  RUNNING: '#3b82f6',
-  SUCCEEDED: '#10b981',
-  FAILED: '#ef4444',
-  CANCELLED: '#64748b',
+  PENDING: 'var(--color-wait)',
+  RUNNING: 'var(--color-signal)',
+  SUCCEEDED: 'var(--color-ok)',
+  FAILED: 'var(--color-fail)',
+  CANCELLED: 'var(--color-faint)',
 };
+
+// Statistics stay fresh only while there is work in flight.
+const STATS_REFRESH_MS = 15_000;
 
 export function StatsWidget() {
   const { data: stats } = useQuery({
     queryKey: ['execution-stats'],
     queryFn: executionsApi.stats,
-    refetchInterval: 15_000,
+    refetchInterval: (query) => {
+      const statuses = query.state.data?.byStatus;
+      return (statuses?.PENDING ?? 0) + (statuses?.RUNNING ?? 0) > 0 ? STATS_REFRESH_MS : false;
+    },
     meta: { errorContext: 'Couldn’t load run statistics' },
   });
 
@@ -37,8 +41,8 @@ export function StatsWidget() {
   const running = stats.byStatus?.RUNNING ?? 0;
 
   return (
-    <div className="mb-6 space-y-4">
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+    <div className="mb-9 space-y-5">
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[5px] border border-rule bg-rule sm:grid-cols-3 lg:grid-cols-5">
         <StatTile label="Total runs" value={String(stats.total)} />
         <StatTile label="Last 24 h" value={String(stats.last24hTotal)} />
         <StatTile label="Avg duration" value={stats.avgDurationMs != null ? formatMs(stats.avgDurationMs) : '—'} />
@@ -59,8 +63,8 @@ export function StatsWidget() {
       </div>
 
       {barTotal > 0 && (
-        <div className="rounded-md bg-card p-5 shadow-[0_10px_24px_-20px_rgba(15,27,45,0.5)] ring-1 ring-rule">
-          <div className="flex h-5 w-full gap-0.5 overflow-hidden rounded-lg" role="img" aria-label="Runs by status">
+        <div className="bg-card p-5 sm:p-6">
+          <div className="flex h-2 w-full gap-0.5 overflow-hidden rounded-[2px]" role="img" aria-label="Runs by status">
             {byStatus
               .filter((s) => s.count > 0)
               .map((s) => (
@@ -97,9 +101,9 @@ export function StatsWidget() {
 
 function StatTile({ label, value, alert }: { label: string; value: string; alert?: string }) {
   return (
-    <div className="rounded-md bg-card p-5 shadow-[0_10px_24px_-20px_rgba(15,27,45,0.5)] ring-1 ring-rule">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted">{label}</p>
-      <p className={`mt-1 text-2xl font-semibold tabular-nums ${alert ? 'text-fail' : 'text-ink'}`}>
+    <div className="bg-card p-5 sm:p-6">
+      <p className="font-mono text-[10px] uppercase tracking-wider text-muted">{label}</p>
+      <p className={`mt-4 font-serif text-4xl tabular-nums ${alert ? 'text-fail' : 'text-ink'}`}>
         {value}
       </p>
       {alert && <p className="mt-1 text-xs text-fail">⚠ {alert}</p>}

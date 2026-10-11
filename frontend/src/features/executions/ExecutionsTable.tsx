@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import type { ExecutionStatus } from '@flowstate/api-types';
 import Link from 'next/link';
-import { useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { EXECUTION_STATUS_LABEL, ExecutionStatusBadge } from '../../components/StatusBadge';
 import { Button, EmptyState, Pagination, Spinner, inputClass } from '../../components/ui';
 import { executionsApi } from '../../lib/api';
@@ -29,8 +29,20 @@ interface ExecutionsTableProps {
 }
 
 export function ExecutionsTable({ workflowId, extraFilters }: ExecutionsTableProps) {
-  const [page, setPage] = useState(1);
-  const [status, setStatus] = useState<ExecutionStatus | ''>('');
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const page = Math.max(1, Number(searchParams.get('page') ?? '1') || 1);
+  const statusParam = searchParams.get('status');
+  const status = STATUSES.find((item) => item === statusParam) ?? '';
+  const updateFilters = (updates: Record<string, string>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    for (const [key, value] of Object.entries(updates)) {
+      if (value) params.set(key, value);
+      else params.delete(key);
+    }
+    router.replace(params.size ? `${pathname}?${params}` : pathname, { scroll: false });
+  };
 
   const { data, isPending, isError, refetch } = useQuery({
     queryKey: ['executions', { workflowId, status, page }],
@@ -46,16 +58,16 @@ export function ExecutionsTable({ workflowId, extraFilters }: ExecutionsTablePro
   });
 
   return (
-    <div className="rounded-md bg-card p-5 shadow-xl ring-1 ring-rule">
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+    <div className="overflow-hidden rounded-[5px] border border-rule bg-card p-4 sm:p-6">
+      <div className="mb-5 border-b border-rule pb-5"><h2 className="font-serif text-2xl">Run journal</h2><p className="mt-1 text-xs text-muted">Newest first. Open a run to follow each step.</p></div>
+      <div className="mb-6 flex flex-wrap items-center gap-3">
         <div className="w-44">
           <select
             aria-label="Filter by status"
             className={inputClass}
             value={status}
             onChange={(e) => {
-              setStatus(e.target.value as ExecutionStatus | '');
-              setPage(1);
+              updateFilters({ status: e.target.value, page: '' });
             }}
           >
             <option value="">All statuses</option>
@@ -92,7 +104,7 @@ export function ExecutionsTable({ workflowId, extraFilters }: ExecutionsTablePro
 
       {data && data.data.length > 0 && (
         <>
-          <table className="w-full text-left text-sm text-ink">
+          <div className="overflow-x-auto"><table className="min-w-[640px] w-full text-left text-sm text-ink">
             <thead>
               <tr className="border-b border-rule text-xs uppercase tracking-wide text-muted">
                 <th className="py-2 pl-3 pr-4 font-medium">Workflow</th>
@@ -108,24 +120,24 @@ export function ExecutionsTable({ workflowId, extraFilters }: ExecutionsTablePro
                   key={e.id}
                   className={`border-b border-l-4 border-b-rule/70 transition-colors duration-150 hover:bg-paper-2 ${ROW_ACCENT[e.status]}`}
                 >
-                  <td className="max-w-52 truncate py-2.5 pl-3 pr-4 font-medium text-ink">{e.workflowName}</td>
-                  <td className="py-2.5 pr-4">
+                  <td className="max-w-52 truncate py-4 pl-3 pr-4 font-serif text-lg text-ink">{e.workflowName}</td>
+                  <td className="py-4 pr-4">
                     <ExecutionStatusBadge status={e.status} />
                   </td>
-                  <td className="whitespace-nowrap py-2.5 pr-4 text-graphite">{formatDateTime(e.startedAt)}</td>
-                  <td className="whitespace-nowrap py-2.5 pr-4 tabular-nums text-graphite">
+                  <td className="whitespace-nowrap py-4 pr-4 text-graphite">{formatDateTime(e.startedAt)}</td>
+                  <td className="whitespace-nowrap py-4 pr-4 tabular-nums text-graphite">
                     {formatDuration(e.startedAt, e.finishedAt)}
                   </td>
-                  <td className="py-2.5 text-right">
-                    <Link href={`/executions/${e.id}`} className="text-xs font-medium text-signal hover:text-signal">
+                  <td className="py-4 text-right">
+                    <Link href={`/executions/${e.id}`} className="text-xs font-medium text-ink underline decoration-rule underline-offset-4 hover:decoration-ink">
                       View steps →
                     </Link>
                   </td>
                 </tr>
               ))}
             </tbody>
-          </table>
-          <Pagination page={data.meta.page} totalPages={data.meta.totalPages} total={data.meta.total} onPage={setPage} />
+          </table></div>
+          <Pagination page={data.meta.page} totalPages={data.meta.totalPages} total={data.meta.total} onPage={(nextPage) => updateFilters({ page: String(nextPage) })} />
         </>
       )}
     </div>

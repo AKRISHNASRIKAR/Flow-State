@@ -2,6 +2,7 @@
 
 import { useMutation, useQuery } from '@tanstack/react-query';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { WhatsNewDrawer, useWhatsNewUnread } from '../features/help/WhatsNew';
@@ -10,7 +11,7 @@ import { useAuthStore } from '../lib/auth-store';
 import { BrandLockup } from './Logo';
 import { ICON_PATHS } from './ui';
 
-const SIDEBAR_WIDTH = 'w-60'; // 240px — paired with md:pl-60 on the content column.
+const SIDEBAR_WIDTH = 'w-64'; // 256px — paired with md:pl-64 on the content column.
 
 // 24x24 Heroicons outline path data, inlined: there is no icon package in this
 // workspace and adding one for five glyphs isn't worth the dependency. The
@@ -59,13 +60,12 @@ function NavItem({
       href={href}
       onClick={onNavigate}
       aria-current={isActive ? 'page' : undefined}
-      // Active is ink with a marker, not blue: signal blue means "running now".
-      className={`relative flex items-center gap-3 rounded-[5px] px-3 py-2 text-sm font-medium transition-colors ${
-        isActive ? 'bg-card text-ink ring-1 ring-rule' : 'text-graphite hover:bg-paper-2 hover:text-ink'
+      // An ink fill marks navigation; signal blue remains reserved for a running step.
+      className={`relative flex items-center gap-3 rounded-[5px] px-4 py-3 text-sm font-medium transition-colors duration-200 ${
+        isActive ? 'bg-ink text-paper' : 'text-graphite hover:bg-paper-2 hover:text-ink'
       }`}
     >
-      {isActive && <span aria-hidden className="absolute -left-3 top-2 bottom-2 w-[3px] rounded-r bg-ink" />}
-      <Icon path={icon} className={`size-[18px] ${isActive ? 'text-ink' : 'text-muted'}`} />
+      <Icon path={icon} className={`size-[18px] ${isActive ? 'text-paper' : 'text-muted'}`} />
       {label}
     </Link>
   );
@@ -136,7 +136,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="dashboard-shell min-h-screen">
       {menuOpen && (
         <div
           className="fixed inset-0 z-30 bg-ink/20 md:hidden"
@@ -146,11 +146,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex ${SIDEBAR_WIDTH} flex-col border-r border-rule bg-paper transition-transform duration-200 md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex ${SIDEBAR_WIDTH} flex-col border-r border-rule bg-card transition-transform duration-300 md:translate-x-0 ${
           menuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="flex h-14 items-center gap-2.5 px-4">
+        <div className="flex h-24 items-center gap-2.5 px-6">
           <Link href="/workflows" aria-label="FlowState — your workflows">
             <BrandLockup size="sm" />
           </Link>
@@ -164,13 +164,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
         </div>
 
-        <p className="label-caps px-6 pt-5 text-faint">Build</p>
-        <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-2">
+        <div className="mx-6 mb-6 border-b border-rule pb-5"><p className="label-caps text-muted">Your workspace</p><p className="mt-2 text-xs text-muted">One task at a time.</p></div><p className="label-caps px-6 text-faint">Workspace</p>
+        <nav className="flex flex-1 flex-col gap-2 overflow-y-auto px-4 py-3">
           {NAV_ITEMS.map((item) => (
             <NavItem key={item.href} {...item} onNavigate={() => setMenuOpen(false)} />
           ))}
         </nav>
 
+        <div className="mx-4 mb-5 overflow-hidden rounded-[4px] border border-rule">
+          <div className="relative h-24"><Image src="/images/pixel-river.jpg" alt="" fill sizes="224px" className="object-cover" /></div>
+          <div className="p-4"><p className="font-serif text-lg">Find your next flow.</p><p className="mt-1 text-xs leading-relaxed text-muted">Start with something you do more than once.</p><Link href="/" className="mt-3 inline-block text-xs font-medium underline decoration-rule underline-offset-4">Explore FlowState ↗</Link></div>
+        </div>
         <div className="px-3 pb-3">
           <button
             type="button"
@@ -189,7 +193,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         <div className="flex items-center gap-2.5 border-t border-rule px-3 py-3">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-card font-serif text-[15px] uppercase text-ink ring-1 ring-rule">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-[4px] bg-paper-2 font-serif text-[15px] uppercase text-ink ring-1 ring-rule">
             {user?.email?.charAt(0) ?? '?'}
           </span>
           <span className="min-w-0 flex-1 truncate text-xs text-muted" title={user?.email}>
@@ -208,8 +212,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <div className="flex min-h-screen flex-col bg-paper md:pl-60">
-        <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-rule bg-paper/95 px-4 sm:px-8">
+      <div className="flex min-h-screen flex-col bg-paper md:pl-64">
+        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-rule bg-paper px-4 sm:px-8">
           <button
             type="button"
             onClick={() => setMenuOpen(true)}
@@ -236,10 +240,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 )}
               </span>
             ))}
-          </nav>
+          </nav><span className="ml-auto hidden font-mono text-[10px] uppercase tracking-widest text-muted sm:block">Your work, in order.</span>
         </header>
-        <main className={`flex-1 ${wide ? 'px-4 py-6 sm:px-6' : 'px-4 py-10 sm:px-6 lg:px-10'}`}>
-          <div className={wide ? '' : 'mx-auto max-w-6xl'}>{children}</div>
+        <main className={`flex-1 ${wide ? 'px-4 py-8 sm:px-8' : 'px-4 py-10 sm:px-8 lg:px-12'}`}>
+          <div key={pathname} className={wide ? 'dashboard-page' : 'dashboard-page mx-auto max-w-6xl'}>{children}</div>
         </main>
       </div>
 

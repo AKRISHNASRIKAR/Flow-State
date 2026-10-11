@@ -8,6 +8,7 @@ import { useAuthStore } from '../../lib/auth-store';
 import { Button } from '../../components/ui';
 import { toast } from '../../lib/toast';
 import Link from 'next/link';
+import Image from 'next/image';
 import { BrandLockup } from '../../components/Logo';
 import { Connector, FlowNodeCard, type RunTone } from '../../components/flow-visuals';
 import { GLYPHS } from '../../lib/glyphs';
@@ -132,11 +133,12 @@ export function AuthLayout({
 }) {
   return (
     <div className="flex min-h-screen bg-paper">
-      <div className="grid-paper relative hidden flex-1 flex-col justify-between border-r border-rule p-12 md:flex">
-        <Link href="/" aria-label="FlowState home">
+      <div className="relative isolate hidden flex-1 flex-col justify-between overflow-hidden border-r border-rule p-10 lg:p-14 md:flex">
+        <Image src="/images/pixel-river.jpg" alt="" fill sizes="50vw" className="-z-10 object-cover" />
+        <Link href="/" aria-label="FlowState home" className="w-fit rounded-[3px] bg-paper px-3 py-2.5">
           <BrandLockup />
         </Link>
-        <div className="mx-auto w-full max-w-[360px]">
+        <div className="mx-auto my-10 w-full max-w-[380px] rounded-[5px] border border-rule bg-paper p-6"><p className="label-caps mb-3 text-muted">A simple beginning</p><h2 className="mb-7 font-serif text-4xl">Find your flow.</h2>
           {SIGN_IN_FLOW.map((n, i) => (
             <div key={n.label}>
               {i > 0 && <Connector height={24} flowing={!failed && i === step} drawn={i <= step ? 1 : 0.35} />}
@@ -153,7 +155,7 @@ export function AuthLayout({
             </div>
           ))}
         </div>
-        <p className="max-w-[40ch] text-[13px] leading-relaxed text-muted">
+        <p className="max-w-[44ch] rounded-[3px] bg-paper p-4 text-xs leading-relaxed text-muted">
           FlowState only asks Google for your name and email. Access to Gmail, Sheets or Calendar will always be a separate,
           explicit choice.
         </p>
@@ -164,8 +166,8 @@ export function AuthLayout({
           <Link href="/" className="mb-10 inline-flex md:hidden" aria-label="FlowState home">
             <BrandLockup />
           </Link>
-          <h1 className="font-serif text-[40px] leading-[1.05] tracking-[-0.015em] text-ink">{title}</h1>
-          <div className="mt-8">{children}</div>
+          <p className="label-caps mb-5 text-muted">Welcome to your workspace</p><h1 className="font-serif text-[48px] leading-[1.05] tracking-[-0.015em] text-ink">{title}</h1>
+          <div className="mt-5"><p className="mb-8 text-[15px] leading-relaxed text-muted">A little less busywork. A little more room for the work that matters.</p>{children}</div>
         </div>
       </div>
     </div>

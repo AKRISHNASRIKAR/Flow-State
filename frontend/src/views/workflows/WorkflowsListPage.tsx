@@ -5,6 +5,8 @@ import type { Workflow } from '@flowstate/api-types';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
+import { DashboardHeading } from '../../components/DashboardHeading';
+import { LogoMark } from '../../components/Logo';
 import { WorkflowStatusBadge } from '../../components/StatusBadge';
 import {
   Button,
@@ -75,35 +77,18 @@ export function WorkflowsListPage() {
 
   return (
     <div>
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-serif text-[40px] leading-tight tracking-[-0.01em] text-ink">Workflows</h1>
-          <p className="mt-1.5 max-w-xl text-sm text-graphite">
-            A workflow waits for something to happen, then runs its steps in order.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {hasAny && (
-            <div className="relative">
-              <Icon
-                path={ICON_PATHS.search}
-                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted"
-              />
-              <input
-                type="search"
-                aria-label="Filter workflows by name"
-                placeholder="Filter by name…"
-                className={`${inputClass} w-56 pl-9`}
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-            </div>
-          )}
-          <Button variant="primary" onClick={() => setShowCreate(true)}>
-            <Icon path={ICON_PATHS.plus} className="size-4" strokeWidth={2} />
-            New workflow
-          </Button>
-        </div>
+      <DashboardHeading eyebrow="Workspace / Workflows" title="Make room for better work." description="Give the tasks you repeat a place to run. Your workflows connect one starting event to a sequence of useful steps." landscape action={<Button variant="primary" size="lg" onClick={() => setShowCreate(true)}><Icon path={ICON_PATHS.plus} className="size-4" />New workflow</Button>} />
+
+      {data && hasAny && <div className="mb-9 grid grid-cols-3 divide-x divide-rule border-y border-rule py-5">
+        {[
+          ['On', data.data.filter((wf) => wf.status === 'ACTIVE').length],
+          ['Draft', data.data.filter((wf) => wf.status === 'DRAFT').length],
+          ['Paused', data.data.filter((wf) => wf.status === 'PAUSED').length],
+        ].map(([label, count]) => <div key={label} className="px-4 first:pl-0 sm:px-6"><p className="label-caps text-muted">{label}</p><p className="mt-3 font-serif text-4xl tabular-nums">{count}</p><p className="mt-1 text-[11px] text-muted">On this page</p></div>)}
+      </div>}
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
+        <div><h2 className="font-serif text-2xl">Your workflow library</h2><p className="mt-1 text-xs text-muted">{hasAny ? `${data?.meta.total} workflows · open one to build or follow its runs` : 'A trigger, a few steps, and one less thing to do by hand.'}</p></div>
+        {hasAny && <div className="relative w-full sm:w-64"><Icon path={ICON_PATHS.search} className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted" /><input type="search" aria-label="Filter workflows by name" placeholder="Find on this page…" className={`${inputClass} pl-9`} value={query} onChange={(e) => setQuery(e.target.value)} /></div>}
       </div>
 
       {isPending && <Spinner label="Loading workflows…" />}
@@ -148,12 +133,13 @@ export function WorkflowsListPage() {
 
       {data && visible.length > 0 && (
         <>
-          <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <ul className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             {visible.map((wf) => (
               <li
                 key={wf.id}
-                className="group relative flex flex-col rounded-md bg-card p-5 ring-1 ring-rule transition hover:ring-signal/50"
+                className="workflow-library-card group relative flex flex-col rounded-[5px] border border-rule bg-card p-6 transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-0.5 hover:border-faint hover:shadow-[0_8px_24px_-16px_var(--color-ink)]"
               >
+                <div className="mb-6 flex items-center justify-between"><span className="flex size-10 items-center justify-center rounded-[4px] border border-rule bg-paper text-ink"><LogoMark className="size-6" /></span><WorkflowStatusBadge status={wf.status} /></div>
                 <div className="flex items-start gap-3">
                   <div className="min-w-0 flex-1">
                     {/* The whole card is clickable through this link's ::after,
@@ -161,13 +147,13 @@ export function WorkflowsListPage() {
                         above it (they're positioned with a z-index). */}
                     <Link
                       href={`/workflows/${wf.id}`}
-                      className="block truncate font-serif text-[22px] leading-tight text-ink underline decoration-transparent underline-offset-4 transition-colors after:absolute after:inset-0 after:rounded-md group-hover:decoration-rule"
+                      className="block truncate font-serif text-[28px] leading-tight text-ink underline decoration-transparent underline-offset-4 transition-colors after:absolute after:inset-0 after:rounded-md group-hover:decoration-rule"
                       title={wf.name}
                     >
                       {wf.name}
                     </Link>
                     <p className="mt-1 line-clamp-2 min-h-10 text-sm text-muted">
-                      {wf.description || 'No description'}
+                      {wf.description || 'Choose a trigger and add the steps that carry your work forward.'}
                     </p>
                   </div>
                   {/* z-20, one above the switches: an open menu can hang over
@@ -183,17 +169,17 @@ export function WorkflowsListPage() {
                     />
                   </div>
                 </div>
-                <div className="mt-4 flex items-center justify-between gap-3 border-t border-rule pt-4">
+                <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-rule pt-5">
                   <div className="relative z-10">
                     <Switch
                       checked={wf.status === 'ACTIVE'}
-                      label={wf.status === 'ACTIVE' ? 'On' : 'Off'}
+                      label={wf.status === 'ACTIVE' ? 'On' : wf.status === 'DRAFT' ? 'Draft' : 'Paused'}
                       disabled={setOn.isPending && setOn.variables?.id === wf.id}
                       onChange={(on) => setOn.mutate({ id: wf.id, on })}
                     />
                   </div>
                   <div className="flex min-w-0 items-center gap-2">
-                    {wf.status !== 'ACTIVE' && <WorkflowStatusBadge status={wf.status} />}
+
                     {/* updatedAt is the last edit, not the last run — the list
                         endpoint has no run timestamp, so the label says so. */}
                     <span className="truncate text-xs text-faint" title={formatDateTime(wf.updatedAt)}>

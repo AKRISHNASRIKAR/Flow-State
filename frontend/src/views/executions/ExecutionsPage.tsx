@@ -1,12 +1,23 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { DashboardHeading } from '../../components/DashboardHeading';
 import { inputClass } from '../../components/ui';
 import { ExecutionsTable } from '../../features/executions/ExecutionsTable';
 import { StatsWidget } from '../../features/executions/StatsWidget';
 import { workflowsApi } from '../../lib/api';
 
 export function ExecutionsPage() {
-  const [workflowId, setWorkflowId] = useState('');
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const workflowId = searchParams.get('workflowId') ?? '';
+  const setWorkflowId = (id: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (id) params.set('workflowId', id);
+    else params.delete('workflowId');
+    params.delete('page');
+    router.replace(params.size ? `/executions?${params}` : '/executions', { scroll: false });
+  };
 
   // Workflow filter options — first 100 is plenty for a filter dropdown.
   const { data: workflows } = useQuery({
@@ -18,12 +29,7 @@ export function ExecutionsPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="font-serif text-[40px] leading-tight tracking-[-0.01em] text-ink">Runs</h1>
-        <p className="mt-1.5 text-sm text-graphite">
-          Every time a workflow ran, newest first. Open one to see what each step received and returned.
-        </p>
-      </div>
+      <DashboardHeading eyebrow="Workspace / Run history" title="See your work happen." description="Every trigger starts a story. Follow the outcome, inspect the steps, and find exactly where a run needs your attention." action={<Link href="/workflows" className="text-sm font-medium underline decoration-rule underline-offset-4">Back to workflows ↗</Link>} />
       <StatsWidget />
       <ExecutionsTable
         key={workflowId}
