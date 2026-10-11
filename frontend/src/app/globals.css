@@ -203,3 +203,22 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* Landing motion reveals hierarchy; run motion follows the active step rather
+   than making the entire canvas move. Reduced-motion overrides remain global. */
+.landing-page { scroll-behavior: smooth; }
+html:has(.landing-page) { scroll-behavior: smooth; }
+.landing-page a { transition: color 200ms ease, background-color 200ms ease, transform 200ms ease; }
+.landing-page a:active { transform: translateY(1px); }
+.landing-hero-copy { animation: fade-up 700ms cubic-bezier(.22,1,.36,1) both; }
+.landing-example-enter { animation: fade-up 350ms cubic-bezier(.22,1,.36,1) both; }
+.landing-node-active { transform: translateY(-2px); transition: transform 450ms cubic-bezier(.22,1,.36,1); }
+@media (prefers-reduced-motion: reduce) {
+  html:has(.landing-page) { scroll-behavior: auto; }
+  .landing-node-active { transform: none; }
+}
+
+.landing-transfer span[style] { animation-duration: var(--handoff-duration) !important; }
+
+/* A soft shadow keeps the unframed copy legible against the pixel landscape. */
+.landing-hero-text { text-shadow: 0 1px 3px var(--color-ink), 0 3px 14px var(--color-ink); }

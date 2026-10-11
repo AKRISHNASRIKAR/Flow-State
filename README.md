@@ -20,6 +20,8 @@ The same REST API ships as two interchangeable runtimes: the **NestJS backend** 
 
 Think of it as the engine behind something like Zapier or n8n, except it's open source, self-hosted, and purpose-built for developers who want to own the stack.
 
+The dashboard landing page introduces triggers, ordered steps, payload templates, and run history with a pixel-art landscape and interactive workflow examples. These examples run locally in the browser and send no external requests; sign in with Google to build a real workflow.
+
 ---
 
 ## Table of Contents
