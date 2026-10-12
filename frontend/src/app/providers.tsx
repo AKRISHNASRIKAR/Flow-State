@@ -2,11 +2,38 @@
 
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import { THEME_KEY, useThemeStore, type ThemePreference } from '../lib/theme-store';
 import { ToastContainer } from '../components/ui';
 import { ApiError, NETWORK_ERROR_STATUS, bootstrapSession } from '../lib/api-client';
 import { isSessionEnded, toastError } from '../lib/errors';
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  const preference = useThemeStore((state) => state.preference);
+  const [themeReady, setThemeReady] = useState(false);
+  useEffect(() => {
+    let saved: string | null = null;
+    try { saved = localStorage.getItem(THEME_KEY); } catch { /* Storage can be unavailable in private contexts. */ }
+    const initial: ThemePreference = saved === 'dark' || saved === 'light' ? saved : 'system';
+    useThemeStore.getState().setPreference(initial);
+    setThemeReady(true);
+  }, []);
+  useEffect(() => {
+    if (!themeReady) return;
+    const media = window.matchMedia('(prefers-color-scheme: dark)');
+    const apply = () => {
+      const resolved = preference === 'system' ? (media.matches ? 'dark' : 'light') : preference;
+      document.documentElement.dataset.theme = resolved;
+      useThemeStore.getState().setResolved(resolved);
+    };
+    apply();
+    try { localStorage.setItem(THEME_KEY, preference); } catch { /* The preference still works for this visit. */ }
+    media.addEventListener('change', apply);
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === THEME_KEY) useThemeStore.getState().setPreference(event.newValue === 'dark' || event.newValue === 'light' ? event.newValue : 'system');
+    };
+    window.addEventListener('storage', onStorage);
+    return () => { media.removeEventListener('change', apply); window.removeEventListener('storage', onStorage); };
+  }, [preference, themeReady]);
   const [queryClient] = useState(
     () =>
       new QueryClient({

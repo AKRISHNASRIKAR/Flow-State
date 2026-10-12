@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { toast } from '../../lib/toast';
 import { workflowsApi } from '../../lib/api';
 import { Button, FieldError, Modal, hintClass, inputClass, labelClass } from '../../components/ui';
 
@@ -35,6 +36,7 @@ export function CreateWorkflowModal({ onClose }: { onClose: () => void }) {
     meta: { errorContext: 'Couldn’t create the workflow' },
     onSuccess: async (wf) => {
       await queryClient.invalidateQueries({ queryKey: ['workflows'] });
+      toast.success('Workflow created', { description: 'Choose its starting event and add your steps.' });
       router.push(`/workflows/${wf.id}`);
     },
   });
@@ -50,11 +52,13 @@ export function CreateWorkflowModal({ onClose }: { onClose: () => void }) {
           <input
             id="wf-name"
             autoFocus
+            aria-invalid={Boolean(errors.name)}
+            aria-describedby={errors.name ? 'wf-name-error' : undefined}
             className={inputClass}
             placeholder="e.g. Email me about new orders"
             {...register('name')}
           />
-          <FieldError message={errors.name?.message} />
+          <div id="wf-name-error"><FieldError message={errors.name?.message} /></div>
         </div>
         <div>
           <label htmlFor="wf-description" className={labelClass}>

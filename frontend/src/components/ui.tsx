@@ -60,14 +60,14 @@ const buttonVariants: Record<ButtonVariant, string> = {
     'bg-ink text-paper hover:bg-graphite disabled:bg-paper-2 disabled:text-faint disabled:ring-1 disabled:ring-rule focus-visible:outline-signal',
   secondary:
     'bg-card text-ink ring-1 ring-rule hover:bg-paper-2 hover:ring-faint/60 disabled:text-faint disabled:hover:bg-card focus-visible:outline-signal',
-  danger: 'bg-fail text-paper hover:bg-fail/90 disabled:bg-fail/40 focus-visible:outline-fail',
+  danger: 'bg-fail-soft text-fail ring-1 ring-fail hover:bg-fail-soft/80 disabled:bg-fail/40 focus-visible:outline-fail',
   ghost: 'text-graphite hover:bg-paper-2 hover:text-ink disabled:text-faint focus-visible:outline-signal',
 };
 
 const buttonSizes = {
-  sm: 'px-2.5 py-1.5 text-xs',
-  md: 'px-3.5 py-2 text-sm',
-  lg: 'px-5 py-2.5 text-sm',
+  sm: 'min-h-11 px-4 py-2 text-xs',
+  md: 'min-h-11 px-4 py-2.5 text-sm',
+  lg: 'min-h-12 px-5 py-3 text-sm',
 } as const;
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -79,7 +79,7 @@ export function Button({ variant = 'secondary', size = 'md', className = '', ...
   return (
     <button
       type="button"
-      className={`inline-flex items-center justify-center gap-1.5 rounded-[5px] font-medium transition-[color,background-color,box-shadow,transform] duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 active:translate-y-px disabled:cursor-not-allowed disabled:active:translate-y-0 ${buttonSizes[size]} ${buttonVariants[variant]} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-md leading-[1.4] font-medium transition-[color,background-color,box-shadow,transform] duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 active:translate-y-px disabled:cursor-not-allowed disabled:active:translate-y-0 ${buttonSizes[size]} ${buttonVariants[variant]} ${className}`}
       {...rest}
     />
   );
@@ -106,11 +106,51 @@ export function Spinner({ label }: { label?: string }) {
 function useEscape(onClose: () => void) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' && !e.defaultPrevented) onClose();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
+}
+
+let activeOverlays = 0;
+let originalBodyOverflow = '';
+const FOCUSABLE = 'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex="0"]';
+
+/** Keep overlay keyboard navigation inside the task, then return to its opener. */
+export function useFocusTrap(enabled: boolean) {
+  const ref = useRef<HTMLDivElement>(null);
+  const wasEnabled = useRef(false);
+  const opener = useRef<HTMLElement | null>(null);
+  // Capture before React commits an autoFocus input, which would otherwise become its own opener.
+  if (enabled && !wasEnabled.current && typeof document !== 'undefined') opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  wasEnabled.current = enabled;
+  useEffect(() => {
+    if (!enabled) return;
+    const previous = opener.current;
+    if (activeOverlays === 0) { originalBodyOverflow = document.body.style.overflow; document.body.style.overflow = 'hidden'; }
+    activeOverlays += 1;
+    const dialog = ref.current;
+    const focusable = () => Array.from(dialog?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? []).filter((item) => item.getClientRects().length > 0);
+    if (!dialog?.contains(document.activeElement)) (dialog?.querySelector<HTMLElement>('[autofocus], [data-autofocus], input, select, textarea') ?? focusable()[0] ?? dialog)?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab') return;
+      const elements = focusable();
+      const first = elements[0];
+      const last = elements[elements.length - 1];
+      if (!first) { event.preventDefault(); dialog?.focus(); return; }
+      if (event.shiftKey && (document.activeElement === first || !dialog?.contains(document.activeElement))) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && (document.activeElement === last || !dialog?.contains(document.activeElement))) { event.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      activeOverlays -= 1;
+      if (activeOverlays === 0) document.body.style.overflow = originalBodyOverflow;
+      if (previous?.isConnected) previous.focus();
+    };
+  }, [enabled]);
+  return ref;
 }
 
 function CloseButton({ onClose }: { onClose: () => void }) {
@@ -119,7 +159,7 @@ function CloseButton({ onClose }: { onClose: () => void }) {
       type="button"
       onClick={onClose}
       aria-label="Close"
-      className="rounded-[5px] p-1 text-muted transition-colors hover:bg-paper-2 hover:text-ink"
+      className="inline-flex size-11 shrink-0 items-center justify-center rounded-md text-muted transition-colors hover:bg-paper-2 hover:text-ink active:bg-rule"
     >
       <Icon path={ICON_PATHS.close} />
     </button>
@@ -135,14 +175,17 @@ interface ModalProps {
 
 export function Modal({ title, onClose, children, wide = false }: ModalProps) {
   useEscape(onClose);
+  const dialogRef = useFocusTrap(true);
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-ink/25 p-4 pt-[8vh]">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-scrim/50 p-4 pt-[8vh]">
       <div className="absolute inset-0" onClick={onClose} aria-hidden />
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className={`relative w-full animate-fade-up ${wide ? 'max-w-2xl' : 'max-w-md'} rounded-md bg-card p-6 shadow-[0_24px_60px_-24px_rgba(15,27,45,0.45)] ring-1 ring-rule`}
+        className={`relative w-full animate-fade-up [animation-duration:240ms] ${wide ? 'max-w-2xl' : 'max-w-md'} rounded-md bg-card p-6 shadow-dialog ring-1 ring-rule`}
       >
         <div className="mb-4 flex items-start justify-between gap-4">
           <h2 className="font-serif text-2xl leading-tight text-ink">{title}</h2>
@@ -175,6 +218,7 @@ export const DrawerModeContext = createContext<'overlay' | 'inline'>('overlay');
 export function Drawer({ title, subtitle, onClose, children, footer }: DrawerProps) {
   useEscape(onClose);
   const mode = useContext(DrawerModeContext);
+  const dialogRef = useFocusTrap(mode === 'overlay');
   if (mode === 'inline') {
     return (
       <section
@@ -195,11 +239,14 @@ export function Drawer({ title, subtitle, onClose, children, footer }: DrawerPro
   }
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-ink/20" onClick={onClose} aria-hidden />
+      <div className="absolute inset-0 bg-scrim/50" onClick={onClose} aria-hidden />
       <div
+        ref={dialogRef}
+        tabIndex={-1}
+        aria-label={typeof title === 'string' ? title : 'Workflow editor'}
         role="dialog"
         aria-modal="true"
-        className="relative flex h-full w-full max-w-xl animate-drawer-in flex-col border-l border-rule bg-card shadow-[-24px_0_60px_-30px_rgba(15,27,45,0.35)]"
+        className="relative flex h-full w-full max-w-xl animate-drawer-in flex-col border-l border-rule bg-card shadow-drawer"
       >
         <div className="flex items-start justify-between gap-4 border-b border-rule px-6 py-5">
           <div className="min-w-0">
@@ -262,7 +309,7 @@ export function Switch({
       aria-checked={checked}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className="group inline-flex items-center gap-2 rounded-full text-sm font-medium text-graphite focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal disabled:opacity-60"
+      className="group inline-flex min-h-11 items-center gap-2 rounded-md text-sm font-medium text-graphite transition-opacity hover:opacity-80 active:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal disabled:opacity-60"
     >
       <span
         className={`relative inline-flex h-[22px] w-10 shrink-0 items-center rounded-full ring-1 ring-inset transition-colors duration-200 ${
@@ -270,7 +317,7 @@ export function Switch({
         }`}
       >
         <span
-          className={`size-4 rounded-full bg-card shadow-[0_1px_2px_rgba(15,27,45,0.3)] transition-transform duration-200 ${checked ? 'translate-x-[21px]' : 'translate-x-[3px]'}`}
+          className={`size-4 rounded-full bg-card shadow-control transition-transform duration-200 ${checked ? 'translate-x-[21px]' : 'translate-x-[3px]'}`}
         />
       </span>
       {label}
@@ -292,6 +339,7 @@ export interface MenuItem {
 export function Menu({ label, items }: { label: string; items: MenuItem[] }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -299,8 +347,16 @@ export function Menu({ label, items }: { label: string; items: MenuItem[] }) {
       if (!ref.current?.contains(e.target as Node)) setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape') { e.preventDefault(); setOpen(false); triggerRef.current?.focus(); }
+      if (['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) {
+        e.preventDefault();
+        const items = Array.from(ref.current?.querySelectorAll<HTMLButtonElement>('[role=menuitem]:not(:disabled)') ?? []);
+        const index = items.indexOf(document.activeElement as HTMLButtonElement);
+        const next = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : (index + (e.key === 'ArrowUp' ? -1 : 1) + items.length) % items.length;
+        items[next]?.focus();
+      }
     };
+    ref.current?.querySelector<HTMLButtonElement>('[role=menuitem]:not(:disabled)')?.focus();
     document.addEventListener('mousedown', onDown);
     document.addEventListener('keydown', onKey);
     return () => {
@@ -310,21 +366,22 @@ export function Menu({ label, items }: { label: string; items: MenuItem[] }) {
   }, [open]);
 
   return (
-    <div ref={ref} className="relative shrink-0">
+    <div ref={ref} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setOpen(false); }} className="relative shrink-0">
       <button
         type="button"
+        ref={triggerRef}
         aria-label={label}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen(!open)}
-        className="rounded-[5px] p-1.5 text-muted transition-colors hover:bg-paper-2 hover:text-ink"
+        className="inline-flex size-11 items-center justify-center rounded-md text-muted transition-colors hover:bg-paper-2 hover:text-ink active:bg-rule"
       >
         <Icon path={ICON_PATHS.dots} strokeWidth={2} />
       </button>
       {open && (
         <ul
           role="menu"
-          className="absolute right-0 top-9 z-30 w-44 animate-fade-up overflow-hidden rounded-md bg-card py-1 text-sm shadow-[0_16px_40px_-18px_rgba(15,27,45,0.45)] ring-1 ring-rule"
+          className="absolute right-0 top-12 z-30 w-48 animate-fade-up [animation-duration:180ms] overflow-hidden rounded-md bg-card py-1 text-sm shadow-menu ring-1 ring-rule"
         >
           {items.map((item) => (
             <li key={item.label} role="none">
@@ -334,9 +391,10 @@ export function Menu({ label, items }: { label: string; items: MenuItem[] }) {
                 disabled={item.disabled}
                 onClick={() => {
                   setOpen(false);
+                  triggerRef.current?.focus();
                   item.onSelect();
                 }}
-                className={`w-full px-3 py-2 text-left transition-colors disabled:cursor-not-allowed disabled:text-faint ${
+                className={`min-h-11 w-full px-4 py-3 text-left transition-colors disabled:cursor-not-allowed disabled:text-faint ${
                   item.danger ? 'text-fail hover:bg-fail-soft' : 'text-graphite hover:bg-paper-2 hover:text-ink'
                 }`}
               >
@@ -364,15 +422,24 @@ export function Tabs<T extends string>({
   onChange: (id: T) => void;
 }) {
   return (
-    <div role="tablist" className="mb-6 flex gap-1 border-b border-rule">
+    <div role="tablist" className="mb-6 flex flex-wrap gap-1 border-b border-rule">
       {tabs.map((t) => (
         <button
           key={t.id}
           type="button"
           role="tab"
           aria-selected={active === t.id}
+          tabIndex={active === t.id ? 0 : -1}
+          onKeyDown={(event) => {
+            if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+            event.preventDefault();
+            const index = tabs.findIndex((tab) => tab.id === t.id);
+            const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (index + (event.key === 'ArrowLeft' ? -1 : 1) + tabs.length) % tabs.length;
+            onChange(tabs[next].id);
+            event.currentTarget.parentElement?.querySelectorAll<HTMLButtonElement>('[role=tab]')[next]?.focus();
+          }}
           onClick={() => onChange(t.id)}
-          className={`-mb-px border-b-2 px-3.5 py-2 text-sm font-medium transition-colors ${
+          className={`-mb-px min-h-11 border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
             active === t.id ? 'border-ink text-ink' : 'border-transparent text-muted hover:border-rule hover:text-ink'
           }`}
         >
@@ -396,7 +463,7 @@ const noticeStyles = {
 export function Notice({ tone = 'info', children }: { tone?: keyof typeof noticeStyles; children: ReactNode }) {
   const style = noticeStyles[tone];
   return (
-    <div className={`flex gap-2.5 rounded-[5px] p-3 text-xs leading-relaxed ring-1 ring-inset ${style.box}`}>
+    <div className={`flex gap-2.5 rounded-md p-3 text-xs leading-relaxed ring-1 ring-inset ${style.box}`}>
       <Icon path={style.path} className={`mt-px size-4 shrink-0 ${style.icon}`} />
       <div className="min-w-0 space-y-1">{children}</div>
     </div>
@@ -410,15 +477,15 @@ export function Notice({ tone = 'info', children }: { tone?: keyof typeof notice
 /** Field-level validation message, shown under the field it belongs to. */
 export function FieldError({ message }: { message?: string }) {
   if (!message) return null;
-  return <p className="mt-1 text-xs text-fail">{message}</p>;
+  return <p role="alert" className="mt-2 text-xs leading-relaxed text-fail">{message}</p>;
 }
 
 export const inputClass =
-  'block w-full rounded-[5px] border-0 bg-card px-3 py-2 text-sm text-ink ring-1 ring-inset ring-rule transition-shadow placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-inset focus:ring-signal';
+  'block min-h-11 min-w-0 w-full rounded-md border-0 bg-card px-3 py-3 text-sm text-ink ring-1 ring-inset ring-rule transition-shadow disabled:cursor-not-allowed disabled:bg-paper-2 disabled:text-muted placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-inset focus:ring-signal';
 
-export const labelClass = 'block text-sm font-medium text-ink mb-1.5';
+export const labelClass = 'block text-sm font-medium text-ink mb-2';
 
-export const hintClass = 'mt-1.5 text-xs leading-relaxed text-muted';
+export const hintClass = 'mt-2 text-xs leading-relaxed text-muted';
 
 // ---------------------------------------------------------------------------
 // Empty state
@@ -438,7 +505,7 @@ export function EmptyState({
 }) {
   return (
     <div className="flex flex-col items-center justify-center rounded-md border border-rule bg-card px-6 py-16 text-center">
-      <span className="mb-6 flex size-14 items-center justify-center rounded-[5px] bg-card text-muted ring-1 ring-rule">
+      <span className="mb-6 flex size-14 items-center justify-center rounded-md bg-card text-muted ring-1 ring-rule">
         {icon ?? (
           <Icon path="M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H6.911a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661Z" className="size-6" />
         )}
@@ -464,7 +531,7 @@ interface PaginationProps {
 export function Pagination({ page, totalPages, total, onPage }: PaginationProps) {
   if (totalPages <= 1) return null;
   return (
-    <div className="flex items-center justify-between pt-4 text-sm text-muted tabular-nums">
+    <div className="flex flex-wrap items-center justify-between gap-4 pt-4 text-sm text-muted tabular-nums">
       <span>
         Page {page} of {totalPages} · {total} total
       </span>
@@ -503,7 +570,7 @@ export function ToastContainer() {
             key={t.id}
             role={t.kind === 'error' ? 'alert' : 'status'}
             aria-live={t.kind === 'error' ? 'assertive' : 'polite'}
-            className={`pointer-events-auto flex animate-toast-in items-start gap-3 rounded-md bg-card p-4 text-sm shadow-[0_18px_40px_-20px_rgba(15,27,45,0.45)] ring-1 ${style.ring}`}
+            className={`pointer-events-auto flex animate-toast-in items-start gap-3 rounded-md bg-card p-4 text-sm shadow-toast ring-1 ${style.ring}`}
           >
             <Icon path={style.path} className={`mt-px size-5 shrink-0 ${style.icon}`} />
             <div className="min-w-0 flex-1">
@@ -526,7 +593,7 @@ export function ToastContainer() {
               type="button"
               onClick={() => dismiss(t.id)}
               aria-label="Dismiss"
-              className="-m-1 rounded-[5px] p-1 text-faint hover:bg-paper-2 hover:text-ink"
+              className="-m-1 rounded-md p-1 text-faint hover:bg-paper-2 hover:text-ink"
             >
               <Icon path={ICON_PATHS.close} className="size-4" />
             </button>
@@ -556,7 +623,7 @@ export function CopyField({ value, mono = true, label = 'value' }: { value: stri
   return (
     <div className="flex items-center gap-2">
       <code
-        className={`min-w-0 flex-1 truncate rounded-[5px] bg-paper px-3 py-2 text-xs text-ink ring-1 ring-inset ring-rule ${mono ? 'font-mono' : ''}`}
+        className={`min-w-0 flex-1 truncate rounded-md bg-paper px-3 py-2 text-xs text-ink ring-1 ring-inset ring-rule ${mono ? 'font-mono' : ''}`}
         title={value}
       >
         {value}

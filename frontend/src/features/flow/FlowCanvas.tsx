@@ -1,4 +1,5 @@
 'use client';
+import { useThemeStore } from '../../lib/theme-store';
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Action } from '@flowstate/api-types';
@@ -46,6 +47,7 @@ interface FlowCanvasProps {
 }
 
 export function FlowCanvas({ workflowId, onEditTrigger, onEditStep, selected, run, problems, lastFired }: FlowCanvasProps) {
+  const theme = useThemeStore((state) => state.resolved);
   const queryClient = useQueryClient();
   const [deleting, setDeleting] = useState<Action | null>(null);
 
@@ -250,7 +252,7 @@ export function FlowCanvas({ workflowId, onEditTrigger, onEditStep, selected, ru
           fitViewOptions={{ padding: 0.22, maxZoom: 1 }}
           minZoom={0.4}
           maxZoom={1.25}
-          colorMode="light"
+          colorMode={theme}
           proOptions={{ hideAttribution: true }}
         >
           <Background variant={BackgroundVariant.Dots} gap={18} size={1.2} color="var(--color-rule)" bgColor="var(--color-paper)" />

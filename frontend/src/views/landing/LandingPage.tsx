@@ -5,13 +5,14 @@ import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { useScrollProgress } from '../../features/landing/useScrollProgress';
+import { ThemeControl } from '../../components/ThemeControl';
 import { BrandLockup } from '../../components/Logo';
 import { Connector, FlowNodeCard, StateChip } from '../../components/flow-visuals';
 import { Button, Icon, ICON_PATHS } from '../../components/ui';
 import { GLYPHS } from '../../lib/glyphs';
 
 const GITHUB_URL = 'https://github.com/AKRISHNASRIKAR/Flow-State';
-const CTA = 'inline-flex items-center justify-center gap-3 rounded-[5px] bg-ink px-5 py-3 text-sm font-medium text-paper transition-colors hover:bg-graphite focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal';
+const CTA = 'inline-flex items-center justify-center gap-3 rounded-md bg-ink px-5 py-3 text-sm font-medium text-paper transition-colors hover:bg-graphite focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal';
 // Each step stays active long enough to read; the handoff gets its own beat.
 const STEP_DURATION_MS = 1400;
 const HANDOFF_DURATION_MS = 450;
@@ -79,13 +80,21 @@ function WorkflowDemo() {
 }
 
 export function LandingPage() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') setMenuOpen(false); };
+    window.addEventListener('keydown', close);
+    return () => window.removeEventListener('keydown', close);
+  }, [menuOpen]);
   return (
     <div className="landing-page min-h-screen bg-paper">
       <header className="relative z-20 border-b border-rule bg-paper">
-        <nav aria-label="Main navigation" className={`${SHELL} flex h-20 items-center justify-between gap-6`}>
+        <nav aria-label="Main navigation" className={`${SHELL} flex min-h-20 flex-wrap items-center justify-between gap-3 py-3`}>
           <Link href="/" aria-label="FlowState home"><BrandLockup size="sm" /></Link>
           <div className="hidden gap-7 text-sm text-graphite md:flex"><a className="hover:text-ink" href="#how-it-works">How it works</a><a className="hover:text-ink" href="#possibilities">What you can build</a><a className="hover:text-ink" href={GITHUB_URL} target="_blank" rel="noreferrer">GitHub ↗</a></div>
-          <Link href="/login" className={CTA}>Get started <span aria-hidden>↗</span></Link>
+          <div className="flex items-center gap-2"><ThemeControl /><Link href="/login" className={`${CTA} hidden sm:inline-flex`}>Get started <span aria-hidden>↗</span></Link><Button variant="ghost" className="md:hidden" aria-label="Toggle navigation" aria-expanded={menuOpen} aria-controls="landing-mobile-menu" onClick={() => setMenuOpen(!menuOpen)}><Icon path={menuOpen ? ICON_PATHS.close : 'M4 6h16M4 12h16M4 18h16'} /></Button></div>
+          {menuOpen && <div id="landing-mobile-menu" className="w-full animate-fade-up border-t border-rule py-3 md:hidden"><a className="block py-3" href="#how-it-works" onClick={() => setMenuOpen(false)}>How it works</a><a className="block py-3" href="#possibilities" onClick={() => setMenuOpen(false)}>What you can build</a><a className="block py-3" href={GITHUB_URL} target="_blank" rel="noreferrer">GitHub ↗</a><Link href="/login" className={`${CTA} mt-3`}>Get started ↗</Link></div>}
         </nav>
       </header>
       <main>
@@ -93,14 +102,14 @@ export function LandingPage() {
           <Image src="/images/pixel-hero-bridge.jpg" alt="Pixel-art woodland bridge over a pond with orange fish" fill priority sizes="100vw" className="-z-10 object-cover object-center" />
           <div className={`${SHELL} flex min-h-[700px] items-start pb-24 pt-20 sm:min-h-[780px] sm:pt-24`}>
             <div className="landing-hero-copy max-w-[600px]">
-              <p className="landing-hero-text label-caps text-paper">A little less busywork. A little more flow.</p>
-              <h1 className="landing-hero-text mt-6 font-serif text-[clamp(52px,6vw,84px)] leading-[1.06] tracking-[-0.035em] text-paper">Let your work<br />find its flow.</h1>
-              <p className="landing-hero-text mt-6 max-w-[40ch] text-base leading-relaxed text-paper">Connect the things that happen to the things that need doing. Build a workflow once. Let FlowState carry it through.</p>
+              <p className="landing-hero-text label-caps text-image-ink">A little less busywork. A little more flow.</p>
+              <h1 className="landing-hero-text mt-6 font-serif text-[clamp(52px,6vw,84px)] leading-[1.06] tracking-[-0.035em] text-image-ink">Let your work<br />find its flow.</h1>
+              <p className="landing-hero-text mt-6 max-w-[40ch] text-base leading-relaxed text-image-ink">Build workflows that turn triggers into ordered steps, with every run recorded.</p>
               <div className="mt-7 flex flex-wrap items-center gap-5"><Link className={CTA} href="/login">Build your first workflow <span aria-hidden>↗</span></Link><a href="#how-it-works" className="rounded-[3px] bg-paper px-4 py-3 text-sm underline decoration-rule underline-offset-4 hover:decoration-ink">Take a look ↓</a></div>
-              <p className="landing-hero-text mt-6 font-mono text-[10px] uppercase tracking-wider text-paper">Open source · Self-hostable · Step-by-step history</p>
+              <p className="landing-hero-text mt-6 font-mono text-[10px] uppercase tracking-wider text-image-ink">Open source · Self-hostable · Step-by-step history</p>
             </div>
           </div>
-          <div className="absolute bottom-0 inset-x-0 flex justify-between gap-4 bg-ink/85 px-6 py-4 font-mono text-[10px] uppercase tracking-widest text-paper sm:px-10"><span>From one small event to work, done.</span><span className="hidden sm:block">01 — Find your flow</span></div>
+          <div className="absolute bottom-0 inset-x-0 flex justify-between gap-4 bg-image-shadow/85 px-6 py-4 font-mono text-[10px] uppercase tracking-widest text-image-ink sm:px-10"><span>From one small event to work, done.</span><span className="hidden sm:block">01 — Find your flow</span></div>
         </section>
 
         <div className={`${SHELL} flex flex-wrap justify-center gap-x-10 gap-y-4 border-b border-rule py-7 text-sm text-muted`}><span>Start with a webhook</span><span aria-hidden>→</span><span>Run your steps in order</span><span aria-hidden>→</span><span>See exactly what happened</span></div>

@@ -136,9 +136,9 @@ export function SetupChecklist({ workflow, onChooseTrigger, onAddStep, onTurnOn,
                   {item.done && <span className="sr-only"> (done)</span>}
                 </p>
                 {isNext && <p className="mt-0.5 text-[13px] leading-snug text-graphite">{item.hint}</p>}
-                {isNext && compact && <div className="mt-2.5">{item.action}</div>}
+                {isNext && <div className={`mt-3 ${compact ? '' : 'sm:hidden'}`}>{item.action}</div>}
               </div>
-              {isNext && !compact && <div className="shrink-0">{item.action}</div>}
+              {isNext && !compact && <div className="hidden shrink-0 sm:block">{item.action}</div>}
             </li>
           );
         })}

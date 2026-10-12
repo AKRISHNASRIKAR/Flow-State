@@ -8,6 +8,7 @@ import { useAuthStore } from '../../lib/auth-store';
 import { Button } from '../../components/ui';
 import { toast } from '../../lib/toast';
 import Link from 'next/link';
+import { ThemeControl } from '../../components/ThemeControl';
 import Image from 'next/image';
 import { BrandLockup } from '../../components/Logo';
 import { Connector, FlowNodeCard, type RunTone } from '../../components/flow-visuals';
@@ -161,7 +162,8 @@ export function AuthLayout({
         </p>
       </div>
 
-      <div className="flex flex-1 items-center justify-center p-6 sm:p-10">
+      <div className="relative flex flex-1 items-center justify-center p-6 pt-24 sm:p-10">
+        <div className="absolute right-6 top-6"><ThemeControl /></div>
         <div className="w-full max-w-[380px]">
           <Link href="/" className="mb-10 inline-flex md:hidden" aria-label="FlowState home">
             <BrandLockup />

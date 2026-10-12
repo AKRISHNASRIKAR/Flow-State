@@ -14,10 +14,10 @@ export function DashboardHeading({ eyebrow, title, description, action, landscap
   return (
     <header className="dashboard-heading mb-9">
       <div className="flex flex-wrap items-end justify-between gap-6">
-        <div className="max-w-[600px]">
+        <div className="min-w-0 w-full">
           <p className="label-caps text-muted">{eyebrow}</p>
-          <h1 className="mt-4 font-serif text-[clamp(40px,4.5vw,56px)] leading-[1.05] tracking-[-0.025em] text-ink">{title}</h1>
-          <p className="mt-4 max-w-[55ch] text-[15px] leading-relaxed text-muted">{description}</p>
+          <h1 className="mt-4 font-serif text-[clamp(32px,3.3vw,40px)] leading-[1.05] tracking-[-0.025em] text-ink">{title}</h1>
+          <p className="mt-4 text-sm leading-relaxed text-muted">{description}</p>
         </div>
         {action && <div className="shrink-0 pb-1">{action}</div>}
       </div>

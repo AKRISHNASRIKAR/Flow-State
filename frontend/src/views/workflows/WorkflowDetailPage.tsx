@@ -276,7 +276,7 @@ export function WorkflowDetailPage() {
             ) : (
               <button
                 type="button"
-                className="min-w-0 truncate rounded-[5px] px-1 -mx-1 text-left font-serif text-[40px] leading-tight text-ink hover:bg-paper-2"
+                className="min-h-11 min-w-0 max-w-full break-words rounded-md px-1 -mx-1 text-left font-serif text-[40px] leading-tight text-ink hover:bg-paper-2"
                 title="Click to rename"
                 onClick={() => {
                   setNameDraft(workflow.name);
@@ -297,7 +297,7 @@ export function WorkflowDetailPage() {
           </div>
           {workflow.description && <p className="mt-1.5 max-w-[70ch] text-sm text-muted">{workflow.description}</p>}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Switch
             checked={isOn}
             label={isOn ? 'On' : 'Off'}

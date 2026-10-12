@@ -22,7 +22,9 @@ Think of it as the engine behind something like Zapier or n8n, except it's open 
 
 The dashboard landing page introduces triggers, ordered steps, payload templates, and run history with a pixel-art landscape and interactive workflow examples. These examples run locally in the browser and send no external requests; sign in with Google to build a real workflow.
 
-The dashboard carries the same paper, serif, and pixel-art theme through the workflow library, builder, run journal, and sign-in screens. Workflow overview counts describe the current page; run filters and pagination are shareable through URL parameters. Run statistics refresh only while work is queued or running.
+The visual system is documented in [DESIGN.md](DESIGN.md). A System / Light / Dark preference is available on the landing page, sign-in screen, and dashboard; it persists locally and follows the operating system in System mode. Shared controls use generous tap targets, keyboard focus indicators, and consistent spacing.
+
+The dashboard carries the same paper, serif, and pixel-art theme through the workflow library, builder, run journal, and sign-in screens. Workflow status counts and search describe the current page; workflow filters persist in the URL; run filters and pagination are shareable through URL parameters. Run statistics refresh only while work is queued or running.
 
 ---
 

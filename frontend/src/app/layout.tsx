@@ -32,8 +32,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${newsreader.variable} ${plexSans.variable} ${plexMono.variable}`}>
+    <html suppressHydrationWarning lang="en" className={`${newsreader.variable} ${plexSans.variable} ${plexMono.variable}`}>
       <body>
+        {/* Apply the stored preference before paint to avoid a light flash on dark visits. */}
+        <script dangerouslySetInnerHTML={{ __html: `try{var p=localStorage.getItem('flowstate-theme');document.documentElement.dataset.theme=(p==='light'||p==='dark')?p:matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}catch(e){document.documentElement.dataset.theme=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}` }} />
         <Providers>{children}</Providers>
       </body>
     </html>

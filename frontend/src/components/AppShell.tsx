@@ -9,8 +9,10 @@ import { WhatsNewDrawer, useWhatsNewUnread } from '../features/help/WhatsNew';
 import { authApi, workflowsApi } from '../lib/api';
 import { useAuthStore } from '../lib/auth-store';
 import { BrandLockup } from './Logo';
-import { ICON_PATHS } from './ui';
+import { ThemeControl } from './ThemeControl';
+import { Button, useFocusTrap, ICON_PATHS } from './ui';
 
+const MOBILE_NAV_QUERY = '(max-width: 767px)'; // Matches Tailwind’s md navigation breakpoint.
 const SIDEBAR_WIDTH = 'w-64'; // 256px — paired with md:pl-64 on the content column.
 
 // 24x24 Heroicons outline path data, inlined: there is no icon package in this
@@ -61,7 +63,7 @@ function NavItem({
       onClick={onNavigate}
       aria-current={isActive ? 'page' : undefined}
       // An ink fill marks navigation; signal blue remains reserved for a running step.
-      className={`relative flex items-center gap-3 rounded-[5px] px-4 py-3 text-sm font-medium transition-colors duration-200 ${
+      className={`relative flex items-center gap-3 rounded-md px-4 py-3 text-sm font-medium transition-colors duration-200 ${
         isActive ? 'bg-ink text-paper' : 'text-graphite hover:bg-paper-2 hover:text-ink'
       }`}
     >
@@ -110,6 +112,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [mobile, setMobile] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia(MOBILE_NAV_QUERY);
+    const apply = () => setMobile(media.matches);
+    apply(); media.addEventListener('change', apply);
+    return () => media.removeEventListener('change', apply);
+  }, []);
+  const navigationRef = useFocusTrap(menuOpen && mobile);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') setMenuOpen(false); };
+    window.addEventListener('keydown', close);
+    return () => window.removeEventListener('keydown', close);
+  }, [menuOpen]);
   const [showWhatsNew, setShowWhatsNew] = useState(false);
   const { unread, markSeen } = useWhatsNewUnread();
 
@@ -139,14 +155,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="dashboard-shell min-h-screen">
       {menuOpen && (
         <div
-          className="fixed inset-0 z-30 bg-ink/20 md:hidden"
+          className="fixed inset-0 z-30 bg-scrim/50 md:hidden"
           onClick={() => setMenuOpen(false)}
           aria-hidden
         />
       )}
 
-      <aside
-        className={`fixed inset-y-0 left-0 z-40 flex ${SIDEBAR_WIDTH} flex-col border-r border-rule bg-card transition-transform duration-300 md:translate-x-0 ${
+      <div ref={navigationRef}>
+      <aside id="workspace-navigation"
+        inert={mobile && !menuOpen}
+        className={`fixed inset-y-0 left-0 z-40 flex ${SIDEBAR_WIDTH} max-w-[calc(100vw-2rem)] flex-col overflow-y-auto border-r border-rule bg-card transition-transform duration-300 md:max-w-none md:translate-x-0 ${
           menuOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -154,18 +172,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <Link href="/workflows" aria-label="FlowState — your workflows">
             <BrandLockup size="sm" />
           </Link>
-          <button
+          <Button variant="ghost"
             type="button"
             onClick={() => setMenuOpen(false)}
             aria-label="Close navigation"
-            className="ml-auto rounded-[5px] p-1 text-graphite hover:bg-paper-2 hover:text-ink md:hidden"
+            className="ml-auto rounded-md p-1 text-graphite hover:bg-paper-2 hover:text-ink md:hidden"
           >
             <Icon path={ICONS.close} />
-          </button>
+          </Button>
         </div>
 
         <div className="mx-6 mb-6 border-b border-rule pb-5"><p className="label-caps text-muted">Your workspace</p><p className="mt-2 text-xs text-muted">One task at a time.</p></div><p className="label-caps px-6 text-faint">Workspace</p>
-        <nav className="flex flex-1 flex-col gap-2 overflow-y-auto px-4 py-3">
+        <nav className="flex min-h-32 flex-1 flex-col gap-2 overflow-y-auto px-4 py-3">
           {NAV_ITEMS.map((item) => (
             <NavItem key={item.href} {...item} onNavigate={() => setMenuOpen(false)} />
           ))}
@@ -176,10 +194,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="p-4"><p className="font-serif text-lg">Find your next flow.</p><p className="mt-1 text-xs leading-relaxed text-muted">Start with something you do more than once.</p><Link href="/" className="mt-3 inline-block text-xs font-medium underline decoration-rule underline-offset-4">Explore FlowState ↗</Link></div>
         </div>
         <div className="px-3 pb-3">
-          <button
+          <Button variant="ghost"
             type="button"
             onClick={openWhatsNew}
-            className="flex w-full items-center gap-3 rounded-[5px] px-3 py-2 text-sm font-medium text-graphite transition-colors hover:bg-paper-2 hover:text-ink"
+            className="flex w-full items-center !justify-start gap-3 rounded-md px-3 py-2 text-sm font-medium text-graphite transition-colors hover:bg-paper-2 hover:text-ink"
           >
             <Icon path={ICON_PATHS.sparkles} className="size-[18px] text-muted" />
             What’s new
@@ -189,7 +207,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 new
               </span>
             )}
-          </button>
+          </Button>
         </div>
 
         <div className="flex items-center gap-2.5 border-t border-rule px-3 py-3">
@@ -199,29 +217,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <span className="min-w-0 flex-1 truncate text-xs text-muted" title={user?.email}>
             {user?.email ?? 'Signed in'}
           </span>
-          <button
+          <Button variant="ghost"
             type="button"
             onClick={() => logout.mutate()}
             disabled={logout.isPending}
             aria-label="Log out"
             title="Log out"
-            className="rounded-[5px] p-1.5 text-muted transition-colors hover:bg-paper-2 hover:text-ink disabled:opacity-50"
+            className="rounded-md p-1.5 text-muted transition-colors hover:bg-paper-2 hover:text-ink disabled:opacity-50"
           >
             <Icon path={ICONS.logout} />
-          </button>
+          </Button>
         </div>
       </aside>
+      </div>
 
       <div className="flex min-h-screen flex-col bg-paper md:pl-64">
         <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-rule bg-paper px-4 sm:px-8">
-          <button
+          <Button variant="ghost"
             type="button"
             onClick={() => setMenuOpen(true)}
             aria-label="Open navigation"
-            className="-ml-1 rounded-[5px] p-1.5 text-graphite hover:bg-paper-2 hover:text-ink md:hidden"
+            aria-expanded={menuOpen}
+            aria-controls="workspace-navigation"
+            className="-ml-1 size-11 !px-0 text-graphite hover:bg-paper-2 hover:text-ink md:hidden"
           >
             <Icon path={ICONS.menu} />
-          </button>
+          </Button>
           <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5 text-sm">
             {crumbs.map((crumb, i) => (
               <span key={i} className="flex min-w-0 items-center gap-1.5">
@@ -240,7 +261,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 )}
               </span>
             ))}
-          </nav><span className="ml-auto hidden font-mono text-[10px] uppercase tracking-widest text-muted sm:block">Your work, in order.</span>
+          </nav><div className="ml-auto"><ThemeControl /></div>
         </header>
         <main className={`flex-1 ${wide ? 'px-4 py-8 sm:px-8' : 'px-4 py-10 sm:px-8 lg:px-12'}`}>
           <div key={pathname} className={wide ? 'dashboard-page' : 'dashboard-page mx-auto max-w-6xl'}>{children}</div>
