@@ -8,6 +8,7 @@ const MOON_PATH = 'M20.985 12.486a9 9 0 1 1-9.473-9.472 7.5 7.5 0 0 0 9.473 9.47
 
 export function ThemeControl() {
   const resolved = useThemeStore((state) => state.resolved);
+  const ready = useThemeStore((state) => state.ready);
   const setPreference = useThemeStore((state) => state.setPreference);
   const dark = resolved === 'dark';
   return (
@@ -16,6 +17,8 @@ export function ThemeControl() {
       role="switch"
       aria-label="Dark theme"
       aria-checked={dark}
+      aria-busy={!ready}
+      disabled={!ready}
       title={dark ? 'Switch to light theme' : 'Switch to dark theme'}
       onClick={() => setPreference(dark ? 'light' : 'dark')}
       className="theme-toggle relative h-11 w-[88px] shrink-0 !gap-0 !p-1"
