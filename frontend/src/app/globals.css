@@ -77,6 +77,19 @@ html[data-theme='dark'] {
   --color-fail-soft: #442b2c;
 }
 
+/* Applied briefly by Providers so existing hover and workflow motion keep their own timing. */
+:root { --theme-transition-duration: 500ms; }
+html.theme-changing,
+html.theme-changing *,
+html.theme-changing *::before,
+html.theme-changing *::after {
+  transition-property: background-color, color, border-color, outline-color, box-shadow, fill, stroke, opacity, transform !important;
+  transition-duration: var(--theme-transition-duration) !important;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+.theme-toggle-thumb { transition: transform var(--theme-transition-duration) cubic-bezier(0.22, 1, 0.36, 1), background-color var(--theme-transition-duration), border-color var(--theme-transition-duration); }
+.theme-toggle-icon { transition: color var(--theme-transition-duration); }
+
 :focus-visible { outline: 2px solid var(--color-signal); outline-offset: 3px; }
 button svg { flex-shrink: 0; }
 .dashboard-heading h1 { text-wrap: initial; }
@@ -273,4 +286,15 @@ html:has(.landing-page) { scroll-behavior: smooth; }
   background-image: url('/images/paper-grain.svg');
   background-repeat: repeat;
   background-size: 180px 180px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.theme-changing,
+  html.theme-changing *,
+  html.theme-changing *::before,
+  html.theme-changing *::after,
+  .theme-toggle-thumb,
+  .theme-toggle-icon {
+    transition-duration: 0.01ms !important;
+  }
 }

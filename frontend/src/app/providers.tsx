@@ -7,6 +7,9 @@ import { ToastContainer } from '../components/ui';
 import { ApiError, NETWORK_ERROR_STATUS, bootstrapSession } from '../lib/api-client';
 import { isSessionEnded, toastError } from '../lib/errors';
 
+// Matches --theme-transition-duration in globals.css; the class exists only during a switch.
+const THEME_TRANSITION_MS = 500;
+
 export function Providers({ children }: { children: React.ReactNode }) {
   const preference = useThemeStore((state) => state.preference);
   const [themeReady, setThemeReady] = useState(false);
@@ -20,9 +23,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!themeReady) return;
     const media = window.matchMedia('(prefers-color-scheme: dark)');
+    let transitionTimer: ReturnType<typeof setTimeout> | undefined;
     const apply = () => {
       const resolved = preference === 'system' ? (media.matches ? 'dark' : 'light') : preference;
-      document.documentElement.dataset.theme = resolved;
+      const root = document.documentElement;
+      if (root.dataset.theme !== resolved) {
+        // Only animate a real preference change; restored visits keep their before-paint theme.
+        root.classList.add('theme-changing');
+        root.dataset.theme = resolved;
+        clearTimeout(transitionTimer);
+        transitionTimer = setTimeout(() => root.classList.remove('theme-changing'), THEME_TRANSITION_MS);
+      }
       useThemeStore.getState().setResolved(resolved);
     };
     apply();
@@ -32,7 +43,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
       if (event.key === THEME_KEY) useThemeStore.getState().setPreference(event.newValue === 'dark' || event.newValue === 'light' ? event.newValue : 'system');
     };
     window.addEventListener('storage', onStorage);
-    return () => { media.removeEventListener('change', apply); window.removeEventListener('storage', onStorage); };
+    return () => {
+      media.removeEventListener('change', apply);
+      window.removeEventListener('storage', onStorage);
+      clearTimeout(transitionTimer);
+      document.documentElement.classList.remove('theme-changing');
+    };
   }, [preference, themeReady]);
   const [queryClient] = useState(
     () =>

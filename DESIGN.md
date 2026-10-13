@@ -30,7 +30,7 @@ Use semantic Tailwind tokens from `frontend/src/app/globals.css` exclusively. Li
 | fail | #bb3b2a | #ffa294 |
 | fail-soft | #f8e4e0 | #442b2c |
 
-Default follows the system appearance. Offer System, Light, Dark in the theme control and persist only that preference locally. Set appearance before paint to avoid a light flash. Use browser color-scheme for native inputs. Paper grain stays subtle in both themes.
+Default follows the system appearance. Use an accessible sun/moon switch for Light and Dark and persist the choice locally. Before a choice is made, follow the system appearance. The thumb and palette transition over 500ms; reduced-motion users get an immediate change. Set appearance before paint to avoid a light flash. Use browser color-scheme for native inputs. Paper grain stays subtle in both themes.
 
 ## Typography
 Newsreader: page titles and workflow names. IBM Plex Sans: interface and prose. IBM Plex Mono: IDs, timestamps, labels, and templates. Scale: 11px micro-labels, 12px metadata, 14px controls, 16px body, 20/24px section headings, 28/32px workflow names, 40px dashboard page titles, 52–84px landing headline. Body line height 1.6, controls 1.4, headings 1.1. Avoid uppercase long sentences. Heading and description occupy two separate rows; use the full reading width and allow natural wrapping on small screens. Never force desktop no-wrap text on a phone.
