@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react';
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { toast, useToastStore, type ToastKind } from '../lib/toast';
 
@@ -71,6 +71,7 @@ const buttonSizes = {
 } as const;
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  ref?: Ref<HTMLButtonElement>;
   variant?: ButtonVariant;
   size?: keyof typeof buttonSizes;
 }

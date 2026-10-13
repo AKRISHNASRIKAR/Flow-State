@@ -573,7 +573,7 @@ backend/src/
 
 Use Node 24 and the pinned pnpm version from `package.json`. Install with `pnpm install --frozen-lockfile`, then run `pnpm check` and `pnpm audit:prod`. Lint is read-only; `pnpm --filter api lint:fix` applies fixes explicitly. CI also rebuilds Postgres from migrations and checks schema drift.
 
-The dashboard bundles licensed local fonts, so builds do not fetch Google Fonts. Build caching tracks frontend env files and the backend engine modules imported by the Worker, following [Turborepo’s environment guidance](https://turborepo.dev/docs/crafting-your-repository/using-environment-variables). Transitive security overrides in `pnpm-workspace.yaml` should be removed once upstream packages include those fixes. See [PRODUCTION.md](PRODUCTION.md) for validation scope and remaining launch work.
+The dashboard bundles licensed local fonts, so builds do not fetch Google Fonts. The hero uses prebuilt responsive WebP assets, a small inline preview, eager preloads and immutable caching for content-hashed filenames; it does not wait for on-demand image resizing. Build caching tracks frontend env files and the backend engine modules imported by the Worker, following [Turborepo’s environment guidance](https://turborepo.dev/docs/crafting-your-repository/using-environment-variables). Transitive security overrides in `pnpm-workspace.yaml` should be removed once upstream packages include those fixes. See [PRODUCTION.md](PRODUCTION.md) for validation scope and remaining launch work.
 
 ## Known Limitations
 

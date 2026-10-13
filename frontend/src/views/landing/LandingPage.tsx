@@ -1,9 +1,10 @@
 'use client';
 
 import Image from 'next/image';
+import { HeroLandscape } from '../../features/landing/HeroLandscape';
 import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useScrollProgress } from '../../features/landing/useScrollProgress';
 import { ThemeControl } from '../../components/ThemeControl';
 import { BrandLockup } from '../../components/Logo';
@@ -81,25 +82,26 @@ function WorkflowDemo() {
 
 export function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!menuOpen) return;
-    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') setMenuOpen(false); };
+    const close = (event: KeyboardEvent) => { if (event.key === 'Escape') { setMenuOpen(false); menuButton.current?.focus(); } };
     window.addEventListener('keydown', close);
     return () => window.removeEventListener('keydown', close);
   }, [menuOpen]);
   return (
     <div className="landing-page min-h-screen bg-paper">
       <header className="relative z-20 border-b border-rule bg-paper">
-        <nav aria-label="Main navigation" className={`${SHELL} flex min-h-20 flex-wrap items-center justify-between gap-3 py-3`}>
-          <Link href="/" aria-label="FlowState home"><BrandLockup size="sm" /></Link>
+        <nav aria-label="Main navigation" className={`mx-auto flex min-h-20 w-full max-w-[1160px] items-center justify-between gap-2 px-4 py-3 sm:px-10`}>
+          <Link href="/" aria-label="FlowState home" className="min-w-0 overflow-hidden whitespace-nowrap"><BrandLockup size="sm" /></Link>
           <div className="hidden gap-7 text-sm text-graphite md:flex"><a className="hover:text-ink" href="#how-it-works">How it works</a><a className="hover:text-ink" href="#possibilities">What you can build</a><a className="hover:text-ink" href={GITHUB_URL} target="_blank" rel="noreferrer">GitHub ↗</a></div>
-          <div className="flex items-center gap-2"><ThemeControl /><Link href="/login" className={`${CTA} hidden sm:inline-flex`}>Get started <span aria-hidden>↗</span></Link><Button variant="ghost" className="md:hidden" aria-label="Toggle navigation" aria-expanded={menuOpen} aria-controls="landing-mobile-menu" onClick={() => setMenuOpen(!menuOpen)}><Icon path={menuOpen ? ICON_PATHS.close : 'M4 6h16M4 12h16M4 18h16'} /></Button></div>
-          {menuOpen && <div id="landing-mobile-menu" className="w-full animate-fade-up border-t border-rule py-3 md:hidden"><a className="block py-3" href="#how-it-works" onClick={() => setMenuOpen(false)}>How it works</a><a className="block py-3" href="#possibilities" onClick={() => setMenuOpen(false)}>What you can build</a><a className="block py-3" href={GITHUB_URL} target="_blank" rel="noreferrer">GitHub ↗</a><Link href="/login" className={`${CTA} mt-3`}>Get started ↗</Link></div>}
+          <div className="flex shrink-0 items-center gap-2"><ThemeControl /><Link href="/login" className={`${CTA} max-md:!hidden`}>Get started <span aria-hidden>↗</span></Link><Button ref={menuButton} variant="ghost" className="h-11 w-11 shrink-0 !p-0 md:hidden" aria-label="Toggle navigation" aria-expanded={menuOpen} aria-controls="landing-mobile-menu" onClick={() => setMenuOpen(!menuOpen)}><Icon path={menuOpen ? ICON_PATHS.close : 'M4 6h16M4 12h16M4 18h16'} /></Button></div>
         </nav>
+        {menuOpen && <div id="landing-mobile-menu" className="absolute inset-x-0 top-full animate-fade-up border-b border-t border-rule bg-paper md:hidden"><div className={`${SHELL} py-3`}><a className="block py-3" href="#how-it-works" onClick={() => setMenuOpen(false)}>How it works</a><a className="block py-3" href="#possibilities" onClick={() => setMenuOpen(false)}>What you can build</a><a className="block py-3" href={GITHUB_URL} target="_blank" rel="noreferrer">GitHub ↗</a></div></div>}
       </header>
       <main>
         <section className="relative isolate overflow-hidden border-b border-rule">
-          <Image src="/images/pixel-hero-bridge.jpg" alt="Pixel-art woodland bridge over a pond with orange fish" fill priority sizes="100vw" className="-z-10 object-cover object-center" />
+          <HeroLandscape />
           <div className={`${SHELL} flex min-h-[700px] items-start pb-24 pt-20 sm:min-h-[780px] sm:pt-24`}>
             <div className="landing-hero-copy max-w-[600px]">
               <p className="landing-hero-text label-caps text-image-ink">A little less busywork. A little more flow.</p>
