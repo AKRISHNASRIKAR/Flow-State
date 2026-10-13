@@ -14,7 +14,7 @@ import {
 
 /**
  * Strategy registry: every action type maps to one executor. Adding a new
- * action touches two places — a new executor class and one line here —
+ * action touches two places - a new executor class and one line here -
  * instead of a growing switch in the engine. Framework-free on purpose: the
  * NestJS ActionExecutorService and the Cloudflare workflow both build it.
  */

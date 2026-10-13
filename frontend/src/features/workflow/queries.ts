@@ -13,7 +13,7 @@ export function useTrigger(workflowId: string) {
       try {
         return await triggersApi.get(workflowId);
       } catch (err) {
-        // 404 means "no trigger chosen yet" — a normal state, not an error.
+        // 404 means "no trigger chosen yet" - a normal state, not an error.
         if (err instanceof ApiError && err.statusCode === 404) return null;
         throw err;
       }
@@ -30,7 +30,7 @@ export function useActions(workflowId: string) {
   });
 }
 
-/** Whether the workflow has ever run — the checklist's "send a test run" step. */
+/** Whether the workflow has ever run - the checklist's "send a test run" step. */
 export function useHasRun(workflowId: string) {
   return useQuery({
     queryKey: ['executions', { workflowId, status: undefined, page: 1 }, 'has-run'],

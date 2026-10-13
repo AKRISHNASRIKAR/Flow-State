@@ -1,7 +1,7 @@
 import type { ActionType, TriggerType } from '@flowstate/api-types';
 
 // 24×24 outline glyphs (Heroicons path data) for every node kind. One glyph
-// per type is the node system's identity — color is reserved for state — so
+// per type is the node system's identity - color is reserved for state - so
 // the landing page and the builder draw from this single map.
 export const GLYPHS = {
   webhook:

@@ -25,7 +25,7 @@ Thank you for taking the time to contribute! This document explains how to get t
    pnpm install
    ```
 
-   This is a pnpm + Turborepo monorepo — the NestJS API lives in `backend/`,
+   This is a pnpm + Turborepo monorepo - the NestJS API lives in `backend/`,
    the same API on Cloudflare in `worker/`, the web dashboard in `frontend/`,
    shared types in `packages/api-types`.
 
@@ -74,7 +74,7 @@ Thank you for taking the time to contribute! This document explains how to get t
 ### Adding a New Action Type
 
 1. Create a new executor in `backend/src/actions/executors/` implementing `IActionExecutor`.
-2. Register it in `createExecutorRegistry` in `backend/src/actions/run-action.ts` — both the NestJS engine and the Cloudflare worker build their registry from it. Keep the executor free of NestJS/Prisma imports.
+2. Register it in `createExecutorRegistry` in `backend/src/actions/run-action.ts` - both the NestJS engine and the Cloudflare worker build their registry from it. Keep the executor free of NestJS/Prisma imports.
 3. Add the new type to the **Action Types** table in `README.md`.
 4. If the executor requires a new env var, add it to `.env.example` with a comment.
 5. Add its config type to `packages/api-types` and a form + metadata entry in `frontend/src/features/flow/action-meta.ts` so the dashboard can configure it.
@@ -86,10 +86,11 @@ Thank you for taking the time to contribute! This document explains how to get t
 This project uses ESLint and Prettier. Before pushing, run:
 
 ```bash
-pnpm lint
-pnpm test
-pnpm --filter api format
+pnpm check
+pnpm audit:prod
 ```
+
+`pnpm check` generates Prisma, runs non-mutating lint, type checks, tests and production builds. Use `pnpm --filter api lint:fix` or `pnpm --filter api format` when you explicitly want to rewrite files.
 
 `pnpm lint` includes the Worker's type check, and `pnpm test` its D1 query tests. CI (`.github/workflows/ci.yml`) runs lint, type checks, tests, all builds and a Prisma migration-drift check, and rejects anything that fails.
 

@@ -60,10 +60,10 @@ testem.log
 *.env.local
 *.env.*.local
 
-# Docs — not committed
+# Docs - not committed
 /docs/
 
-# Personal / local notes — not committed
+# Personal / local notes - not committed
 # These patterns cover common names for scratch pads, design notes,
 # and personal logs that should stay local.
 NOTES.md
@@ -80,7 +80,7 @@ PROJECT_OVERVIEW.md
 /local-docs/
 /private/
 
-# Agent & Skill Folders — not committed
+# Agent & Skill Folders - not committed
 .claude/
 .agents/
 skills/

@@ -29,7 +29,7 @@ import { audit } from '../repo/executions';
 import { startSession } from './session';
 
 /**
- * Port of backend GoogleAuthService — same flow, same error codes, same
+ * Port of backend GoogleAuthService - same flow, same error codes, same
  * shared helpers; see that file for the design (PKCE, handoff code, nonce as
  * the login-CSRF defence). Redis GETDEL becomes the OneTimeStore DO.
  */
@@ -192,7 +192,7 @@ async function upsertUser(
     scopes: tokens.scope.split(' ').filter(Boolean),
     accessTokenEnc: cipher.encrypt(tokens.access_token),
     accessTokenExpiresAt: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
-    // Google only returns a refresh token on first consent — keep the stored one.
+    // Google only returns a refresh token on first consent - keep the stored one.
     refreshTokenEnc: tokens.refresh_token ? cipher.encrypt(tokens.refresh_token) : undefined,
   };
 
@@ -209,13 +209,13 @@ async function upsertUser(
 
       const byEmail = await findUserByEmailWithGoogle(db, identity.email);
       if (byEmail) {
-        // Tied to a *different* Google account — never silently re-point it.
+        // Tied to a *different* Google account - never silently re-point it.
         if (byEmail.hasGoogle) throw new SignInFailure('account_conflict');
         await db.batch([insertGoogleConnectionStatement(db, byEmail.id, identity.sub, creds)]);
         return { userId: byEmail.id, event: { action: 'UPDATE', name: 'auth.google.linked' } };
       }
 
-      // User and connection together, atomically — never a user without one.
+      // User and connection together, atomically - never a user without one.
       const userId = crypto.randomUUID();
       await db.batch([
         insertUserStatement(db, userId, identity.email, identity.name),

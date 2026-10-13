@@ -58,7 +58,7 @@ async function bootstrap() {
   const swaggerConfig = new DocumentBuilder()
     .setTitle('FlowForge API')
     .setDescription(
-      'REST API for FlowForge — a workflow automation platform. ' +
+      'REST API for FlowForge - a workflow automation platform. ' +
         'Use the **Authorize** button to set your Bearer token for protected endpoints.',
     )
     .setVersion('0.1.0')

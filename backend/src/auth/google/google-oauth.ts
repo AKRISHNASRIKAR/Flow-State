@@ -43,7 +43,7 @@ export function pkceChallenge(verifier: string): string {
 }
 
 /**
- * Only same-origin paths survive — `//evil.com` and `/\evil.com` are
+ * Only same-origin paths survive - `//evil.com` and `/\evil.com` are
  * protocol-relative to a browser, so they'd turn the post-login redirect
  * into an open redirect.
  */

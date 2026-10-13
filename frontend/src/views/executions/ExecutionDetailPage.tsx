@@ -54,7 +54,7 @@ export function ExecutionDetailPage() {
       // <200ms, at which point cancel returns 400. That's information, not an
       // error state.
       if (err instanceof ApiError && err.statusCode === 400) {
-        toast.info('Too late to cancel', { description: 'This run already started — only queued runs can be cancelled.' });
+        toast.info('Too late to cancel', { description: 'This run already started. Only queued runs can be cancelled.' });
         void queryClient.invalidateQueries({ queryKey: ['execution', executionId] });
       } else {
         toastError(err, 'Couldn’t cancel the run');
@@ -67,7 +67,7 @@ export function ExecutionDetailPage() {
     return (
       <EmptyState
         title="Couldn’t show this run"
-        body="It may have been deleted or belong to another account — the notification has the details."
+        body="It may have been deleted or belong to another account. The notification has the details."
         action={<Button onClick={() => void refetch()}>Try again</Button>}
       />
     );
@@ -76,7 +76,7 @@ export function ExecutionDetailPage() {
   const attempts = groupIntoAttempts(execution.actionExecutions);
   const actionById = new Map((actions ?? []).map((a) => [a.id, a]));
   // Number steps by their place in the chain (the list comes back in chain
-  // order), not their place in the attempt — a resumed attempt starts mid-chain.
+  // order), not their place in the attempt - a resumed attempt starts mid-chain.
   const stepIndexById = new Map((actions ?? []).map((a, i) => [a.id, i]));
 
   return (
@@ -135,7 +135,7 @@ export function ExecutionDetailPage() {
               {attempts.length > 1 && (
                 <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted">
                   Attempt {i + 1} of {attempts.length}
-                  {i < attempts.length - 1 && ' — retried from the failed step'}
+                  {i < attempts.length - 1 && ' - retried from the failed step'}
                 </h2>
               )}
               {/* The rail is drawn on the wrapper, not between items, so it stays
@@ -163,8 +163,8 @@ export function ExecutionDetailPage() {
 /**
  * A retry resumes at the step that failed (earlier steps already succeeded
  * and are skipped), so actionExecutions can hold several entries for the
- * failing actionId — one per attempt. Group into attempts — a repeat of an
- * already-seen actionId starts the next attempt — instead of showing a flat
+ * failing actionId - one per attempt. Group into attempts - a repeat of an
+ * already-seen actionId starts the next attempt - instead of showing a flat
  * list that reads like N distinct actions ran.
  */
 function groupIntoAttempts(actionExecutions: ActionExecution[]): ActionExecution[][] {
@@ -190,7 +190,7 @@ function groupIntoAttempts(actionExecutions: ActionExecution[]): ActionExecution
 }
 
 // Marker colors on the timeline rail. PENDING/RUNNING normally render a
-// spinner instead — their entries here only cover the exhaustive Record.
+// spinner instead - their entries here only cover the exhaustive Record.
 const STEP_DOT: Record<ExecutionStatus, string> = {
   PENDING: 'bg-rule',
   RUNNING: 'bg-signal',
@@ -216,7 +216,7 @@ function ActionStep({
 
   return (
     <li className="relative rounded-[5px] border border-rule bg-card transition-colors hover:border-faint">
-      {/* Rail marker, centred on the rail at x=28px. Decorative — the row's
+      {/* Rail marker, centred on the rail at x=28px. Decorative - the row's
           status badge carries the state. */}
       <span aria-hidden className="absolute -left-9 top-5">
         {inFlight ? (

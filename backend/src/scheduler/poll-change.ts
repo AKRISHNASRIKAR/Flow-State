@@ -3,8 +3,8 @@ import { isRecord, PollingChangeMode, PollingConfig } from './polling-config';
 
 /**
  * Change detection for SCHEDULED (polling) triggers: fetch the endpoint,
- * reduce the response to a comparable state, and decide what — if anything
- * — should fire. Pure apart from the fetch, and framework-free on purpose:
+ * reduce the response to a comparable state, and decide what - if anything
+ * - should fire. Pure apart from the fetch, and framework-free on purpose:
  * the NestJS PollingWorker and the Cloudflare poller both use it, so the two
  * engines can't disagree about what counts as "changed".
  */

@@ -29,11 +29,11 @@ export class WebhooksService {
   /**
    * Handle an incoming external webhook.
    *
-   * 1. Look up the workflow + trigger — 404 if missing or workflow not ACTIVE
+   * 1. Look up the workflow + trigger - 404 if missing or workflow not ACTIVE
    * 2. If the trigger has a secret, verify HMAC-SHA256 signature
    * 3. Log a webhook_events row with status RECEIVED
    * 4. Emit "workflow.triggered" event (fire-and-forget)
-   * 5. Return immediately — never await downstream processing
+   * 5. Return immediately - never await downstream processing
    */
   async handleWebhook(
     workflowId: string,
@@ -84,7 +84,7 @@ export class WebhooksService {
       };
     }
 
-    // Step 3: Log the event — handle the race where two identical requests
+    // Step 3: Log the event - handle the race where two identical requests
     // arrive simultaneously and both pass the duplicate check above.
     let event: Awaited<ReturnType<typeof this.prisma.webhookEvent.create>>;
     try {
@@ -203,7 +203,7 @@ export class WebhooksService {
     };
   }
 
-  /** HMAC check — the comparison itself lives in webhook-signature.ts. */
+  /** HMAC check - the comparison itself lives in webhook-signature.ts. */
   private verifyHmac(
     rawBody: Buffer,
     secret: string,

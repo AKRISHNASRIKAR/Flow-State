@@ -2,7 +2,7 @@ import type { ConfigReader } from '../../backend/src/actions/interfaces/action-e
 
 /**
  * Secrets, set with `wrangler secret put NAME` (or .dev.vars locally). They
- * aren't declared in wrangler.jsonc, so `wrangler types` can't see them —
+ * aren't declared in wrangler.jsonc, so `wrangler types` can't see them -
  * listed here instead. Bindings and plain vars come from the generated
  * Cloudflare.Env.
  */

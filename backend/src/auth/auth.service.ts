@@ -21,7 +21,7 @@ export class AuthService {
 
   /**
    * Issues a FlowState session for a user whose identity has already been
-   * established — today that only happens at the end of Google sign-in
+   * established - today that only happens at the end of Google sign-in
    * (GoogleAuthService). There is deliberately no password path.
    */
   async startSession(userId: string) {

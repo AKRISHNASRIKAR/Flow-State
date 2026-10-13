@@ -4,8 +4,8 @@ import { timingSafeEqual } from 'crypto';
  * The FlowState Telegram bot, in webhook mode.
  *
  * Telegram POSTs each update to our webhook URL instead of us long-polling
- * for them. That needs no always-running process — the prerequisite for
- * Cloudflare Workers — and a sleeping Render instance simply wakes on the
+ * for them. That needs no always-running process - the prerequisite for
+ * Cloudflare Workers - and a sleeping Render instance simply wakes on the
  * request. Registration is a one-off `setWebhook` call (see README).
  *
  * Framework-free on purpose: imported by both the NestJS backend and worker/.
@@ -45,7 +45,7 @@ export interface TelegramBotDeps {
 /**
  * Telegram echoes the `secret_token` given to setWebhook in this header on
  * every delivery. Without a configured secret the webhook is refused outright
- * — an open endpoint would let anyone make the bot write to our database.
+ * - an open endpoint would let anyone make the bot write to our database.
  */
 export const TELEGRAM_SECRET_HEADER = 'x-telegram-bot-api-secret-token';
 

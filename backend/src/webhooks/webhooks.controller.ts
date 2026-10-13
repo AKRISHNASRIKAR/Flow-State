@@ -110,7 +110,7 @@ export class WebhooksController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden — not the workflow owner',
+    description: 'Forbidden - not the workflow owner',
   })
   @ApiResponse({ status: 404, description: 'Workflow or trigger not found' })
   manualFire(
@@ -143,7 +143,7 @@ export class WebhooksController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden — not the workflow owner',
+    description: 'Forbidden - not the workflow owner',
   })
   listEvents(
     @Param('id') workflowId: string,

@@ -76,7 +76,7 @@ export function WorkflowsListPage() {
     },
   });
 
-  // Pagination is server-side, so this narrows the current page only — the
+  // Pagination is server-side, so this narrows the current page only - the
   // empty state below says so rather than implying a global search.
   const normalizedQuery = query.trim().toLowerCase();
   const visible = (data?.data ?? []).filter((wf) => (wf.name.toLowerCase().includes(normalizedQuery) || (wf.description ?? '').toLowerCase().includes(normalizedQuery)) && (status === 'ALL' || wf.status === status));
@@ -88,7 +88,7 @@ export function WorkflowsListPage() {
 
       <section aria-label="Workflow library">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-6">
-        <div><h2 className="font-serif text-2xl">Your workflows <span className="ml-2 font-mono text-sm text-muted">{data?.meta.total ?? '—'}</span></h2><p className="mt-2 text-sm text-muted">Build, manage, and follow your repeatable work.</p></div>
+        <div><h2 className="font-serif text-2xl">Your workflows <span className="ml-2 font-mono text-sm text-muted">{data?.meta.total ?? '-'}</span></h2><p className="mt-2 text-sm text-muted">Build, manage, and follow your repeatable work.</p></div>
         <Button variant="primary" size="lg" onClick={() => setShowCreate(true)}><Icon path={ICON_PATHS.plus} className="size-4" />New workflow</Button>
       </div>
       {hasAny && <div className="mb-8 rounded-md border border-rule bg-card p-4 sm:p-6">
@@ -101,7 +101,7 @@ export function WorkflowsListPage() {
         </div>
       </div>}
       {isPending && <div role="status" aria-label="Loading workflows" className="grid gap-5 lg:grid-cols-2">{[0, 1, 2, 3].map((key) => <div key={key} className="min-h-64 rounded-md border border-rule bg-card p-6"><p className="text-sm text-muted">Loading workflow…</p><div aria-hidden className="mt-8 h-6 w-2/3 animate-pulse rounded bg-paper-2" /><div aria-hidden className="mt-4 h-4 w-4/5 animate-pulse rounded bg-paper-2" /></div>)}</div>}
-      {/* With data already on screen, a failed refresh is just the toast —
+      {/* With data already on screen, a failed refresh is just the toast -
           the list stays usable. The panel is for when there's nothing to show. */}
       {isError && !data && (
         <EmptyState
@@ -117,7 +117,7 @@ export function WorkflowsListPage() {
           title="Create your first workflow"
           body={
             <ol className="mx-auto mt-2 max-w-sm list-decimal space-y-1 pl-5 text-left">
-              <li>Choose what starts it — a webhook, a schedule, or a button.</li>
+              <li>Choose what starts it: a webhook, a schedule, or a button.</li>
               <li>Add the steps it should run, like a web request or an email.</li>
               <li>Turn it on, then send a test run.</li>
             </ol>
@@ -186,7 +186,7 @@ export function WorkflowsListPage() {
                   </div>
                   <div className="flex min-w-0 items-center gap-2">
 
-                    {/* updatedAt is the last edit, not the last run — the list
+                    {/* updatedAt is the last edit, not the last run - the list
                         endpoint has no run timestamp, so the label says so. */}
                     <span className="truncate text-xs text-faint" title={formatDateTime(wf.updatedAt)}>
                       Edited {formatDateTime(wf.updatedAt)}

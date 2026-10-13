@@ -1,5 +1,5 @@
 export function formatDateTime(iso: string | null | undefined): string {
-  if (!iso) return '—';
+  if (!iso) return '-';
   return new Date(iso).toLocaleString(undefined, {
     year: 'numeric',
     month: 'short',
@@ -11,14 +11,14 @@ export function formatDateTime(iso: string | null | undefined): string {
 }
 
 export function formatDuration(startedAt: string | null, finishedAt: string | null): string {
-  if (!startedAt) return '—';
+  if (!startedAt) return '-';
   if (!finishedAt) return 'running…';
   const ms = new Date(finishedAt).getTime() - new Date(startedAt).getTime();
   return formatMs(ms);
 }
 
 export function formatMs(ms: number): string {
-  if (ms < 0) return '—';
+  if (ms < 0) return '-';
   if (ms < 1000) return `${Math.round(ms)}ms`;
   if (ms < 60_000) return `${(ms / 1000).toFixed(1)}s`;
   const minutes = Math.floor(ms / 60_000);
@@ -38,9 +38,9 @@ export function formatJson(value: unknown): string {
   }
 }
 
-/** "just now", "4 min ago", "3 h ago", "2 d ago" — for "last run" summaries. */
+/** "just now", "4 min ago", "3 h ago", "2 d ago" - for "last run" summaries. */
 export function timeAgo(iso: string | null | undefined, now: number = Date.now()): string {
-  if (!iso) return '—';
+  if (!iso) return '-';
   const s = Math.max(0, Math.round((now - new Date(iso).getTime()) / 1000));
   if (s < 45) return 'just now';
   if (s < 3600) return `${Math.round(s / 60)} min ago`;

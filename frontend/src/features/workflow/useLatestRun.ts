@@ -7,7 +7,7 @@ import { executionsApi } from '../../lib/api';
 import { formatDuration } from '../../lib/format';
 
 // The engine retries a failing step up to 3 attempts (per-step on Cloudflare,
-// resumed-from-step on NestJS) — a FAILED attempt below this is "retrying",
+// resumed-from-step on NestJS) - a FAILED attempt below this is "retrying",
 // not "failed", while the run is still going.
 const MAX_ATTEMPTS = 3;
 // Live while a run is in flight: fast enough to watch steps light up in turn.

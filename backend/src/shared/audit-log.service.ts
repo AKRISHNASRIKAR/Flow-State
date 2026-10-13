@@ -17,7 +17,7 @@ export class AuditLogService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Write an audit log entry. Never throws — a logging failure must not
+   * Write an audit log entry. Never throws - a logging failure must not
    * abort the operation being audited. Errors are logged via the NestJS
    * logger so they surface in monitoring without propagating to the caller.
    */

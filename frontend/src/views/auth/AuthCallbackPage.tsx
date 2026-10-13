@@ -42,11 +42,11 @@ export function AuthCallbackPage() {
       })
       .catch((err: unknown) => {
         // 401 is the one expected failure (code expired, reused, or opened in
-        // another tab); anything else — offline, API down — says what it is.
+        // another tab); anything else - offline, API down - says what it is.
         const message =
           err instanceof ApiError && err.statusCode === 401
             ? 'That sign-in link expired or was already used. Please sign in again.'
-            : [describeError(err).title, describeError(err).description].filter(Boolean).join(' — ');
+            : [describeError(err).title, describeError(err).description].filter(Boolean).join('. ');
         toast.error('Couldn’t sign you in', { description: message });
         setError(message);
       });

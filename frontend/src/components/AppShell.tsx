@@ -13,11 +13,11 @@ import { ThemeControl } from './ThemeControl';
 import { Button, useFocusTrap, ICON_PATHS } from './ui';
 
 const MOBILE_NAV_QUERY = '(max-width: 767px)'; // Matches Tailwind’s md navigation breakpoint.
-const SIDEBAR_WIDTH = 'w-64'; // 256px — paired with md:pl-64 on the content column.
+const SIDEBAR_WIDTH = 'w-64'; // 256px - paired with md:pl-64 on the content column.
 
 // 24x24 Heroicons outline path data, inlined: there is no icon package in this
 // workspace and adding one for five glyphs isn't worth the dependency. The
-// brand mark is not one of these — it lives in components/Logo.tsx.
+// brand mark is not one of these - it lives in components/Logo.tsx.
 const ICONS = {
   workflows:
     'M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z',
@@ -80,8 +80,8 @@ interface Crumb {
 
 /**
  * A workflow crumb shows its name once the page below has loaded it. The
- * query here is disabled — it never fetches, it only subscribes to the
- * page's own cache entry — so the name appears without a second request.
+ * query here is disabled - it never fetches, it only subscribes to the
+ * page's own cache entry - so the name appears without a second request.
  * Until then (and for runs) a short id stands in.
  */
 function useCrumbs(pathname: string): Crumb[] {
@@ -169,7 +169,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         }`}
       >
         <div className="flex h-24 items-center gap-2.5 px-6">
-          <Link href="/workflows" aria-label="FlowState — your workflows">
+          <Link href="/workflows" aria-label="FlowState - your workflows">
             <BrandLockup size="sm" />
           </Link>
           <Button variant="ghost"

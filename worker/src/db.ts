@@ -7,10 +7,10 @@ import type { Env } from './env';
  * updated for fails the build.
  *
  * Storage conventions (see migrations/0001_initial.sql):
- * - timestamps are ISO-8601 UTC strings — always `now()` below, never SQL
+ * - timestamps are ISO-8601 UTC strings - always `now()` below, never SQL
  *   `CURRENT_TIMESTAMP` (a different format that sorts differently);
- * - JSON columns hold JSON text — write with `json()`, read with `parseJson()`;
- * - booleans are 0/1 — read with `bool()`.
+ * - JSON columns hold JSON text - write with `json()`, read with `parseJson()`;
+ * - booleans are 0/1 - read with `bool()`.
  *
  * D1 has no interactive transactions. Where several writes must land
  * together, send them as one `batch()`, which D1 runs atomically.

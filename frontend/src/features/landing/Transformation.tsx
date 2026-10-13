@@ -7,7 +7,7 @@ import { GLYPHS } from '../../lib/glyphs';
 import { SectionHead } from './Spine';
 import { useScrollProgress } from './useScrollProgress';
 
-// What handling one shop order looks like by hand — the job the workflow in
+// What handling one shop order looks like by hand - the job the workflow in
 // the story above replaces.
 const MANUAL = [
   'Notice the new-order email',
@@ -53,7 +53,7 @@ export function Transformation() {
   return (
     <section ref={ref} className="relative py-28 lg:py-40" style={{ '--p': 0 } as CSSProperties}>
       <SectionHead n="07" stage="Automation" title="Eight steps by hand become one flow.">
-        <p>The same order, handled the way most teams do it today — and the workflow that replaces it. Scroll, and watch each manual step fold into the node that now does it.</p>
+        <p>The same order, handled the way most teams do it today - and the workflow that replaces it. Scroll, and watch each manual step fold into the node that now does it.</p>
       </SectionHead>
 
       <div className="mt-16 grid grid-cols-[minmax(0,1fr)] items-start gap-10 pl-[64px] lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] lg:gap-8 lg:pl-[88px]">
@@ -113,7 +113,7 @@ export function Transformation() {
               <Connector height={20} />
             </div>
             <div className="sp sp-reveal" style={at(FIRST + 8 * EACH + 0.02, 0.04)}>
-              <FlowNodeCard kind="result" label="Result" title="Handled — while you did something else" glyph={GLYPHS.check} state={{ tone: 'ok', text: 'automated' }} />
+              <FlowNodeCard kind="result" label="Result" title="Handled - while you did something else" glyph={GLYPHS.check} state={{ tone: 'ok', text: 'automated' }} />
             </div>
           </div>
         </div>

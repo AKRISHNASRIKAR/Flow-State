@@ -100,7 +100,7 @@ export const executionRoutes = new Hono<AppEnv>()
     try {
       await (await c.env.RUN_WORKFLOW.get(id)).terminate();
     } catch {
-      // Not found or already finished — expected races, not errors.
+      // Not found or already finished - expected races, not errors.
     }
     return c.json({ cancelled: true });
   });

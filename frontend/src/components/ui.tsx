@@ -203,14 +203,14 @@ interface DrawerProps {
   subtitle?: ReactNode;
   onClose: () => void;
   children: ReactNode;
-  /** Pinned to the bottom, outside the scroll area — for Save/Cancel. */
+  /** Pinned to the bottom, outside the scroll area - for Save/Cancel. */
   footer?: ReactNode;
 }
 
 /**
  * Where a Drawer renders. The workflow builder docks panels beside its canvas
- * on wide screens ('inline'); everywhere else — and in the builder on small
- * screens — they slide over the page ('overlay'). The panel components don't
+ * on wide screens ('inline'); everywhere else - and in the builder on small
+ * screens - they slide over the page ('overlay'). The panel components don't
  * know or care which.
  */
 export const DrawerModeContext = createContext<'overlay' | 'inline'>('overlay');
@@ -287,7 +287,7 @@ export function ConfirmDialog({ title, body, confirmLabel, danger, busy, onConfi
 }
 
 // ---------------------------------------------------------------------------
-// Switch — the one control for turning a workflow on and off.
+// Switch - the one control for turning a workflow on and off.
 // ---------------------------------------------------------------------------
 
 export function Switch({
@@ -326,7 +326,7 @@ export function Switch({
 }
 
 // ---------------------------------------------------------------------------
-// Menu — a "⋯" button with a short list of secondary actions.
+// Menu - a "⋯" button with a short list of secondary actions.
 // ---------------------------------------------------------------------------
 
 export interface MenuItem {
@@ -451,7 +451,7 @@ export function Tabs<T extends string>({
 }
 
 // ---------------------------------------------------------------------------
-// Notice — an inline callout for guidance that belongs next to a control
+// Notice - an inline callout for guidance that belongs next to a control
 // (not for errors: those are toasts).
 // ---------------------------------------------------------------------------
 
@@ -548,7 +548,7 @@ export function Pagination({ page, totalPages, total, onPage }: PaginationProps)
 }
 
 // ---------------------------------------------------------------------------
-// Toasts — the single place errors (and confirmations) are shown.
+// Toasts - the single place errors (and confirmations) are shown.
 // ---------------------------------------------------------------------------
 
 const toastStyles: Record<ToastKind, { ring: string; icon: string; path: string }> = {
@@ -615,7 +615,7 @@ export function CopyField({ value, mono = true, label = 'value' }: { value: stri
       toast.success(`Copied ${label}`, { key: 'copied' });
     } catch {
       // Clipboard access is refused on insecure origins and by some browsers'
-      // permission settings — say so rather than pretending it worked.
+      // permission settings - say so rather than pretending it worked.
       toast.error('Couldn’t copy to the clipboard', { description: 'Select the text and copy it manually.' });
     }
   };

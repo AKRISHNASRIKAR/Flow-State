@@ -10,8 +10,8 @@ const at = (a: number, span = 0.08) => ({ '--a': a, '--span': span }) as CSSProp
 
 /**
  * The hand-off from concept to product: the same nodes the page has been
- * building sit at the centre, and the builder's chrome — top bar, inspector,
- * run dock — assembles around them as the frame settles to full size.
+ * building sit at the centre, and the builder's chrome - top bar, inspector,
+ * run dock - assembles around them as the frame settles to full size.
  */
 export function ProductShowcase() {
   const ref = useScrollProgress<HTMLElement>();

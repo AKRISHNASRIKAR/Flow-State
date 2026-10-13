@@ -1,10 +1,10 @@
 import type { ExecutionStatus, WorkflowStatus } from '@flowstate/api-types';
 
 const BADGE_BASE =
-  // Squared mono chips — the same shape as the canvas's state chips.
+  // Squared mono chips - the same shape as the canvas's state chips.
   'inline-flex items-center gap-1.5 whitespace-nowrap rounded-[3px] px-1.5 py-1 font-mono text-[11px] leading-none font-medium ring-1 ring-inset';
 
-/** Leading dot. Decorative only — the status word beside it carries the meaning. */
+/** Leading dot. Decorative only - the status word beside it carries the meaning. */
 function Dot({ className }: { className: string }) {
   return <span aria-hidden className={`size-1.5 shrink-0 rounded-full ${className}`} />;
 }
@@ -15,7 +15,7 @@ const workflowStyles: Record<WorkflowStatus, string> = {
   DRAFT: 'bg-rule text-graphite ring-faint/30',
   ACTIVE: 'bg-ok-soft text-ok ring-ok/30',
   PAUSED: 'bg-wait-soft text-wait ring-wait/30',
-  // Deliberately dimmer than DRAFT — archived is inert, not merely unstarted.
+  // Deliberately dimmer than DRAFT - archived is inert, not merely unstarted.
   ARCHIVED: 'bg-rule text-faint ring-faint/20',
 };
 
@@ -95,9 +95,9 @@ const WEBHOOK_EVENT_LABEL: Record<string, string> = {
   RECEIVED: 'Received',
   PROCESSED: 'Ran',
   MANUAL: 'Test run',
-  SKIPPED: 'Skipped — workflow off',
-  SKIPPED_CONCURRENCY_LIMIT: 'Skipped — too many running',
-  SKIPPED_RATE_LIMIT: 'Skipped — hourly limit',
+  SKIPPED: 'Skipped: workflow off',
+  SKIPPED_CONCURRENCY_LIMIT: 'Skipped: too many running',
+  SKIPPED_RATE_LIMIT: 'Skipped: hourly limit',
 };
 
 export function WebhookEventStatusBadge({ status }: { status: string }) {

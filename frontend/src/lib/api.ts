@@ -27,7 +27,7 @@ export const authApi = {
   /**
    * Full-page navigation to the API, which redirects to Google. The nonce
    * stays in this tab's sessionStorage and must come back with the handoff
-   * code — a sign-in link started anywhere else can't be completed here.
+   * code - a sign-in link started anywhere else can't be completed here.
    */
   startGoogleSignIn(returnTo: string) {
     const nonce = createSignInNonce();

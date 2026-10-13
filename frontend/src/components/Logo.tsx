@@ -2,7 +2,7 @@
  * FlowState brand mark: one continuous chain that folds back on itself, with a
  * node at each end (trigger → last action).
  *
- * It is deliberately a single unbranched line — the engine runs exactly one
+ * It is deliberately a single unbranched line - the engine runs exactly one
  * ordered chain per workflow, and the brand shouldn't promise a DAG any more
  * than the canvas does.
  *
@@ -29,7 +29,7 @@ export function LogoMark({ className = 'size-5', strokeWidth = 2 }: { className?
   );
 }
 
-/** The mark on an ink tile, beside the serif wordmark — the one brand lockup. */
+/** The mark on an ink tile, beside the serif wordmark - the one brand lockup. */
 export function BrandLockup({ size = 'md', wordmark = true }: { size?: 'sm' | 'md'; wordmark?: boolean }) {
   const tile = size === 'sm' ? 'size-7 rounded-[5px]' : 'size-8 rounded-[6px]';
   return (

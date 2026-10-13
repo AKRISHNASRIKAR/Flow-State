@@ -8,7 +8,7 @@ import { SectionHead } from './Spine';
 import { useScrollProgress } from './useScrollProgress';
 
 // Only what FlowState can connect to today, plus the one integration its
-// roadmap commits to next (Google — sign-in already uses it). Anything else
+// roadmap commits to next (Google - sign-in already uses it). Anything else
 // would be a promise the engine can't keep.
 const INPUTS = [
   { id: 'in-webhook', title: 'Any app that can send a webhook', sub: 'GitHub · Stripe · Shopify · your own backend', glyph: GLYPHS.webhook },
@@ -20,7 +20,7 @@ const OUTPUTS = [
   { id: 'out-http', title: 'Any REST API', sub: 'GET, POST, PUT… with headers and a body', glyph: GLYPHS.request },
   { id: 'out-email', title: 'Email', sub: 'Sent through Resend', glyph: GLYPHS.email },
   { id: 'out-telegram', title: 'Telegram', sub: 'Messages to any chat', glyph: GLYPHS.message },
-  { id: 'out-google', title: 'Gmail · Sheets · Calendar', sub: 'Coming next — on the same Google sign-in', glyph: GLYPHS.table, soon: true },
+  { id: 'out-google', title: 'Gmail · Sheets · Calendar', sub: 'Coming next with the same Google sign-in', glyph: GLYPHS.table, soon: true },
 ];
 
 type Wire = { id: string; d: string; soon?: boolean; order: number };
@@ -98,7 +98,7 @@ export function Connectors() {
   return (
     <section id="connectors" ref={ref} className="relative scroll-mt-20 py-28 lg:py-36" style={{ '--p': 0 } as CSSProperties}>
       <SectionHead n="08" stage="Connectors" title="Plugged into what you already use.">
-        <p>A workflow starts from something outside FlowState and reaches back out when it runs. Here is everything it connects to today — and what’s next.</p>
+        <p>A workflow starts from something outside FlowState and reaches back out when it runs. Here is everything it connects to today, and what’s next.</p>
       </SectionHead>
 
       <div ref={boardRef} className="relative mt-16 pl-[64px] lg:pl-[88px]">

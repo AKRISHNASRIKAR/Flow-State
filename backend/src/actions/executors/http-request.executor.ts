@@ -40,7 +40,7 @@ export class HttpRequestExecutor implements IActionExecutor {
 
       // Namespaced under `http` so later steps can template against it
       // ({{payload.http.body.id}}) without clobbering the trigger's own
-      // top-level fields. A second HTTP step replaces it — templates always
+      // top-level fields. A second HTTP step replaces it - templates always
       // see the most recent response.
       return {
         success: true,

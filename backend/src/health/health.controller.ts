@@ -32,7 +32,7 @@ export class HealthController {
   @ApiOperation({
     summary: 'Health check',
     description:
-      'Reports database, Redis, and workflow-execution queue health. Intended for load balancers and uptime monitors — no auth required.',
+      'Reports database, Redis, and workflow-execution queue health. Intended for load balancers and uptime monitors - no auth required.',
   })
   @ApiResponse({ status: 200, description: 'Health status' })
   async check() {

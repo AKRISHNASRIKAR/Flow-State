@@ -71,7 +71,7 @@ export function LoginPage() {
           {redirecting ? 'Redirecting to Google…' : 'Continue with Google'}
         </Button>
         <p className="text-[13px] leading-relaxed text-muted">
-          New here? Signing in creates your account — there’s no separate sign-up.
+          New here? Signing in creates your account. There’s no separate sign-up.
         </p>
       </div>
     </AuthLayout>

@@ -13,7 +13,7 @@ export interface PollStateStore {
 }
 
 /**
- * One tick of a SCHEDULED trigger — port of the backend PollingWorker.
+ * One tick of a SCHEDULED trigger - port of the backend PollingWorker.
  * Returns false when the trigger should stop polling (deleted, disabled,
  * workflow no longer on).
  */
@@ -71,7 +71,7 @@ export async function syncWorkflowPoller(env: Env, db: Db, workflowId: string): 
 
 /**
  * Cron safety net: re-arm every poller that should be running. One D1 query
- * for the whole list, then one Durable Object call per trigger — the Free
+ * for the whole list, then one Durable Object call per trigger - the Free
  * plan allows 50 subrequests per invocation, so this covers ~49 polling
  * workflows. `start` is idempotent, so already-armed pollers are untouched.
  */

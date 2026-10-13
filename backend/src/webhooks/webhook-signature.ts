@@ -5,13 +5,13 @@ import { createHash, createHmac, timingSafeEqual } from 'crypto';
  * Framework-free on purpose. HIGH-RISK: see AGENTS.md §19 before editing.
  */
 
-/** Header senders put the signature in. Load-bearing — never rename. */
+/** Header senders put the signature in. Load-bearing - never rename. */
 export const SIGNATURE_HEADER = 'x-flowforge-signature';
 
 /**
  * The sender computes `sha256=HMAC-SHA256(rawBody, secret)` as hex. It must
  * be the raw request bytes: re-serialised JSON (different whitespace or key
- * order) would never verify. Compared with timingSafeEqual — never `===`,
+ * order) would never verify. Compared with timingSafeEqual - never `===`,
  * which leaks how many leading characters matched.
  */
 export function isValidWebhookSignature(
@@ -30,7 +30,7 @@ export function isValidWebhookSignature(
 
 /**
  * Idempotency key when the sender doesn't supply X-Idempotency-Key.
- * Deterministic — no timestamp — so identical payloads map to the same key
+ * Deterministic - no timestamp - so identical payloads map to the same key
  * across real retry windows (GitHub retries at 60s, Stripe at 30–90s).
  * Senders with legitimately identical payloads must send their own key.
  */

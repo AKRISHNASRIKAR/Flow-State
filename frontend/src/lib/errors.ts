@@ -52,16 +52,16 @@ export function describeError(error: unknown, fallbackTitle = 'Something went wr
 /** Shows `error` as a toast. `context` names what failed ("Couldn't save step"). */
 export function toastError(error: unknown, context?: string, action?: ToastAction) {
   const { title, description } = describeError(error, context);
-  // When a context is given it leads, and the specific reason follows — "Couldn't
+  // When a context is given it leads, and the specific reason follows - "Couldn't
   // save step" tells the user *what* failed, the reason tells them *why*.
   const lead = context && context !== title ? context : title;
-  const detail = context && context !== title ? [title, description].filter(Boolean).join(' — ') : description;
+  const detail = context && context !== title ? [title, description].filter(Boolean).join('. ') : description;
   toast.error(lead, { description: detail, action });
 }
 
 /**
  * What a query or mutation tells the global error handler (providers.tsx).
- * Every request failure becomes a toast unless it opts out with `silent` —
+ * Every request failure becomes a toast unless it opts out with `silent` -
  * which is only for failures the component turns into UI itself (a 404
  * that means "not set up yet", a page that redirects on not-found).
  */

@@ -23,13 +23,13 @@ interface Options {
   end?: number;
   /** CSS custom property to write. */
   variable?: string;
-  /** Called with the eased value each frame — for the few visuals that need discrete states. Keep it cheap. */
+  /** Called with the eased value each frame - for the few visuals that need discrete states. Keep it cheap. */
   onChange?: (p: number) => void;
 }
 
 /**
  * Scroll-linked progress for one element, written as a CSS custom property
- * (default `--p`, 0..1) on that element — never React state, so scrolling
+ * (default `--p`, 0..1) on that element - never React state, so scrolling
  * never re-renders anything. The value eases toward the real position every
  * animation frame, which is what makes lines draw and nodes arrive smoothly
  * instead of stepping with each wheel tick. The page's own scrolling is left

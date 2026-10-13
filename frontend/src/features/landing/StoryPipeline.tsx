@@ -9,7 +9,7 @@ import { useScrollProgress } from './useScrollProgress';
 
 /*
  * The scroll story. Five chapters scroll on the left; on the right a sticky
- * stage builds ONE real workflow as you read — trigger, then steps, then the
+ * stage builds ONE real workflow as you read - trigger, then steps, then the
  * wiring between them, then a run, then its record. Story progress p (0..1)
  * is split into five equal windows, one per chapter:
  *
@@ -35,7 +35,7 @@ const CHAPTERS = [
     n: '04',
     stage: 'Logic',
     title: 'Each step uses what the last one found.',
-    body: 'The order id from the webhook completes the lookup URL. The lookup’s answer — the customer’s name and email — completes the receipt. Templates are the wiring.',
+    body: 'The order id from the webhook completes the lookup URL. The lookup’s answer, the customer’s name and email, completes the receipt. Templates are the wiring.',
     note: '{{payload.orderId}} · {{payload.http.body.email}}',
   },
   {
@@ -50,7 +50,7 @@ const CHAPTERS = [
     stage: 'Result · observability',
     title: 'And you can see exactly what happened.',
     body: 'Every run keeps each step’s input, output, duration and attempts. When something fails you know which step, what it received, and what it said back.',
-    note: 'Queued · running · succeeded · failed — per run, and per step.',
+    note: 'Queued · running · succeeded · failed, per run and per step.',
   },
 ] as const;
 
@@ -102,7 +102,7 @@ function Stage({ exec }: { exec: Exec }) {
       {/* Stage content is laid out at desktop size and scaled down on small screens. */}
       <div className="absolute inset-x-0 top-10 bottom-0 flex justify-center xl:justify-start xl:pl-6">
         <div className="w-[340px] origin-top scale-[0.72] sm:scale-[0.85] lg:scale-100 xl:w-[320px]">
-          {/* Trigger — and the three kinds it could be */}
+          {/* Trigger - and the three kinds it could be */}
           <div className="relative">
           <div className="sp sp-reveal" style={at(0.0, 0.03)}>
             <FlowNodeCard
@@ -138,7 +138,7 @@ function Stage({ exec }: { exec: Exec }) {
           </div>
           </div>
 
-          {/* Steps — each connection draws itself, then its node arrives */}
+          {/* Steps - each connection draws itself, then its node arrives */}
           {[
             {
               a: 0.21,

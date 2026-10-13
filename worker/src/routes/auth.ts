@@ -5,7 +5,7 @@ import { endSession, refreshSession } from '../auth/session';
 import { parseBody, schemas } from '../http';
 
 export const authRoutes = new Hono<AppEnv>()
-  // Browser navigations, not XHRs — they answer with redirects.
+  // Browser navigations, not XHRs - they answer with redirects.
   .get('/google/start', async (c) =>
     c.redirect(await buildAuthorizationUrl(c.env, c.req.query('returnTo'), c.req.query('nonce')), 302),
   )

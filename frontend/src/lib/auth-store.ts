@@ -10,7 +10,7 @@ export interface AuthUser {
 }
 
 interface AuthState {
-  /** Access token lives in memory only — never persisted. */
+  /** Access token lives in memory only - never persisted. */
   accessToken: string | null;
   user: AuthUser | null;
   /** True until the initial silent-refresh attempt on app boot settles. */
@@ -37,7 +37,7 @@ export function decodeAccessToken(token: string): AuthUser | null {
 }
 
 export function getStoredRefreshToken(): string | null {
-  // Guard for Next.js prerendering — there is no localStorage on the server.
+  // Guard for Next.js prerendering - there is no localStorage on the server.
   if (typeof window === 'undefined') return null;
   return localStorage.getItem(REFRESH_TOKEN_KEY);
 }

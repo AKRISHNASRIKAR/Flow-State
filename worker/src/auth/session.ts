@@ -14,7 +14,7 @@ import { audit } from '../repo/executions';
 
 /**
  * Port of backend AuthService. Same claims, same HS256 secrets, same TTLs as
- * NestJS's JwtService, and the same SHA-256 refresh-token hash — so a session
+ * NestJS's JwtService, and the same SHA-256 refresh-token hash - so a session
  * started on either backend keeps working on the other during the move.
  */
 

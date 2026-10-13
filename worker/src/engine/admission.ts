@@ -13,7 +13,7 @@ export interface TriggeredEvent {
   workflowId: string;
   payload: unknown;
   source: 'webhook' | 'manual' | 'poll';
-  /** Present for webhook and manual fires — gets the admission outcome. */
+  /** Present for webhook and manual fires - gets the admission outcome. */
   webhookEventId?: string;
 }
 
@@ -21,7 +21,7 @@ export interface TriggeredEvent {
  * Port of backend TriggeredListener: decide whether a trigger may start a
  * run, and if so record it and start its durable Workflow. The instance id
  * is the execution id, so starting the same execution twice is refused by
- * Cloudflare — the same guarantee BullMQ's `jobId` gave.
+ * Cloudflare - the same guarantee BullMQ's `jobId` gave.
  */
 export async function admit(env: Env, db: Db, event: TriggeredEvent): Promise<void> {
   const workflow = await findWorkflow(db, event.workflowId);
@@ -48,7 +48,7 @@ export async function admit(env: Env, db: Db, event: TriggeredEvent): Promise<vo
   try {
     await env.RUN_WORKFLOW.create({ id: executionId, params: { executionId } });
   } catch (error) {
-    // Without an instance nothing would ever move this run out of PENDING —
+    // Without an instance nothing would ever move this run out of PENDING -
     // fail it visibly instead.
     await setExecution(db, executionId, {
       status: 'FAILED',
@@ -63,7 +63,7 @@ export async function admit(env: Env, db: Db, event: TriggeredEvent): Promise<vo
 
 /**
  * For request handlers: runs admission after the response is sent (ingress
- * never executes), on its own connection — the request's is closed by then.
+ * never executes), on its own connection - the request's is closed by then.
  */
 export function admitInBackground(
   env: Env,

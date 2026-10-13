@@ -245,7 +245,7 @@ export function findEventByKey(db: Db, workflowId: string, idempotencyKey: strin
   ]);
 }
 
-/** Throws a unique violation when (workflow_id, idempotency_key) already exists — the dedup guarantee. */
+/** Throws a unique violation when (workflow_id, idempotency_key) already exists - the dedup guarantee. */
 export async function createEvent(
   db: Db,
   input: { workflowId: string; payload: unknown; status: string; idempotencyKey: string | null },
@@ -284,7 +284,7 @@ export async function listEvents(
 // --- audit log ---------------------------------------------------------
 
 /**
- * Never throws — a logging failure must not abort the operation being
+ * Never throws - a logging failure must not abort the operation being
  * audited (same contract as the backend's AuditLogService).
  */
 export async function audit(

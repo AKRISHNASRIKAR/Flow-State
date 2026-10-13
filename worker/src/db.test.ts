@@ -9,7 +9,7 @@ import * as wf from './repo/workflows';
 
 /**
  * Runs the worker's SQL against a local D1 (the same engine `wrangler dev`
- * uses) built from migrations/ — so a migration and the queries in src/repo/
+ * uses) built from migrations/ - so a migration and the queries in src/repo/
  * can't drift apart unnoticed. No server or credentials needed; runs in CI.
  */
 

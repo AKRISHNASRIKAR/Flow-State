@@ -10,7 +10,7 @@ JWT_REFRESH_SECRET=
 
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
-# 32 bytes base64 — must be the SAME key the backend used, or stored Google
+# 32 bytes base64 - must be the SAME key the backend used, or stored Google
 # tokens can't be decrypted.
 CREDENTIALS_ENCRYPTION_KEY=
 

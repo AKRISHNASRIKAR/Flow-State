@@ -190,7 +190,7 @@ export const workflowRoutes = new Hono<AppEnv>()
         : null;
 
     const trigger = await upsertTrigger(db, workflowId, { type: body.type, config: body.configuration ?? {}, secret });
-    // Starts the poller for SCHEDULED, stops it for anything else — the
+    // Starts the poller for SCHEDULED, stops it for anything else - the
     // upsert keeps the same trigger id either way.
     await syncTriggerPoller(c.env, db, trigger.id);
     return c.json(serializeTrigger(trigger), 201);

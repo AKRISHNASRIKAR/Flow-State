@@ -6,7 +6,7 @@ import { Button, FieldError, inputClass, labelClass } from '../../components/ui'
 import { headersToRows, rowsToHeaders } from '../flow/action-meta';
 import { KeyValueEditor } from '../flow/KeyValueEditor';
 
-// Mirrors the backend's PollingConfig validation — interval floor is 30s.
+// Mirrors the backend's PollingConfig validation - interval floor is 30s.
 const schema = z.object({
   interval: z.coerce.number({ invalid_type_error: 'Enter an interval in seconds' }).min(30, 'Minimum interval is 30 seconds'),
   endpoint: z.string().url('Enter a valid URL to poll'),

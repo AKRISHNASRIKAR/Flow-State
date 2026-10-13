@@ -25,7 +25,7 @@ import {
  * here. This handler creates the WorkflowExecution row (the durable record
  * of "this run happened") and enqueues a BullMQ job that references it by
  * id. The actual action chain runs in WorkflowProcessor, decoupled from
- * this handler by the queue — if the process crashes after this method
+ * this handler by the queue - if the process crashes after this method
  * returns, the job survives in Redis and a worker will still pick it up.
  */
 @Injectable()
@@ -72,7 +72,7 @@ export class TriggeredListener {
 
     if (inFlight >= MAX_CONCURRENT_EXECUTIONS_PER_WORKFLOW) {
       this.logger.warn(
-        `Workflow ${workflow.id} at concurrency limit (${inFlight}/${MAX_CONCURRENT_EXECUTIONS_PER_WORKFLOW}) — skipping`,
+        `Workflow ${workflow.id} at concurrency limit (${inFlight}/${MAX_CONCURRENT_EXECUTIONS_PER_WORKFLOW}) - skipping`,
       );
       await this.markWebhookEvent(
         event.webhookEventId,

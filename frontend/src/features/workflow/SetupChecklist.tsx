@@ -59,7 +59,7 @@ export function SetupChecklist({ workflow, onChooseTrigger, onAddStep, onTurnOn,
     {
       id: 'steps',
       title: 'Add a step',
-      hint: 'What should happen each time — call a URL, send an email, post to Telegram…',
+      hint: 'Choose what happens each time: call a URL, send an email, or post to Telegram.',
       done: hasSteps,
       action: (
         <Button size="sm" variant="primary" onClick={onAddStep}>

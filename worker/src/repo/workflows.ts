@@ -87,7 +87,7 @@ export function serializeAction(a: ActionRow) {
   };
 }
 
-/** The full HMAC secret never leaves the API — only its first 8 characters. */
+/** The full HMAC secret never leaves the API - only its first 8 characters. */
 export function serializeTrigger(t: TriggerRow) {
   return {
     id: t.id,
@@ -174,7 +174,7 @@ export async function updateWorkflow(
 }
 
 /**
- * Clone as a DRAFT with a fresh WEBHOOK secret — the source and the copy must
+ * Clone as a DRAFT with a fresh WEBHOOK secret - the source and the copy must
  * never share an HMAC key. One atomic batch: a copy never exists half-made,
  * and it costs one D1 call however many steps the workflow has (the Free
  * plan allows 50 D1 calls per request).
@@ -292,7 +292,7 @@ export function deleteAction(db: Db, actionId: string) {
   return db.run('DELETE FROM actions WHERE id = ?1', [actionId]);
 }
 
-/** One atomic batch — a reorder never lands half-applied. */
+/** One atomic batch - a reorder never lands half-applied. */
 export async function setActionPositions(db: Db, orderedIds: string[]) {
   const at = now();
   await db.batch(

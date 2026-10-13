@@ -3,5 +3,5 @@ node_modules
 .dev.vars
 dist
 
-# Production secrets for `wrangler secret bulk` — never commit
+# Production secrets for `wrangler secret bulk` - never commit
 .secrets.production.env

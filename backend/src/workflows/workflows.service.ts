@@ -195,7 +195,7 @@ export class WorkflowsService {
         userId,
         name: `Copy of ${source.name}`,
         description: source.description,
-        status: WorkflowStatus.DRAFT, // Always DRAFT — user must activate intentionally
+        status: WorkflowStatus.DRAFT, // Always DRAFT - user must activate intentionally
         version: 1,
         triggers: {
           create: source.triggers.map((trigger) => ({

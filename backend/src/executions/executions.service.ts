@@ -146,7 +146,7 @@ export class ExecutionsService {
       const job = await this.executionQueue.getJob(id);
       await job?.remove();
     } catch {
-      // Removal racing a worker pickup is expected — not an error.
+      // Removal racing a worker pickup is expected - not an error.
     }
 
     return { cancelled: true };
@@ -218,7 +218,7 @@ export class ExecutionsService {
    * Counts failed BullMQ jobs belonging to this user's workflows. Failed
    * jobs are sampled (most recent N) rather than scanning the whole DLQ,
    * since a Redis ZSET scan is O(n) and this endpoint is read on every
-   * dashboard load — see docs for the tradeoff at scale.
+   * dashboard load - see docs for the tradeoff at scale.
    */
   private async countFailedJobsForUser(userId: string) {
     const failedJobs = await this.executionQueue.getFailed(

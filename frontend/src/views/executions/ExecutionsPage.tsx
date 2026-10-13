@@ -19,7 +19,7 @@ export function ExecutionsPage() {
     router.replace(params.size ? `/executions?${params}` : '/executions', { scroll: false });
   };
 
-  // Workflow filter options — first 100 is plenty for a filter dropdown.
+  // Workflow filter options - first 100 is plenty for a filter dropdown.
   const { data: workflows } = useQuery({
     queryKey: ['workflows', 'filter-options'],
     queryFn: () => workflowsApi.list(1, 100),

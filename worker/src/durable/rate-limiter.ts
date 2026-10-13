@@ -13,7 +13,7 @@ const bucketKey = (at = Date.now()) => `hour:${Math.floor(at / HOUR_MS)}`;
 export class RateLimiter extends DurableObject<Env> {
   /**
    * Counts one run against the current hour. Counts even when over the
-   * limit — same as the backend — so a flood keeps being refused until the
+   * limit - same as the backend - so a flood keeps being refused until the
    * window rolls over.
    */
   async consume(limit: number): Promise<{ allowed: boolean; used: number }> {

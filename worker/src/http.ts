@@ -5,7 +5,7 @@ import { z } from 'zod';
 /**
  * Errors in the exact shape NestJS produced (`{ statusCode, message, error }`,
  * `message` an array for validation failures), so the dashboard's ApiError
- * handling — and every toast it drives — works unchanged against either API.
+ * handling - and every toast it drives - works unchanged against either API.
  */
 
 const STATUS_TEXT: Record<number, string> = {
@@ -22,7 +22,7 @@ export class HttpError extends Error {
   constructor(
     readonly status: ContentfulStatusCode,
     readonly messages: string | string[],
-    /** Replaces the standard body — for the few responses Nest shaped by hand. */
+    /** Replaces the standard body - for the few responses Nest shaped by hand. */
     readonly customBody?: Record<string, unknown>,
   ) {
     super(Array.isArray(messages) ? messages.join('; ') : messages);
@@ -129,7 +129,7 @@ export const schemas = {
       configuration: configuration.optional(),
     })
     .strict(),
-  // No DTO on the backend for manual fire — any object is accepted.
+  // No DTO on the backend for manual fire - any object is accepted.
   manualFire: z.object({ payload: configuration.optional() }).passthrough(),
   refreshToken: z.object({ refreshToken: z.string() }).strict(),
   googleExchange: z.object({ code: z.string().min(16).max(128), nonce: z.string().min(16).max(128) }).strict(),

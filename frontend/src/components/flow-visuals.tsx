@@ -5,10 +5,10 @@ import { Icon } from './ui';
 // The FlowState node system, shared by the landing page and the builder so a
 // visitor meets the exact nodes they'll later build with.
 //
-//   trigger    ink-filled glyph — there is exactly one, always first
-//   step       signal-tinted glyph — web request, email, Telegram, wait, log
-//   result     ok-tinted glyph — the outcome of a run
-//   condition  dashed and quiet — roadmap only; the engine has no branching
+//   trigger    ink-filled glyph - there is exactly one, always first
+//   step       signal-tinted glyph - web request, email, Telegram, wait, log
+//   result     ok-tinted glyph - the outcome of a run
+//   condition  dashed and quiet - roadmap only; the engine has no branching
 //
 // Type is told by glyph and fill; color on the chip is execution state only.
 

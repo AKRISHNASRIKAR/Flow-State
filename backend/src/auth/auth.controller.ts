@@ -40,7 +40,7 @@ export class AuthController {
   ) {}
 
   // Public because the browser navigates here directly (no Authorization
-  // header on a top-level navigation) — the nonce, not a session, is what
+  // header on a top-level navigation) - the nonce, not a session, is what
   // ties the flow to its initiator.
   @Public()
   @Get('google/start')
@@ -146,7 +146,7 @@ export class AuthController {
   })
   @ApiResponse({
     status: 401,
-    description: 'Unauthorized — missing or invalid access token',
+    description: 'Unauthorized - missing or invalid access token',
   })
   logout(@Req() request: AuthenticatedRequest, @Body() dto: RefreshTokenDto) {
     return this.authService.logout(request.user.sub, dto.refreshToken);

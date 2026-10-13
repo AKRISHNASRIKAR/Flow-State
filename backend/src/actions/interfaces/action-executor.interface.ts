@@ -14,7 +14,7 @@ export interface ActionResult {
 
 /**
  * The only configuration an executor may read. NestJS's ConfigService
- * satisfies it structurally; the Cloudflare worker passes its env instead —
+ * satisfies it structurally; the Cloudflare worker passes its env instead -
  * which is what lets executors (and everything in actions/) run on both.
  */
 export interface ConfigReader {

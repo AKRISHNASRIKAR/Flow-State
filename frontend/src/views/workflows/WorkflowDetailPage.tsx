@@ -114,7 +114,7 @@ export function WorkflowDetailPage() {
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get('tab');
-  // ?tab=trigger predates the trigger living on the canvas — keep those links
+  // ?tab=trigger predates the trigger living on the canvas - keep those links
   // working by opening the trigger panel on the Flow tab.
   const tab: Tab = tabParam === 'runs' ? 'runs' : 'flow';
   const [panel, setPanel] = useState<Panel>(tabParam === 'trigger' ? { kind: 'trigger' } : null);
@@ -207,7 +207,7 @@ export function WorkflowDetailPage() {
 
   const isOn = workflow.status === 'ACTIVE';
   const hasTrigger = Boolean(trigger.data);
-  // Manual fire is refused unless the workflow is on — explain rather than let
+  // Manual fire is refused unless the workflow is on - explain rather than let
   // the button fail with a confusing "not found".
   const testRunBlocker = !hasTrigger
     ? 'Choose what starts this workflow first'
@@ -388,7 +388,7 @@ function InspectorOverview({ readiness }: { readiness: Readiness }) {
     <div>
       <p className="label-caps text-signal">Inspector</p>
       <h2 className="mt-2 font-serif text-[22px] leading-tight text-ink">
-        {readiness.tone === 'ready' ? 'Ready to run' : 'Set up — and switched off'}
+        {readiness.tone === 'ready' ? 'Ready to run' : 'Set up and switched off'}
       </h2>
       <p className="mt-2 text-sm leading-relaxed text-graphite">{readiness.detail}</p>
       <ul className="mt-5 space-y-3 border-t border-rule pt-4 text-[13px] leading-snug text-graphite">
@@ -396,7 +396,7 @@ function InspectorOverview({ readiness }: { readiness: Readiness }) {
           <span className="font-medium text-ink">Select a node</span> to see and change its settings here.
         </li>
         <li>
-          <span className="font-medium text-ink">Test run</span> sends sample data through the flow — each step lights up
+          <span className="font-medium text-ink">Test run</span> sends sample data through the flow. Each step lights up
           on the canvas as it runs.
         </li>
         <li>

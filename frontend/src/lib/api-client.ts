@@ -3,7 +3,7 @@ import { getStoredRefreshToken, useAuthStore } from './auth-store';
 import { toast } from './toast';
 
 // Trailing slashes stripped: every path is appended with a leading `/`, and
-// `//auth/…` 404s on the API — an easy mistake to make in a hosting dashboard.
+// `//auth/…` 404s on the API - an easy mistake to make in a hosting dashboard.
 export const API_URL: string = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000').replace(/\/+$/, '');
 
 /** statusCode used when the request never got an HTTP response at all. */
@@ -11,7 +11,7 @@ export const NETWORK_ERROR_STATUS = 0;
 
 export class ApiError extends Error {
   readonly statusCode: number;
-  /** Always an array — validation failures come back as one message per field. */
+  /** Always an array - validation failures come back as one message per field. */
   readonly messages: string[];
 
   constructor(body: ApiErrorResponse | null, status: number) {
@@ -39,7 +39,7 @@ async function parseError(res: Response): Promise<ApiError> {
   try {
     body = (await res.json()) as ApiErrorResponse;
   } catch {
-    // non-JSON error body (proxy, network layer) — fall back to status only
+    // non-JSON error body (proxy, network layer) - fall back to status only
   }
   return new ApiError(body, res.status);
 }
@@ -47,7 +47,7 @@ async function parseError(res: Response): Promise<ApiError> {
 /**
  * - ok: new tokens stored.
  * - rejected: the API answered and said no (expired, revoked, already used)
- *   — the session is over.
+ *   - the session is over.
  * - unreachable: no answer, or a 5xx. The stored token is kept: logging
  *   someone out because their wifi blinked would be wrong, and if the token
  *   really was spent, the next attempt is rejected properly.
@@ -71,7 +71,7 @@ async function refreshSession(): Promise<RefreshOutcome> {
       if (res.status >= 500) return 'unreachable';
       if (!res.ok) return 'rejected';
       const tokens = (await res.json()) as RefreshResponse;
-      // The backend rotates refresh tokens — always store the NEW one.
+      // The backend rotates refresh tokens - always store the NEW one.
       useAuthStore.getState().setTokens(tokens.accessToken, tokens.refreshToken);
       return 'ok';
     } catch {
@@ -100,7 +100,7 @@ interface RequestOptions {
   method?: string;
   body?: unknown;
   headers?: Record<string, string>;
-  /** Query params — undefined values are dropped. */
+  /** Query params - undefined values are dropped. */
   params?: Record<string, string | number | undefined>;
   auth?: boolean;
 }
@@ -136,7 +136,7 @@ async function request<T>(path: string, options: RequestOptions = {}, isRetry = 
   if (res.status === 401 && auth && !isRetry && !path.startsWith('/auth/')) {
     const outcome = await refreshSession();
     if (outcome === 'ok') return request<T>(path, options, true);
-    // Couldn't ask the API — that's a connection problem, not a logout.
+    // Couldn't ask the API - that's a connection problem, not a logout.
     if (outcome === 'unreachable') throw ApiError.network(new Error('Session refresh failed'));
     if (useAuthStore.getState().accessToken !== null) {
       // Keyed so a page firing several requests at once shows this once.

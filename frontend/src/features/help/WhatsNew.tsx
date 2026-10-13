@@ -8,7 +8,7 @@ import { CHANGELOG, LATEST_CHANGELOG_ID } from '../../lib/changelog';
 const SEEN_KEY = 'flowstate.whatsNewSeen';
 
 // Unread state is a per-browser convenience, so localStorage is the right
-// home — and every access is guarded, because storage can be blocked or
+// home - and every access is guarded, because storage can be blocked or
 // throw (private windows, disabled site data). Losing it just re-shows a dot.
 function readSeen(): string | null {
   try {
@@ -30,7 +30,7 @@ export function useWhatsNewUnread() {
     try {
       localStorage.setItem(SEEN_KEY, LATEST_CHANGELOG_ID);
     } catch {
-      // Storage unavailable — the dot will simply come back next visit.
+      // Storage unavailable - the dot will simply come back next visit.
     }
     listeners.forEach((l) => l());
   }, []);

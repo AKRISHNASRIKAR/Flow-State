@@ -22,7 +22,7 @@ import type { LatestRun } from '../workflow/useLatestRun';
 import { ActionNode, AddActionNode, TriggerNode } from './nodes';
 
 // The execution engine runs a strict linear chain (one trigger, actions in
-// `order` ascending — no branching or merging). The canvas therefore renders
+// `order` ascending - no branching or merging). The canvas therefore renders
 // a fixed vertical stack with derived edges; it is deliberately NOT a
 // free-form DAG editor, and there is no way to draw edges by hand.
 const GAP_Y = 130;
@@ -60,7 +60,7 @@ export function FlowCanvas({ workflowId, onEditTrigger, onEditStep, selected, ru
 
   const reorder = useMutation({
     mutationFn: (orderedIds: string[]) => actionsApi.reorder(workflowId, orderedIds),
-    meta: { errorContext: 'Couldn’t reorder the steps — the previous order is back' },
+    meta: { errorContext: 'Couldn’t reorder the steps. The previous order is back' },
     onMutate: async (orderedIds) => {
       await queryClient.cancelQueries({ queryKey: ['actions', workflowId] });
       const previous = queryClient.getQueryData<Action[]>(['actions', workflowId]);
@@ -107,7 +107,7 @@ export function FlowCanvas({ workflowId, onEditTrigger, onEditStep, selected, ru
         id: 'trigger',
         type: 'trigger',
         position: { x: 0, y: 0 },
-        // draggable stays off, but selectable must stay on — React Flow gives
+        // draggable stays off, but selectable must stay on - React Flow gives
         // fully non-interactive nodes pointer-events:none, which would swallow
         // the node's own buttons.
         draggable: false,
@@ -155,7 +155,7 @@ export function FlowCanvas({ workflowId, onEditTrigger, onEditStep, selected, ru
     setNodes(layoutNodes);
   }, [layoutNodes, setNodes]);
 
-  // fitView only runs on mount, before the steps have loaded — refit whenever
+  // fitView only runs on mount, before the steps have loaded - refit whenever
   // the chain gets longer or shorter so every node is in view.
   const nodeCount = layoutNodes.length;
   useEffect(() => {
@@ -186,7 +186,7 @@ export function FlowCanvas({ workflowId, onEditTrigger, onEditStep, selected, ru
     });
   }, [trigger, actions, sorted, run.runningActionId]);
 
-  // Constrain dragging to the vertical axis — steps can only be reordered
+  // Constrain dragging to the vertical axis - steps can only be reordered
   // within the stack, not placed freely in 2D.
   const onNodeDrag = useCallback(
     (_: unknown, node: Node) => {

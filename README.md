@@ -1,6 +1,6 @@
 # FlowState
 
-**A self-hosted workflow automation engine — runs on NestJS + PostgreSQL + Redis, or entirely on Cloudflare's free plan.**
+**A self-hosted workflow automation engine - runs on NestJS + PostgreSQL + Redis, or entirely on Cloudflare's free plan.**
 
 Trigger multi-step pipelines from webhooks, scheduled polling, or manual calls.  
 Every execution is queued, retried, and fully audited.
@@ -14,9 +14,9 @@ Every execution is queued, retried, and fully audited.
 
 ---
 
-FlowState is a backend automation engine that lets you compose workflows from ordered actions and attach triggers to them. When a trigger fires — via an incoming webhook, a scheduler polling an external API, or a direct API call — the workflow is queued durably and executed step-by-step, with each action's output forwarded to the next.
+FlowState is a backend automation engine that lets you compose workflows from ordered actions and attach triggers to them. When a trigger fires - via an incoming webhook, a scheduler polling an external API, or a direct API call - the workflow is queued durably and executed step-by-step, with each action's output forwarded to the next.
 
-The same REST API ships as two interchangeable runtimes: the **NestJS backend** (`backend/` — Postgres, Redis, BullMQ) and a **Cloudflare Worker** (`worker/` — D1, Workflows, Durable Objects, on the free plan). The dashboard works against either.
+The same REST API ships as two interchangeable runtimes: the **NestJS backend** (`backend/` - Postgres, Redis, BullMQ) and a **Cloudflare Worker** (`worker/` - D1, Workflows, Durable Objects, on the free plan). The dashboard works against either.
 
 Think of it as the engine behind something like Zapier or n8n, except it's open source, self-hosted, and purpose-built for developers who want to own the stack.
 
@@ -65,7 +65,7 @@ The dashboard carries the same paper, serif, and pixel-art theme through the wor
 | 🧩 | **Template Interpolation** | `{{payload.field}}` dot-notation in any action config field |
 | 📬 | **Durable Execution** | BullMQ + Redis (NestJS) or Cloudflare Workflows (Worker), with automatic retries that resume from the failed step |
 | 💀 | **Dead-Letter Handling** | Runs that exhaust their retries are listed and retryable through the admin API |
-| ☁️ | **Runs on Cloudflare for free** | The whole API + engine as one Worker on D1 — no servers, no Docker, Workers Free plan |
+| ☁️ | **Runs on Cloudflare for free** | The whole API + engine as one Worker on D1 - no servers, no Docker, Workers Free plan |
 | 🔁 | **Idempotent Webhooks** | Dedup via `X-Idempotency-Key` header or automatic SHA-256 payload fingerprinting |
 | 📝 | **Comprehensive Audit Log** | Every auth event, CRUD operation, and workflow execution is written to an immutable table |
 | 📖 | **Swagger UI** | Interactive API docs at `/api/docs` (NestJS backend) |
@@ -136,8 +136,8 @@ The dashboard carries the same paper, serif, and pixel-art theme through the wor
 
 | NestJS backend | Cloudflare Worker |
 |---|---|
-| NestJS controllers | Hono routes — same paths, JSON and error shapes |
-| PostgreSQL + Prisma | D1 (SQLite) — schema in `worker/migrations/` |
+| NestJS controllers | Hono routes - same paths, JSON and error shapes |
+| PostgreSQL + Prisma | D1 (SQLite) - schema in `worker/migrations/` |
 | BullMQ + `WorkflowProcessor` | A Workflow instance per run, one durable `step.do` per action |
 | Redis rate limits / sign-in state | `RateLimiter` and `OneTimeStore` Durable Objects |
 | BullMQ repeatable polling jobs | A `Poller` Durable Object per scheduled trigger (alarms), plus a 15-minute Cron safety net |
@@ -178,31 +178,31 @@ cp .env.example .env
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
-| `DATABASE_URL` | ✅ | — | PostgreSQL connection string |
-| `REDIS_URL` | ✅ | — | Redis connection string |
-| `JWT_ACCESS_SECRET` | ✅ | — | Secret for signing access tokens (use a long random string) |
-| `JWT_REFRESH_SECRET` | ✅ | — | Secret for signing refresh tokens (different from access secret) |
+| `DATABASE_URL` | ✅ | - | PostgreSQL connection string |
+| `REDIS_URL` | ✅ | - | Redis connection string |
+| `JWT_ACCESS_SECRET` | ✅ | - | Secret for signing access tokens (use a long random string) |
+| `JWT_REFRESH_SECRET` | ✅ | - | Secret for signing refresh tokens (different from access secret) |
 | `PORT` | Optional | `3000` | HTTP port |
 | `WORKER_CONCURRENCY` | Optional | `5` | Parallel jobs per worker instance |
 | `CORS_ORIGIN` | Optional | `http://localhost:5173` | The dashboard's origin |
-| `RESEND_API_KEY` | Optional | — | Required to use the `SEND_EMAIL` action |
+| `RESEND_API_KEY` | Optional | - | Required to use the `SEND_EMAIL` action |
 | `RESEND_FROM_ADDRESS` | Optional | `noreply@example.com` | Verified sender address for outbound email |
-| `TELEGRAM_BOT_TOKEN` | Optional | — | Required to use the `TELEGRAM_NOTIFY` action and the bot |
-| `TELEGRAM_WEBHOOK_SECRET` | With the bot | — | `secret_token` for Telegram's `setWebhook`; the bot runs in webhook mode at `POST /telegram/webhook` |
-| `ADMIN_SECRET` | Optional | — | Enables admin/DLQ endpoints when set (sent as `X-Admin-Secret` header) |
-| `GOOGLE_CLIENT_ID` | ✅ to sign in | — | OAuth client ID (Google Cloud → Google Auth Platform → Clients → *Web application*) |
-| `GOOGLE_CLIENT_SECRET` | ✅ to sign in | — | That client's secret |
+| `TELEGRAM_BOT_TOKEN` | Optional | - | Required to use the `TELEGRAM_NOTIFY` action and the bot |
+| `TELEGRAM_WEBHOOK_SECRET` | With the bot | - | `secret_token` for Telegram's `setWebhook`; the bot runs in webhook mode at `POST /telegram/webhook` |
+| `ADMIN_SECRET` | Optional | - | Enables admin/DLQ endpoints when set (sent as `X-Admin-Secret` header) |
+| `GOOGLE_CLIENT_ID` | ✅ to sign in | - | OAuth client ID (Google Cloud → Google Auth Platform → Clients → *Web application*) |
+| `GOOGLE_CLIENT_SECRET` | ✅ to sign in | - | That client's secret |
 | `GOOGLE_REDIRECT_URI` | Optional | `http://localhost:$PORT/auth/google/callback` | Must exactly match an *Authorized redirect URI* on the OAuth client |
-| `CREDENTIALS_ENCRYPTION_KEY` | ✅ to sign in | — | 32 bytes, base64 (`openssl rand -base64 32`). Encrypts stored Google tokens. Changing it makes stored tokens unreadable |
+| `CREDENTIALS_ENCRYPTION_KEY` | ✅ to sign in | - | 32 bytes, base64 (`openssl rand -base64 32`). Encrypts stored Google tokens. Changing it makes stored tokens unreadable |
 | `FRONTEND_URL` | Optional | `http://localhost:5173` | Where the API sends the browser after Google sign-in |
 
-The dashboard reads one variable, `NEXT_PUBLIC_API_URL` (default `http://localhost:3000`), baked in at build time — no trailing slash needed (it's stripped).
+The dashboard reads one variable, `NEXT_PUBLIC_API_URL` (default `http://localhost:3000`), baked in at build time - no trailing slash needed (it's stripped).
 
 The Cloudflare Worker doesn't read `.env`: locally it uses `worker/.dev.vars` (template: `worker/.dev.vars.example`), and in production Wrangler secrets plus the `vars` in `worker/wrangler.jsonc`. It needs no `DATABASE_URL`, `REDIS_URL`, `PORT` or `WORKER_CONCURRENCY`.
 
 > ⚠️ **Never commit `.env` to version control.** It is listed in `.gitignore`. Generate `JWT_ACCESS_SECRET` and `JWT_REFRESH_SECRET` with `openssl rand -hex 64`.
 
-**Google sign-in setup.** In Google Cloud Console → Google Auth Platform: configure the consent screen (add yourself as a test user), then create a client of type *Web application* with `http://localhost:3000/auth/google/callback` as an authorized redirect URI (`http://localhost:8787/auth/google/callback` for the local Worker). Leave *Authorised JavaScript origins* empty. Prefer **Download JSON** over copy-pasting the ID and secret — a dropped first character gives Google's "OAuth client was not found". Sign-in only requests `openid email profile`, which needs no Google verification. Without the three required variables the API still starts, but `/auth/google/start` returns 503 and nobody can sign in.
+**Google sign-in setup.** In Google Cloud Console → Google Auth Platform: configure the consent screen (add yourself as a test user), then create a client of type *Web application* with `http://localhost:3000/auth/google/callback` as an authorized redirect URI (`http://localhost:8787/auth/google/callback` for the local Worker). Leave *Authorised JavaScript origins* empty. Prefer **Download JSON** over copy-pasting the ID and secret - a dropped first character gives Google's "OAuth client was not found". Sign-in only requests `openid email profile`, which needs no Google verification. Without the three required variables the API still starts, but `/auth/google/start` returns 503 and nobody can sign in.
 
 ### Running Locally
 
@@ -262,7 +262,7 @@ The live setup is the **Cloudflare Worker** for the API (Workers Free plan) and 
 | Dashboard | Vercel (or Cloudflare via `pnpm --filter web cf:deploy`) | `NEXT_PUBLIC_API_URL` = the Worker's URL, then redeploy |
 | Google OAuth client | Google Cloud → Google Auth Platform | Redirect URI = the Worker's `/auth/google/callback` |
 
-Step-by-step deploy, secrets, and moving data off a Postgres deployment: [`worker/README.md`](worker/README.md). The NestJS backend still deploys anywhere Node, Postgres and Redis run (it was on Render) — but **never run both runtimes in production at once**: each polls scheduled triggers, so every detected change would start two runs.
+Step-by-step deploy, secrets, and moving data off a Postgres deployment: [`worker/README.md`](worker/README.md). The NestJS backend still deploys anywhere Node, Postgres and Redis run (it was on Render) - but **never run both runtimes in production at once**: each polls scheduled triggers, so every detected change would start two runs.
 
 ---
 
@@ -276,8 +276,8 @@ For a fully interactive reference, open the Swagger UI at `/api/docs` after star
 
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
-| `GET` | `/auth/google/start?nonce=&returnTo=` | Public | Browser navigation — redirects to Google (PKCE) |
-| `GET` | `/auth/google/callback` | Public | Google's redirect target — redirects to the dashboard with a one-time code, or to `/login?error=` |
+| `GET` | `/auth/google/start?nonce=&returnTo=` | Public | Browser navigation - redirects to Google (PKCE) |
+| `GET` | `/auth/google/callback` | Public | Google's redirect target - redirects to the dashboard with a one-time code, or to `/login?error=` |
 | `POST` | `/auth/google/exchange` | Public | Trade `{ code, nonce }` for an access + refresh token pair (single-use, 60 s) |
 | `POST` | `/auth/refresh` | Public | Rotate a refresh token |
 | `POST` | `/auth/logout` | 🔒 | Revoke the current refresh token |
@@ -291,7 +291,7 @@ For a fully interactive reference, open the Swagger UI at `/api/docs` after star
 | `GET` | `/workflows/:id` | Get a single workflow |
 | `PATCH` | `/workflows/:id` | Partially update a workflow |
 | `DELETE` | `/workflows/:id` | Delete (archive) a workflow |
-| `POST` | `/workflows/:id/pause` | Pause — stops the trigger from firing |
+| `POST` | `/workflows/:id/pause` | Pause - stops the trigger from firing |
 | `POST` | `/workflows/:id/resume` | Resume a paused workflow |
 | `POST` | `/workflows/:id/clone` | Clone a workflow (trigger + actions, fresh webhook secret, as a draft) |
 | `GET` | `/workflows/:id/poll-history` | Last 50 polling events for debugging |
@@ -350,7 +350,7 @@ An external service (GitHub, Stripe, your own app, etc.) sends a `POST` request 
 
 **Signature verification**: If the trigger has a secret, the request must include an `X-FlowForge-Signature: sha256=<hex>` header. FlowState recomputes `HMAC-SHA256(rawBody, secret)` and compares using a constant-time comparison to prevent timing attacks.
 
-The webhook secret is auto-generated on first creation and kept when the trigger is saved again. Only the first 8 characters are returned in API responses. There's no rotation endpoint yet — delete and re-create the trigger to get a new secret.
+The webhook secret is auto-generated on first creation and kept when the trigger is saved again. Only the first 8 characters are returned in API responses. There's no rotation endpoint yet - delete and re-create the trigger to get a new secret.
 
 **Deduplication**: Requests are deduplicated using the `X-Idempotency-Key` header if provided, or automatically via a deterministic SHA-256 fingerprint of the payload body. Duplicate requests receive a `{ received: true, duplicate: true }` response with no side effects.
 
@@ -391,7 +391,7 @@ FlowState polls an external HTTP endpoint on a configurable interval (minimum 30
 
 ## Action Types
 
-Actions run in ascending `position` order. Each action receives the current payload and may enrich it — subsequent actions see the merged result.
+Actions run in ascending `position` order. Each action receives the current payload and may enrich it - subsequent actions see the merged result.
 
 ### `HTTP_REQUEST`
 
@@ -450,7 +450,7 @@ Writes a message to the server log. Useful for debugging pipelines.
 
 Every string value in an action's `config` object supports `{{mustache}}`-style placeholders. Placeholders are resolved against the live payload using dot-notation before the action executes.
 
-**Example — send an email using data from a webhook payload:**
+**Example - send an email using data from a webhook payload:**
 
 ```json
 {
@@ -465,7 +465,7 @@ Every string value in an action's `config` object supports `{{mustache}}`-style 
 
 **Rules:**
 - Paths are resolved from the root `payload` object using `.` as a separator.
-- Unresolvable paths leave the placeholder **unchanged** rather than throwing — a typo is visible in the output, not a silent crash.
+- Unresolvable paths leave the placeholder **unchanged** rather than throwing - a typo is visible in the output, not a silent crash.
 - Interpolation applies recursively through nested objects and arrays.
 
 ---
@@ -478,8 +478,8 @@ Every string value in an action's `config` object supports `{{mustache}}`-style 
 | Google tokens | AES-256-GCM encrypted at rest (`CREDENTIALS_ENCRYPTION_KEY`); never sent to the browser |
 | Refresh token storage | Stored as SHA-256 digests (the tokens are high-entropy random ids); the raw token is never persisted |
 | Token rotation | Each refresh issues a new pair and revokes the old one; chain tracked via `replacedByTokenId` |
-| Webhook authenticity | HMAC-SHA256 with `timingSafeEqual` — prevents both forgery and timing attacks |
-| Resource ownership | `WorkflowOwnerGuard` on all per-workflow routes — cross-user access returns 403 |
+| Webhook authenticity | HMAC-SHA256 with `timingSafeEqual` - prevents both forgery and timing attacks |
+| Resource ownership | `WorkflowOwnerGuard` on all per-workflow routes - cross-user access returns 403 |
 | Input validation | `class-validator` with `whitelist: true` (unknown fields stripped) and `forbidNonWhitelisted: true` |
 | Admin routes | Opt-in via `ADMIN_SECRET` env var; disabled entirely when unset |
 | Secret masking | Webhook secrets are masked in all API responses (first 8 chars + `...`) |
@@ -529,7 +529,7 @@ flowstate/                      # pnpm workspace root (Turborepo)
 │       │   └── executions/     # Runs tables, stats widget
 │       ├── lib/                # API client (auth refresh), stores, helpers
 │       └── views/              # Page components (login + Google callback, workflows, executions)
-├── worker/                     # Same API on Cloudflare (workspace: "worker") — see worker/README.md
+├── worker/                     # Same API on Cloudflare (workspace: "worker") - see worker/README.md
 │   ├── src/                    # Hono routes, repo/ (D1 SQL), engine/ (Workflow, polling), durable/ (DOs)
 │   ├── migrations/             # D1 schema
 │   ├── scripts/postgres-to-d1.mjs  # One-off data move from Postgres
@@ -569,6 +569,12 @@ backend/src/
 
 ---
 
+## Release validation
+
+Use Node 24 and the pinned pnpm version from `package.json`. Install with `pnpm install --frozen-lockfile`, then run `pnpm check` and `pnpm audit:prod`. Lint is read-only; `pnpm --filter api lint:fix` applies fixes explicitly. CI also rebuilds Postgres from migrations and checks schema drift.
+
+The dashboard bundles licensed local fonts, so builds do not fetch Google Fonts. Build caching tracks frontend env files and the backend engine modules imported by the Worker, following [Turborepo’s environment guidance](https://turborepo.dev/docs/crafting-your-repository/using-environment-variables). Transitive security overrides in `pnpm-workspace.yaml` should be removed once upstream packages include those fixes. See [PRODUCTION.md](PRODUCTION.md) for validation scope and remaining launch work.
+
 ## Known Limitations
 
 These are intentional simplifications. They are documented here rather than papered over.
@@ -577,7 +583,7 @@ These are intentional simplifications. They are documented here rather than pape
 |---|---|
 | **At-least-once per step** | A retry skips steps that already succeeded and resumes at the failed one with the payload as it was. The failed step itself re-runs, so if it had an external effect before erroring (e.g. the remote accepted a request, then the connection timed out), that effect can happen twice. |
 | **`DELAY` blocks the worker (NestJS only)** | The processor sleeps inline, holding a BullMQ worker slot for the full duration. The Cloudflare Worker uses a durable `step.sleep` instead. |
-| **Cloudflare Free plan limits** | 100,000 requests/day, 10 ms CPU per request or step, 50 D1 queries or subrequests per invocation — so the 15-minute poller safety net re-arms up to ~49 polling workflows per run. The $5/month Paid plan lifts these with no code change. |
+| **Cloudflare Free plan limits** | 100,000 requests/day, 10 ms CPU per request or step, 50 D1 queries or subrequests per invocation - so the 15-minute poller safety net re-arms up to ~49 polling workflows per run. The $5/month Paid plan lifts these with no code change. |
 | **One runtime at a time** | The NestJS backend and the Worker each poll scheduled triggers; running both in production doubles every polled run. |
 | **SPA token storage** | The dashboard keeps the refresh token in `localStorage` (access token stays in memory). Fine for local/dev; a production deployment should move refresh-token storage behind a BFF or a same-site cookie once API and frontend share a domain. |
 | **No per-endpoint rate limiting** | Runs are capped per user per hour, but there are no request-rate guards on the API itself (e.g. `/auth/google/start`). |
@@ -596,11 +602,11 @@ Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) before
 
 In brief:
 1. Fork → branch → change → test → PR
-2. Run `pnpm lint` and `pnpm test` (and `pnpm --filter api format`) before pushing — CI runs the same, plus the Worker's D1 tests
-3. Keep PRs focused — one concern per PR
+2. Run `pnpm check` and `pnpm audit:prod` before pushing; CI also checks migration drift
+3. Keep PRs focused - one concern per PR
 
 ---
 
 ## License
 
-[MIT](LICENSE) — © FlowState Contributors
+[MIT](LICENSE) - © FlowState Contributors

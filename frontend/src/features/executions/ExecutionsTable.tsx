@@ -11,7 +11,7 @@ import { formatDateTime, formatDuration } from '../../lib/format';
 
 const STATUSES: ExecutionStatus[] = ['PENDING', 'RUNNING', 'SUCCEEDED', 'FAILED', 'CANCELLED'];
 
-// Row accent — a redundant cue alongside the status badge in each row, so the
+// Row accent - a redundant cue alongside the status badge in each row, so the
 // in-flight and failed rows are findable while scanning a long page.
 const ROW_ACCENT: Record<ExecutionStatus, string> = {
   PENDING: 'border-l-wait',
@@ -48,7 +48,7 @@ export function ExecutionsTable({ workflowId, extraFilters }: ExecutionsTablePro
     queryKey: ['executions', { workflowId, status, page }],
     queryFn: () =>
       executionsApi.list({ page, status: status === '' ? undefined : status, workflowId }),
-    // Poll every 3s ONLY while a visible row is still in flight — an idle
+    // Poll every 3s ONLY while a visible row is still in flight - an idle
     // dashboard tab stops hammering the API once everything is terminal.
     refetchInterval: (query) => {
       const rows = query.state.data?.data;

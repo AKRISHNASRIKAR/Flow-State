@@ -104,7 +104,7 @@ export class WorkflowsController {
   @ApiResponse({ status: 200, description: 'Workflow found' })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden — not the workflow owner',
+    description: 'Forbidden - not the workflow owner',
   })
   @ApiResponse({ status: 404, description: 'Workflow not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -128,7 +128,7 @@ export class WorkflowsController {
   @ApiResponse({ status: 400, description: 'Validation failed' })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden — not the workflow owner',
+    description: 'Forbidden - not the workflow owner',
   })
   @ApiResponse({ status: 404, description: 'Workflow not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -156,7 +156,7 @@ export class WorkflowsController {
   @ApiResponse({ status: 200, description: 'Workflow deleted successfully' })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden — not the workflow owner',
+    description: 'Forbidden - not the workflow owner',
   })
   @ApiResponse({ status: 404, description: 'Workflow not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -180,7 +180,7 @@ export class WorkflowsController {
   @ApiResponse({ status: 200, description: 'Workflow paused' })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden — not the workflow owner',
+    description: 'Forbidden - not the workflow owner',
   })
   @ApiResponse({ status: 404, description: 'Workflow not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -204,7 +204,7 @@ export class WorkflowsController {
   @ApiResponse({ status: 200, description: 'Workflow resumed' })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden — not the workflow owner',
+    description: 'Forbidden - not the workflow owner',
   })
   @ApiResponse({ status: 404, description: 'Workflow not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -227,7 +227,7 @@ export class WorkflowsController {
   @ApiResponse({ status: 200, description: 'Polling history list' })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden — not the workflow owner',
+    description: 'Forbidden - not the workflow owner',
   })
   @ApiResponse({ status: 404, description: 'Workflow not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -250,7 +250,7 @@ export class WorkflowsController {
   @ApiResponse({ status: 201, description: 'Workflow cloned successfully' })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden — not the workflow owner',
+    description: 'Forbidden - not the workflow owner',
   })
   @ApiResponse({ status: 404, description: 'Workflow not found' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })

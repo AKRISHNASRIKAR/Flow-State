@@ -42,7 +42,7 @@ export class TriggersController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden — not the workflow owner',
+    description: 'Forbidden - not the workflow owner',
   })
   @ApiResponse({ status: 404, description: 'Workflow not found' })
   upsert(@Param('id') workflowId: string, @Body() dto: CreateTriggerDto) {
@@ -61,7 +61,7 @@ export class TriggersController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden — not the workflow owner',
+    description: 'Forbidden - not the workflow owner',
   })
   @ApiResponse({ status: 404, description: 'Trigger not found' })
   findOne(@Param('id') workflowId: string) {
@@ -80,7 +80,7 @@ export class TriggersController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   @ApiResponse({
     status: 403,
-    description: 'Forbidden — not the workflow owner',
+    description: 'Forbidden - not the workflow owner',
   })
   @ApiResponse({ status: 404, description: 'Trigger not found' })
   remove(@Param('id') workflowId: string, @Req() req: AuthenticatedRequest) {

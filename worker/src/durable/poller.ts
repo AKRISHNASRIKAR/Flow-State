@@ -13,7 +13,7 @@ const STATE_KEY = 'state';
 
 /**
  * One per SCHEDULED trigger (addressed by trigger id). Its alarm is the
- * polling timer and its storage holds the last-seen state — replacing
+ * polling timer and its storage holds the last-seen state - replacing
  * BullMQ repeatable jobs and the Redis `poll:state:*` keys.
  *
  * Alarms rather than Cron Triggers because Cron's finest granularity is one
@@ -47,7 +47,7 @@ export class Poller extends DurableObject<Env> {
         write: (state) => this.ctx.storage.put(STATE_KEY, state),
       });
     } catch (error) {
-      // A failed poll (DB unreachable, …) must not end the schedule — the
+      // A failed poll (DB unreachable, …) must not end the schedule - the
       // next tick tries again. pollOnce already records endpoint errors.
       console.error(`Poll failed for trigger ${config.triggerId}`, error);
     }

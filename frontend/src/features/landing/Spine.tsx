@@ -10,7 +10,7 @@ const READING_LINE = 0.62;
 /**
  * The page's single connection line. It runs down the left edge of every
  * section, draws itself to where you're reading, and carries a signal-blue
- * packet at its tip — so scrolling the page *is* data moving through a flow.
+ * packet at its tip - so scrolling the page *is* data moving through a flow.
  */
 export function SpineTrack({ children }: { children: ReactNode }) {
   const ref = useScrollProgress<HTMLDivElement>({ mode: 'reader', start: READING_LINE, variable: '--spine' });

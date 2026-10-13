@@ -11,7 +11,8 @@
     "cf-typegen": "wrangler types",
     "test": "vitest run",
     "db:migrate:local": "wrangler d1 migrations apply flowstate --local",
-    "db:migrate:remote": "wrangler d1 migrations apply flowstate --remote"
+    "db:migrate:remote": "wrangler d1 migrations apply flowstate --remote",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "hono": "^4.13.9",

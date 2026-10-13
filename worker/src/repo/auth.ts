@@ -38,7 +38,7 @@ export function findRefreshToken(db: Db, id: string) {
 
 /**
  * Revokes the token only if it's still live; returns rows changed. 0 means
- * someone else already spent it — the caller refuses, so two refreshes racing
+ * someone else already spent it - the caller refuses, so two refreshes racing
  * on one token can't both succeed.
  */
 export function revokeRefreshToken(db: Db, id: string, userId?: string) {
@@ -60,7 +60,7 @@ export interface GoogleCredentials {
   scopes: string[];
   accessTokenEnc: string;
   accessTokenExpiresAt: string;
-  /** Only present when Google returned one — otherwise the stored token is kept. */
+  /** Only present when Google returned one - otherwise the stored token is kept. */
   refreshTokenEnc?: string;
 }
 

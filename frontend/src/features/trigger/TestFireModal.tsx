@@ -8,7 +8,7 @@ import { triggersApi } from '../../lib/api';
 import { toast } from '../../lib/toast';
 
 /**
- * "Test run" — POST /workflows/:id/trigger/fire with sample data. From the
+ * "Test run" - POST /workflows/:id/trigger/fire with sample data. From the
  * builder's Flow tab the run then plays out on the canvas itself
  * (`watchOnCanvas`); anywhere else it jumps to the Runs tab so the new run is
  * visible as it moves Queued → Running → Succeeded/Failed.
@@ -46,7 +46,7 @@ export function TestFireModal({
     try {
       parsed = JSON.parse(payloadText.trim() === '' ? '{}' : payloadText);
     } catch {
-      setJsonError('This isn’t valid JSON — check for missing quotes or commas.');
+      setJsonError('This isn’t valid JSON. Check for missing quotes or commas.');
       return;
     }
     if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) {
@@ -75,7 +75,7 @@ export function TestFireModal({
           />
           <FieldError message={jsonError} />
           <p className={hintClass}>
-            Your steps receive this as the trigger’s data — a step can use{' '}
+            Your steps receive this as the trigger’s data. A step can use{' '}
             <code className="font-mono text-graphite">{'{{payload.example}}'}</code> to insert a value.
           </p>
         </div>

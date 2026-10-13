@@ -16,7 +16,7 @@ const WORKER_CONCURRENCY = Number(process.env.WORKER_CONCURRENCY) || 5;
  * Runs one WorkflowExecution end to end: fetch the action chain, execute
  * each step in order via ActionExecutorService, thread the payload through,
  * and record every step as an ActionExecution row. Any number of instances
- * of this processor can run against the same 'workflow-execution' queue —
+ * of this processor can run against the same 'workflow-execution' queue -
  * BullMQ guarantees a job is only ever locked by one worker at a time, so
  * horizontal scaling is just "start another process".
  */
@@ -197,7 +197,7 @@ export class WorkflowProcessor extends WorkerHost {
 
   /**
    * Dead-letter bookkeeping. BullMQ already keeps the failed job in Redis
-   * (removeOnFail: false) — this hook makes sure the WorkflowExecution row
+   * (removeOnFail: false) - this hook makes sure the WorkflowExecution row
    * in Postgres reflects the terminal state too, and writes an audit trail
    * entry marking the execution as dead-lettered so it's discoverable
    * without querying Redis directly.
@@ -212,7 +212,7 @@ export class WorkflowProcessor extends WorkerHost {
     const maxAttempts = job.opts.attempts ?? 1;
 
     if (attemptsMade < maxAttempts) {
-      return; // more retries scheduled — not dead yet
+      return; // more retries scheduled - not dead yet
     }
 
     const execution = await this.prisma.workflowExecution.findUnique({

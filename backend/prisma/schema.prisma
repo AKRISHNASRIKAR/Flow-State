@@ -73,7 +73,7 @@ model Connection {
   providerAccountId    String             @map("provider_account_id")
   email                String
   scopes               String[]
-  /// AES-256-GCM ciphertext (see TokenCipher) — never the raw token.
+  /// AES-256-GCM ciphertext (see TokenCipher) - never the raw token.
   accessTokenEnc       String?            @map("access_token_enc")
   refreshTokenEnc      String?            @map("refresh_token_enc")
   accessTokenExpiresAt DateTime?          @map("access_token_expires_at")

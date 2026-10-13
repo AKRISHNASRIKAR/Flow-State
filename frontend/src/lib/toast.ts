@@ -50,8 +50,8 @@ export const useToastStore = create<ToastState>((set, get) => ({
     const { key, duration = DEFAULT_DURATION[kind], ...rest } = options;
 
     // A polling query that keeps failing, or a button pressed twice, would
-    // otherwise pile up identical toasts. Same key — or same text when no
-    // key is given — replaces the earlier one.
+    // otherwise pile up identical toasts. Same key - or same text when no
+    // key is given - replaces the earlier one.
     const replaced = get().toasts.filter((t) =>
       key !== undefined ? t.key === key : t.kind === kind && t.title === title && t.description === rest.description,
     );

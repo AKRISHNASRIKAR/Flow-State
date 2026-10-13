@@ -10,7 +10,7 @@ import { Request } from 'express';
 /**
  * Header-secret guard for operator-only endpoints. There is no admin role
  * on the User model (this is a single-tenant portfolio project), so the
- * simplest honest option is a shared secret set via env — never falls back
+ * simplest honest option is a shared secret set via env - never falls back
  * to "open" if the secret is unset, since that would silently expose the
  * DLQ to anyone.
  */

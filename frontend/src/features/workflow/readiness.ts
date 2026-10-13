@@ -9,7 +9,7 @@ export interface Readiness {
   label: string;
   /** Longer explanation for a tooltip / the inspector. */
   detail: string;
-  /** Steps whose saved settings wouldn't pass the step form — flagged on the canvas. */
+  /** Steps whose saved settings wouldn't pass the step form - flagged on the canvas. */
   problems: Map<string, string>;
 }
 
@@ -18,7 +18,7 @@ const isKnownType = (type: string): type is ActionType => type in ACTION_META;
 /**
  * Can this workflow run, and if not, why? Checked in the browser with the
  * same rules the step forms enforce (actionSchemas), plus the engine's own
- * rule that only an ACTIVE workflow can be fired. The server still decides —
+ * rule that only an ACTIVE workflow can be fired. The server still decides -
  * this only makes the answer visible before you press Test run.
  */
 export function assessReadiness(workflow: Workflow, trigger: Trigger | null, actions: Action[]): Readiness {

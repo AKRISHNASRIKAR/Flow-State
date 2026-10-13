@@ -24,7 +24,7 @@ export class TriggersService {
    *
    * If the trigger type is WEBHOOK, auto-generates a 32-byte hex secret
    * used for HMAC-SHA256 signature verification on incoming webhooks.
-   * The secret is stored in the DB — the caller never provides it.
+   * The secret is stored in the DB - the caller never provides it.
    */
   async upsert(workflowId: string, dto: CreateTriggerDto) {
     if (dto.type === TriggerType.SCHEDULED) {

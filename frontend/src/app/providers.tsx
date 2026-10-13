@@ -74,7 +74,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           queries: {
             retry: (failureCount, error) => {
               if (!(error instanceof ApiError)) return failureCount < 2;
-              // Don't retry 4xx responses — they won't get better.
+              // Don't retry 4xx responses - they won't get better.
               if (error.statusCode >= 400 && error.statusCode < 500) return false;
               // Unreachable API: one quick retry absorbs a blip, then the user
               // hears about it within ~2s instead of sitting on a spinner.

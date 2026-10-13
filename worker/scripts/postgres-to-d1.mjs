@@ -8,7 +8,7 @@
  * Read-only against Postgres: it only runs SELECTs, through `psql` (which
  * must be installed). Output converts each column to the D1 schema's storage
  * (migrations/0001_initial.sql): timestamps → ISO-8601 UTC text, JSON and
- * arrays → JSON text, booleans → 0/1. Run it against an empty D1 database —
+ * arrays → JSON text, booleans → 0/1. Run it against an empty D1 database -
  * rows that already exist would fail on their primary key.
  */
 import { execFileSync } from 'node:child_process';
@@ -38,7 +38,7 @@ const TABLES = {
   telegram_users: { timestamps: ['created_at', 'updated_at'], bool: ['is_active'] },
 };
 
-/** Postgres gives `timestamp without time zone` as "2026-07-29T12:14:20.658" — UTC, per Prisma. */
+/** Postgres gives `timestamp without time zone` as "2026-07-29T12:14:20.658" - UTC, per Prisma. */
 function toIsoUtc(value) {
   const normalised = value.includes('.') ? value : `${value}.000`;
   return `${normalised.padEnd(23, '0').slice(0, 23)}Z`;

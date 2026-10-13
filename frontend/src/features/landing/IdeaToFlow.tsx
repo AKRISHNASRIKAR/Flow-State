@@ -49,7 +49,7 @@ export function IdeaToFlow() {
       </SectionHead>
 
       <ol className="relative mt-16 grid grid-cols-[minmax(0,1fr)] gap-6 pl-[64px] sm:grid-cols-2 lg:grid-cols-6 lg:gap-4 lg:pl-[88px]">
-        {/* The line that joins the moves — drawn across as you scroll (down, on phones). */}
+        {/* The line that joins the moves - drawn across as you scroll (down, on phones). */}
         <span
           aria-hidden
           className="sp sp-draw-x absolute left-[88px] right-0 top-[15px] hidden h-px bg-ink/60 lg:block"

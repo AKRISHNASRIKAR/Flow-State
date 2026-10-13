@@ -65,7 +65,7 @@ export const webhookRoutes = new Hono<AppEnv>().post('/:workflowId', async (c) =
   try {
     eventId = await createEvent(db, { workflowId, payload, status: 'RECEIVED', idempotencyKey });
   } catch (error) {
-    // Two identical deliveries raced past the check above — the unique
+    // Two identical deliveries raced past the check above - the unique
     // constraint decides, and the loser reports the winner's event.
     if (!isUniqueViolation(error)) throw error;
     const winner = await findEventByKey(db, workflowId, idempotencyKey);
@@ -89,7 +89,7 @@ export const telegramRoutes = new Hono<AppEnv>().post('/webhook', async (c) => {
       saveUser: (user) => upsertTelegramUser(c.get('db'), user).then(() => undefined),
     });
   } catch (error) {
-    // Still 200 — Telegram would otherwise redeliver the same update forever.
+    // Still 200 - Telegram would otherwise redeliver the same update forever.
     console.error('Telegram update failed', error);
   }
   return c.json({ ok: true });

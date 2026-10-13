@@ -13,7 +13,7 @@ interface Entry {
  * dashboard handoff code (60 s). Replaces Redis GETDEL.
  *
  * Not KV: KV is eventually consistent, so two requests could both read a
- * code before either delete lands — a sign-in code redeemed twice. A Durable
+ * code before either delete lands - a sign-in code redeemed twice. A Durable
  * Object runs one event at a time and its storage calls are gated, so
  * `take()`'s read-then-delete is atomic.
  */

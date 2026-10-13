@@ -18,7 +18,7 @@ export interface RunParams {
   executionId: string;
 }
 
-// Same budget as the backend's BullMQ job (3 attempts, exponential from 2s) —
+// Same budget as the backend's BullMQ job (3 attempts, exponential from 2s) -
 // but per step, so only the failing step is retried.
 const STEP_RETRIES = { limit: 2, delay: '2 seconds', backoff: 'exponential' } as const;
 // Executors time out their own network calls at 10–15s; this only catches a hang.
@@ -40,7 +40,7 @@ interface Plan {
  * BullMQ + WorkflowProcessor.
  *
  * Cloudflare persists each `step.do` result, so when the instance is retried
- * or resumed, completed steps are skipped and their saved output is reused —
+ * or resumed, completed steps are skipped and their saved output is reused -
  * the resume-from-failure behaviour the backend implements by hand, here
  * provided by the platform. Code outside `step.do` re-runs on every replay,
  * so it must stay deterministic: all I/O lives inside steps.
@@ -61,7 +61,7 @@ export class RunWorkflow extends WorkflowEntrypoint<Env, RunParams> {
 
       if (action.type === 'DELAY') {
         const seconds = Number(action.config.seconds ?? 0);
-        // A durable sleep: no worker is held while it waits — which the
+        // A durable sleep: no worker is held while it waits - which the
         // backend's inline sleep couldn't avoid.
         if (seconds > 0) await step.sleep(`wait-${action.id}`, seconds * 1000);
       }
@@ -82,7 +82,7 @@ export class RunWorkflow extends WorkflowEntrypoint<Env, RunParams> {
   private load(executionId: string): Promise<string | null> {
     return withDb(this.env, async (db) => {
       const execution = await findExecution(db, executionId);
-      // Cancelled while queued — nothing to do.
+      // Cancelled while queued - nothing to do.
       if (!execution || execution.status === 'CANCELLED') return null;
 
       const actions = await listActions(db, execution.workflowId);
@@ -122,7 +122,7 @@ export class RunWorkflow extends WorkflowEntrypoint<Env, RunParams> {
       }
 
       const next = result.enrichedPayload ? { ...payload, ...result.enrichedPayload } : payload;
-      // Step row and checkpoint commit together — a SUCCEEDED row must always
+      // Step row and checkpoint commit together - a SUCCEEDED row must always
       // mean its output is in the checkpoint (see CLAUDE.md high-risk #9).
       // One atomic D1 batch.
       await db.batch([

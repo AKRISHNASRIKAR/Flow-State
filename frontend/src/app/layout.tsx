@@ -1,33 +1,35 @@
 import type { Metadata } from 'next';
-import { IBM_Plex_Mono, IBM_Plex_Sans, Newsreader } from 'next/font/google';
+import localFont from 'next/font/local';
 import { Providers } from './providers';
 import './globals.css';
 
-// Three voices (see globals.css): Newsreader for ideas and workflow names,
-// Plex Sans for the interface, Plex Mono for what the machine says. Exposed as
-// CSS variables so Tailwind's font-sans/serif/mono point at them.
-const newsreader = Newsreader({
-  subsets: ['latin'],
+// Local assets preserve the three type voices without Google Fonts requests at build time.
+const newsreader = localFont({
+  src: [
+    { path: '../assets/fonts/newsreader-normal.woff2', weight: '200 800', style: 'normal' },
+    { path: '../assets/fonts/newsreader-italic.woff2', weight: '200 800', style: 'italic' },
+  ],
   variable: '--font-newsreader',
-  style: ['normal', 'italic'],
   display: 'swap',
 });
-const plexSans = IBM_Plex_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
+const plexSans = localFont({
+  src: '../assets/fonts/plex-sans-normal.woff2',
+  weight: '400 600',
   variable: '--font-plex-sans',
   display: 'swap',
 });
-const plexMono = IBM_Plex_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500'],
+const plexMono = localFont({
+  src: [
+    { path: '../assets/fonts/plex-mono-400.woff2', weight: '400' },
+    { path: '../assets/fonts/plex-mono-500.woff2', weight: '500' },
+  ],
   variable: '--font-plex-mono',
   display: 'swap',
 });
 
 export const metadata: Metadata = {
   title: 'FlowState',
-  description: 'Turn repetitive work into workflows that run themselves — and see exactly what every run did.',
+  description: 'Turn repetitive work into workflows that run themselves and see exactly what every run did.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

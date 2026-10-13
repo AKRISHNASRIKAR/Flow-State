@@ -45,7 +45,7 @@ export function StatsWidget() {
       <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[5px] border border-rule bg-rule sm:grid-cols-3 lg:grid-cols-5">
         <StatTile label="Total runs" value={String(stats.total)} />
         <StatTile label="Last 24 h" value={String(stats.last24hTotal)} />
-        <StatTile label="Avg duration" value={stats.avgDurationMs != null ? formatMs(stats.avgDurationMs) : '—'} />
+        <StatTile label="Avg duration" value={stats.avgDurationMs != null ? formatMs(stats.avgDurationMs) : '-'} />
         <StatTile
           label="Gave up after retries"
           value={String(stats.failedJobsInDLQ)}
@@ -53,7 +53,7 @@ export function StatsWidget() {
         />
         <StatTile
           label="Runs left this hour"
-          value={stats.rateLimitRemaining != null ? String(stats.rateLimitRemaining) : '—'}
+          value={stats.rateLimitRemaining != null ? String(stats.rateLimitRemaining) : '-'}
           alert={
             stats.rateLimitRemaining != null && stats.rateLimitRemaining < 10
               ? 'Close to the hourly limit of 100 runs'

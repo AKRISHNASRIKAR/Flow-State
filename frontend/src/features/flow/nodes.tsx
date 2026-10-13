@@ -10,8 +10,8 @@ import { ACTION_META } from './action-meta';
 
 export const NODE_WIDTH = 340;
 
-// Edges attach to these, but the builder never lets you draw one by hand — the
-// engine runs a straight chain — so the handles are invisible.
+// Edges attach to these, but the builder never lets you draw one by hand - the
+// engine runs a straight chain - so the handles are invisible.
 const HIDDEN_HANDLE = '!h-px !w-px !min-h-0 !min-w-0 !border-0 !bg-transparent';
 
 const TRIGGER_KIND: Record<string, string> = {
@@ -35,7 +35,7 @@ export interface TriggerNodeData {
   trigger: Trigger | null;
   onEdit: () => void;
   selected: boolean;
-  /** e.g. "fired 2 min ago" — from the latest run. */
+  /** e.g. "fired 2 min ago" - from the latest run. */
   lastFired?: string;
   [key: string]: unknown;
 }

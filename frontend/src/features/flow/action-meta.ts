@@ -17,7 +17,7 @@ export const ACTION_META: Record<ActionType, ActionMeta> = {
     type: ActionType.LOG_MESSAGE,
     label: 'Log a message',
     icon: '📝',
-    description: 'Write a note to the run’s log — useful while testing.',
+    description: 'Write a note to the run’s log, useful while testing.',
     summarize: (c) => str(c.message) || 'No message set',
   },
   DELAY: {
@@ -31,7 +31,7 @@ export const ACTION_META: Record<ActionType, ActionMeta> = {
     type: ActionType.HTTP_REQUEST,
     label: 'Web request',
     icon: '🌐',
-    description: 'Call a URL — an API or another app’s webhook. Later steps can use its reply.',
+    description: 'Call a URL, such as an API or another app’s webhook. Later steps can use its reply.',
     summarize: (c) => `${str(c.method) || 'GET'} ${str(c.url) || '(no URL)'}`,
   },
   SEND_EMAIL: {

@@ -22,7 +22,7 @@ class RedisShutdown implements OnModuleDestroy {
 
 /**
  * One shared ioredis client, closed on shutdown. New code should inject
- * REDIS_CLIENT rather than constructing its own connection — the four
+ * REDIS_CLIENT rather than constructing its own connection - the four
  * pre-existing ad-hoc clients (health, polling, executions, admission) are
  * a known TODO to migrate onto this.
  */

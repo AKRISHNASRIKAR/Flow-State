@@ -25,7 +25,7 @@ export const requireUser = createMiddleware<AppEnv>(async (c, next) => {
 
 /**
  * Port of WorkflowOwnerGuard for /workflows/:id/*. Like the guard it doesn't
- * filter archived workflows — the handlers that must, do.
+ * filter archived workflows - the handlers that must, do.
  */
 export const requireWorkflowOwner = createMiddleware<AppEnv>(async (c, next) => {
   const id = c.req.param('id');

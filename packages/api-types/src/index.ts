@@ -1,7 +1,7 @@
 /**
  * Shared types mirroring the FlowState backend API surface (Phases 1–3).
  * Hand-maintained against backend/prisma/schema.prisma and the controller
- * serializers — keep in sync when the API changes.
+ * serializers - keep in sync when the API changes.
  */
 
 // ---------------------------------------------------------------------------
@@ -201,7 +201,7 @@ export interface ReorderActionsRequest {
 
 /** SCHEDULED trigger configuration (PollingConfig). */
 export interface PollingConfig {
-  /** Poll interval in seconds — backend floor is 30. */
+  /** Poll interval in seconds - backend floor is 30. */
   interval: number;
   endpoint: string;
   method?: string;
@@ -215,7 +215,7 @@ export interface Trigger {
   workflowId: string;
   type: TriggerType;
   configuration: Record<string, unknown>;
-  /** Masked for WEBHOOK triggers: first 8 chars + "..." — full secret is never returned. */
+  /** Masked for WEBHOOK triggers: first 8 chars + "..." - full secret is never returned. */
   secret: string | null;
   enabled: boolean;
   createdAt: string;
@@ -299,7 +299,7 @@ export interface ExecutionStats {
   avgDurationMs: number | null;
   failedJobsInDLQ: number;
   rateLimitRemaining: number | null;
-  /** NestJS backend only — the Cloudflare worker has no fixed worker pool. */
+  /** NestJS backend only - the Cloudflare worker has no fixed worker pool. */
   activeWorkers?: { configuredConcurrency: number };
 }
 

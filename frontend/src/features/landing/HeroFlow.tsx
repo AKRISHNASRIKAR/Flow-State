@@ -50,7 +50,7 @@ export function HeroFlow() {
 
   return (
     <div className="relative">
-      {/* The canvas the nodes sit on — the same drafting-paper ground as the builder. */}
+      {/* The canvas the nodes sit on - the same drafting-paper ground as the builder. */}
       <div className="grid-paper relative overflow-hidden rounded-md border border-rule px-5 py-7 sm:px-8">
         <div className="mx-auto flex max-w-[340px] flex-col">
           {STEPS.map((step, i) => (
@@ -72,7 +72,7 @@ export function HeroFlow() {
             label="Result"
             title={finished ? 'Order handled' : 'Waiting for the steps…'}
             glyph={GLYPHS.check}
-            state={finished ? { tone: 'ok', text: '412 ms' } : { tone: 'idle', text: '—' }}
+            state={finished ? { tone: 'ok', text: '412 ms' } : { tone: 'idle', text: '-' }}
             className={finished ? '' : 'opacity-60'}
           />
         </div>

@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 
 /*
- * FlowState design tokens. Every colour in the app comes from here — components
+ * FlowState design tokens. Every colour in the app comes from here - components
  * use the semantic names (bg-paper, text-ink, ring-rule, bg-signal…), never a
  * raw palette colour, so the identity lives in one place and a dark theme later
  * is a swap of these values, not a rewrite.
@@ -10,7 +10,7 @@
  *   paper / card / paper-2   surfaces: page, raised objects, quiet fills
  *   ink / graphite / muted / faint   text, strongest to weakest
  *   rule / rule-soft         1px borders, idle connections, grid dots
- *   signal                   the ONLY accent — "something is moving/active now":
+ *   signal                   the ONLY accent - "something is moving/active now":
  *                            the running step, a packet on a connection, focus,
  *                            template tokens, primary actions
  *   ok / wait / fail         execution state only (succeeded, queued/retried, failed)
@@ -162,7 +162,7 @@ html {
 /* Tailwind v3's preflight forced `cursor: pointer` on buttons; v4 deliberately
    reverted to the UA default (an arrow), which left every tab, icon button, and
    menu item in the app feeling inert. Restoring it once here is the only way to
-   keep that guarantee — a per-element utility is one forgotten class away from
+   keep that guarantee - a per-element utility is one forgotten class away from
    the same bug, which is how it reappeared on the flow nodes. */
 @layer base {
   button,
@@ -191,7 +191,7 @@ body {
   @apply bg-paper font-sans text-ink antialiased;
 }
 
-/* Uppercase mono labels ("STEP · WEB REQUEST") — the machine's voice. */
+/* Uppercase mono labels ("STEP · WEB REQUEST") - the machine's voice. */
 @utility label-caps {
   font-family: var(--font-mono);
   font-size: 11px;

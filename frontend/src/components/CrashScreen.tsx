@@ -6,7 +6,7 @@ import { Button, Icon, ICON_PATHS } from './ui';
 import { toast } from '../lib/toast';
 
 /**
- * Shown by the route error boundaries when a page throws while rendering —
+ * Shown by the route error boundaries when a page throws while rendering -
  * instead of a blank screen. Toasts the error too, so a crash reads the same
  * way as every other failure in the app.
  */
@@ -23,7 +23,7 @@ export function CrashScreen({ error, reset }: { error: Error & { digest?: string
       </span>
       <h1 className="text-lg font-semibold text-ink">Something broke on this page</h1>
       <p className="mt-1.5 max-w-md text-sm text-graphite">
-        Your workflows are safe — this is a display problem. Try again, or head back to your workflows.
+        Your workflows are safe. This is a display problem. Try again, or head back to your workflows.
       </p>
       <div className="mt-6 flex gap-3">
         <Button variant="primary" onClick={reset}>

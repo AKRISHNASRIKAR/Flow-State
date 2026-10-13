@@ -4,7 +4,7 @@ const PLACEHOLDER_PATTERN = /\{\{\s*([\w.]+)\s*\}\}/g;
  * Replace {{path.to.value}} placeholders in a string with values resolved
  * from `payload` via dot-notation (e.g. {{payload.event.title}}). A path
  * that can't be resolved leaves the original placeholder untouched instead
- * of throwing — a typo in a template should surface as visibly wrong output,
+ * of throwing - a typo in a template should surface as visibly wrong output,
  * not crash the action.
  */
 export function interpolate(
@@ -18,8 +18,8 @@ export function interpolate(
 }
 
 /**
- * Recursively interpolate every string found in a config value — including
- * strings nested in objects and arrays — against the given payload. This is
+ * Recursively interpolate every string found in a config value - including
+ * strings nested in objects and arrays - against the given payload. This is
  * what lets an action config like { subject: "Goal by {{payload.player}}" }
  * resolve without every executor re-implementing template logic.
  */

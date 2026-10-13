@@ -23,7 +23,7 @@
   ],
 
   // One durable instance per run. Each step is persisted, so a retry resumes
-  // after the steps that already succeeded — see src/engine/run-workflow.ts.
+  // after the steps that already succeeded - see src/engine/run-workflow.ts.
   "workflows": [
     { "name": "flowstate-run", "binding": "RUN_WORKFLOW", "class_name": "RunWorkflow" }
   ],
@@ -47,7 +47,7 @@
   "triggers": { "crons": ["*/15 * * * *"] },
 
   // Non-secret config. Secrets (JWT_*, GOOGLE_CLIENT_*, CREDENTIALS_ENCRYPTION_KEY,
-  // RESEND_*, TELEGRAM_*, ADMIN_SECRET) go in via `wrangler secret put` —
+  // RESEND_*, TELEGRAM_*, ADMIN_SECRET) go in via `wrangler secret put` -
   // see .dev.vars.example for the full list.
   "vars": {
     "FRONTEND_URL": "https://flow-state-fe.vercel.app",

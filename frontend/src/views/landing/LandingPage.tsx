@@ -109,7 +109,7 @@ export function LandingPage() {
               <p className="landing-hero-text mt-6 font-mono text-[10px] uppercase tracking-wider text-image-ink">Open source · Self-hostable · Step-by-step history</p>
             </div>
           </div>
-          <div className="absolute bottom-0 inset-x-0 flex justify-between gap-4 bg-image-shadow/85 px-6 py-4 font-mono text-[10px] uppercase tracking-widest text-image-ink sm:px-10"><span>From one small event to work, done.</span><span className="hidden sm:block">01 — Find your flow</span></div>
+          <div className="absolute bottom-0 inset-x-0 flex justify-between gap-4 bg-image-shadow/85 px-6 py-4 font-mono text-[10px] uppercase tracking-widest text-image-ink sm:px-10"><span>From one small event to work, done.</span><span className="hidden sm:block">01 · Find your flow</span></div>
         </section>
 
         <div className={`${SHELL} flex flex-wrap justify-center gap-x-10 gap-y-4 border-b border-rule py-7 text-sm text-muted`}><span>Start with a webhook</span><span aria-hidden>→</span><span>Run your steps in order</span><span aria-hidden>→</span><span>See exactly what happened</span></div>
@@ -121,7 +121,7 @@ export function LandingPage() {
             ['01', 'Choose the starting point.', 'Receive a webhook, watch an API for changes on a schedule, or start a run manually.'],
             ['02', 'Give it the next steps.', 'Call an API, send an email or Telegram message, add a delay, or write a log. Put them in the order you need.'],
             ['03', 'Turn it on. Follow along.', 'Test with a payload, then turn your workflow on. Open any run to inspect what went in, what came out, and where it stopped.'],
-          ].map(([n, title, body]) => <div key={n}><p className="font-mono text-xs text-faint">{n} —</p><h3 className="mt-3 text-base font-medium">{title}</h3><p className="mt-2 text-sm leading-relaxed text-muted">{body}</p></div>)}</div></Reveal>
+          ].map(([n, title, body]) => <div key={n}><p className="font-mono text-xs text-faint">{n} -</p><h3 className="mt-3 text-base font-medium">{title}</h3><p className="mt-2 text-sm leading-relaxed text-muted">{body}</p></div>)}</div></Reveal>
         </section>
 
         <section id="possibilities" className="scroll-mt-8 border-y border-rule bg-paper-2 py-20 sm:py-24"><div className={SHELL}>

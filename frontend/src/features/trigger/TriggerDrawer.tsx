@@ -11,7 +11,7 @@ import { useTrigger } from '../workflow/queries';
 import { ScheduledConfigForm } from './ScheduledConfigForm';
 import { WebhookEventsTable } from './WebhookEventsTable';
 
-// 24x24 Heroicons outline path data — globe-alt, clock, cursor-arrow-rays.
+// 24x24 Heroicons outline path data - globe-alt, clock, cursor-arrow-rays.
 export const TRIGGER_ICONS: Record<TriggerType, string> = {
   WEBHOOK:
     'M12 21a9.004 9.004 0 0 0 8.716-6.747M12 21a9.004 9.004 0 0 1-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 0 1 7.843 4.582M12 3a8.997 8.997 0 0 0-7.843 4.582m15.686 0A11.953 11.953 0 0 1 12 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0 1 21 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0 1 12 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 0 1 3 12c0-1.605.42-3.113 1.157-4.418',
@@ -35,7 +35,7 @@ export const TRIGGER_OPTIONS: { type: TriggerType; label: string; description: s
   {
     type: 'MANUAL',
     label: 'Only when I press Test run',
-    description: 'No outside trigger — handy while you’re building.',
+    description: 'No outside trigger. Handy while you’re building.',
   },
 ];
 
@@ -85,14 +85,14 @@ function TriggerEditor({
       void queryClient.invalidateQueries({ queryKey: ['trigger', workflowId] });
       setConfirmingReplace(null);
       toast.success('Trigger saved');
-      // A new webhook's URL is the thing the user needs next — keep the
+      // A new webhook's URL is the thing the user needs next - keep the
       // panel open to show it. Everything else is done.
       if (saved.type !== 'WEBHOOK') onDone();
     },
   });
 
   const save = (body: UpsertTriggerRequest) => {
-    // Replacing a WEBHOOK trigger discards its secret permanently — confirm.
+    // Replacing a WEBHOOK trigger discards its secret permanently - confirm.
     if (trigger?.type === 'WEBHOOK' && body.type !== 'WEBHOOK') {
       setConfirmingReplace(body);
     } else {
@@ -225,12 +225,12 @@ function WebhookSection({
       <div>
         <p className="mb-1.5 text-sm font-medium text-ink">Signing secret</p>
         <code className="inline-block rounded-lg bg-paper px-3 py-2 font-mono text-xs text-ink ring-1 ring-rule">
-          {trigger.secret ?? '—'}
+          {trigger.secret ?? '-'}
         </code>
         <div className="mt-3">
           <Notice tone="warning">
             <p>
-              Only the first few characters are ever shown — FlowState doesn’t return the full secret, even right
+              Only the first few characters are ever shown. FlowState doesn’t return the full secret, even right
               after creating it, and it can’t be changed without replacing this trigger.
             </p>
             <p>

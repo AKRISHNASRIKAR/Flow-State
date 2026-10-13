@@ -5,7 +5,7 @@ import { createHash, timingSafeEqual } from 'crypto';
  *
  * argon2's deliberate slowness exists to make guessing *low-entropy*
  * secrets (passwords) expensive. A refresh token is a signed JWT carrying a
- * random 122-bit jti — there is nothing to guess, so a fast digest is just as
+ * random 122-bit jti - there is nothing to guess, so a fast digest is just as
  * safe, and it runs anywhere (argon2 is a native module Cloudflare Workers
  * can't load). Shared with the Cloudflare worker so both backends produce and
  * accept the same hashes during the migration.
@@ -23,6 +23,6 @@ export function refreshTokenMatches(
   const actual = Buffer.from(hashRefreshToken(token), 'hex');
   const expected = Buffer.from(storedHash, 'hex');
   // A pre-migration argon2 hash isn't hex of the right length, so it simply
-  // never matches — that session ends and the user signs in again once.
+  // never matches - that session ends and the user signs in again once.
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
