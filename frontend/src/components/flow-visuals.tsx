@@ -6,18 +6,19 @@ import { Icon } from './ui';
 // visitor meets the exact nodes they'll later build with.
 //
 //   trigger    ink-filled glyph - there is exactly one, always first
-//   step       signal-tinted glyph - web request, email, Telegram, wait, log
+//   step       neutral glyph at rest; signal tint when running or selected
 //   result     ok-tinted glyph - the outcome of a run
 //   condition  dashed and quiet - roadmap only; the engine has no branching
 //
-// Type is told by glyph and fill; color on the chip is execution state only.
+// Glyphs identify the type; signal tint identifies activity or selection.
+// A state chip always names the execution state as well as coloring it.
 
 export type NodeKind = 'trigger' | 'step' | 'result' | 'condition';
 export type RunTone = 'idle' | 'queued' | 'running' | 'ok' | 'retry' | 'fail' | 'setup';
 
 const GLYPH_BOX: Record<NodeKind, string> = {
   trigger: 'bg-ink text-paper',
-  step: 'bg-signal-soft text-signal',
+  step: 'bg-paper-2 text-graphite',
   result: 'bg-ok-soft text-ok',
   condition: 'border border-dashed border-faint/70 text-faint',
 };
@@ -79,7 +80,7 @@ export function FlowNodeCard({ kind, label, title, glyph, state, active, alert, 
       } ${className}`}
     >
       <div className="flex items-start gap-3">
-        <span className={`flex size-8 shrink-0 items-center justify-center rounded-[4px] ${GLYPH_BOX[kind]}`}>
+        <span className={`flex size-8 shrink-0 items-center justify-center rounded-[4px] ${active ? 'bg-signal-soft text-signal' : GLYPH_BOX[kind]}`}>
           <Icon path={glyph ?? GLYPHS.bolt} className="size-4" strokeWidth={1.75} />
         </span>
         <div className="min-w-0 flex-1">

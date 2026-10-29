@@ -70,20 +70,23 @@ const buttonSizes = {
   lg: 'min-h-12 px-5 py-3 text-sm',
 } as const;
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  ref?: Ref<HTMLButtonElement>;
+interface ButtonStyleOptions {
   variant?: ButtonVariant;
   size?: keyof typeof buttonSizes;
+  className?: string;
 }
 
-export function Button({ variant = 'secondary', size = 'md', className = '', ...rest }: ButtonProps) {
-  return (
-    <button
-      type="button"
-      className={`inline-flex items-center justify-center gap-2 rounded-md leading-[1.4] font-medium transition-[color,background-color,box-shadow,transform] duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 active:translate-y-px disabled:cursor-not-allowed disabled:active:translate-y-0 ${buttonSizes[size]} ${buttonVariants[variant]} ${className}`}
-      {...rest}
-    />
-  );
+/** Navigation links and buttons share geometry without changing their native behavior. */
+export function buttonClassName({ variant = 'secondary', size = 'md', className = '' }: ButtonStyleOptions = {}): string {
+  return `inline-flex items-center justify-center gap-2 rounded-md leading-[1.4] font-medium transition-[color,background-color,box-shadow,transform] duration-150 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 active:translate-y-px disabled:cursor-not-allowed disabled:active:translate-y-0 ${buttonSizes[size]} ${buttonVariants[variant]} ${className}`;
+}
+
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>, ButtonStyleOptions {
+  ref?: Ref<HTMLButtonElement>;
+}
+
+export function Button({ variant, size, className, ...rest }: ButtonProps) {
+  return <button type="button" className={buttonClassName({ variant, size, className })} {...rest} />;
 }
 
 // ---------------------------------------------------------------------------
@@ -295,18 +298,21 @@ export function Switch({
   checked,
   onChange,
   label,
+  ariaLabel,
   disabled,
 }: {
   checked: boolean;
   onChange: (next: boolean) => void;
   /** Accessible name; also shown beside the switch. */
   label: string;
+  ariaLabel?: string;
   disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       role="switch"
+      aria-label={ariaLabel ?? label}
       aria-checked={checked}
       disabled={disabled}
       onClick={() => onChange(!checked)}

@@ -24,7 +24,7 @@ The dashboard landing page introduces triggers, ordered steps, payload templates
 
 The visual system is documented in [DESIGN.md](DESIGN.md). A sun/moon theme switch is available on the landing page, sign-in screen, and dashboard; it persists locally and follows the operating system until a theme is chosen. Palette and switch transitions take 500ms and respect reduced motion. Shared controls use generous tap targets, keyboard focus indicators, and consistent spacing.
 
-The dashboard carries the same paper, serif, and pixel-art theme through the workflow library, builder, run journal, and sign-in screens. Workflow status counts and search describe the current page; workflow filters persist in the URL; run filters and pagination are shareable through URL parameters. Run statistics refresh only while work is queued or running.
+The dashboard carries the same paper, serif, and pixel-art theme through the workflow library, builder, run journal, and sign-in screens. Returning users see a single library heading and compact workflow cards with user-written descriptions, clear draft setup links, and relative edited times. The homepage introduces the real builder with light and dark captures of an isolated example workflow. Marketing links and dashboard buttons share control geometry, and idle node glyphs stay neutral until selected or running. Workflow status counts and search describe the current page; workflow filters persist in the URL; run filters and pagination are shareable through URL parameters. Run statistics refresh only while work is queued or running.
 
 ---
 

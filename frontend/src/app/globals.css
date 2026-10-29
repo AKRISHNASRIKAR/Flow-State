@@ -298,3 +298,10 @@ html:has(.landing-page) { scroll-behavior: smooth; }
     transition-duration: 0.01ms !important;
   }
 }
+
+/* The captures show the same workspace, so only its appearance changes with the theme. */
+.builder-capture-dark { opacity: 0; transition: opacity var(--theme-transition-duration); }
+html[data-theme='dark'] .builder-capture-dark { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .builder-capture-dark { transition: none; }
+}

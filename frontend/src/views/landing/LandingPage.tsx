@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { HeroLandscape } from '../../features/landing/HeroLandscape';
+import { BuilderPreview } from '../../features/landing/BuilderPreview';
 import Link from 'next/link';
 import type { CSSProperties, ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
@@ -9,11 +10,11 @@ import { useScrollProgress } from '../../features/landing/useScrollProgress';
 import { ThemeControl } from '../../components/ThemeControl';
 import { BrandLockup } from '../../components/Logo';
 import { Connector, FlowNodeCard, StateChip } from '../../components/flow-visuals';
-import { Button, Icon, ICON_PATHS } from '../../components/ui';
+import { Button, buttonClassName, Icon, ICON_PATHS } from '../../components/ui';
 import { GLYPHS } from '../../lib/glyphs';
 
 const GITHUB_URL = 'https://github.com/AKRISHNASRIKAR/Flow-State';
-const CTA = 'inline-flex items-center justify-center gap-3 rounded-md bg-ink px-5 py-3 text-sm font-medium text-paper transition-colors hover:bg-graphite focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-signal';
+const CTA = buttonClassName({ variant: 'primary' });
 // Each step stays active long enough to read; the handoff gets its own beat.
 const STEP_DURATION_MS = 1400;
 const HANDOFF_DURATION_MS = 450;
@@ -54,10 +55,10 @@ function WorkflowDemo() {
   }, [phase, playing]);
   const example = EXAMPLES[selected];
   return (
-    <div className="mt-12 overflow-hidden rounded-md border border-rule bg-card">
+    <div id="workflow-example" className="mt-8 scroll-mt-8 overflow-hidden rounded-md border border-rule bg-card">
       <div className="flex flex-wrap gap-2 border-b border-rule px-4 py-3 sm:px-6" role="group" aria-label="Example workflows">
         {EXAMPLES.map((item, index) => <Button key={item.name} variant={selected === index ? 'primary' : 'ghost'} aria-pressed={selected === index} onClick={() => { setSelected(index); setPhase(-1); setPlaying(false); }}>{item.name}</Button>)}
-        <span className="ml-auto self-center font-mono text-[10px] uppercase tracking-widest text-muted">Interactive example</span>
+        <span className="ml-auto self-center font-mono text-[11px] uppercase tracking-wider text-muted">Interactive example</span>
       </div>
       <div key={selected} className="landing-example-enter grid md:grid-cols-[1fr_0.85fr]">
         <div className="grid-paper flex justify-center p-6 sm:p-10">
@@ -94,40 +95,40 @@ export function LandingPage() {
       <header className="relative z-20 border-b border-rule bg-paper">
         <nav aria-label="Main navigation" className={`mx-auto flex min-h-20 w-full max-w-[1160px] items-center justify-between gap-2 px-4 py-3 sm:px-10`}>
           <Link href="/" aria-label="FlowState home" className="min-w-0 overflow-hidden whitespace-nowrap"><BrandLockup size="sm" /></Link>
-          <div className="hidden gap-7 text-sm text-graphite md:flex"><a className="hover:text-ink" href="#how-it-works">How it works</a><a className="hover:text-ink" href="#possibilities">What you can build</a><a className="hover:text-ink" href={GITHUB_URL} target="_blank" rel="noreferrer">GitHub ↗</a></div>
-          <div className="flex shrink-0 items-center gap-2"><ThemeControl /><Link href="/login" className={`${CTA} max-md:!hidden`}>Get started <span aria-hidden>↗</span></Link><Button ref={menuButton} variant="ghost" className="h-11 w-11 shrink-0 !p-0 md:hidden" aria-label="Toggle navigation" aria-expanded={menuOpen} aria-controls="landing-mobile-menu" onClick={() => setMenuOpen(!menuOpen)}><Icon path={menuOpen ? ICON_PATHS.close : 'M4 6h16M4 12h16M4 18h16'} /></Button></div>
+          <div className="hidden gap-7 text-sm text-graphite lg:flex"><a className="hover:text-ink" href="#how-it-works">How it works</a><a className="hover:text-ink" href="#possibilities">What you can build</a><a className="hover:text-ink" href={GITHUB_URL} target="_blank" rel="noreferrer">GitHub ↗</a></div>
+          <div className="flex shrink-0 items-center gap-2"><ThemeControl /><Link href="/login" className={`${CTA} max-md:!hidden`}>Get started <span aria-hidden>↗</span></Link><Button ref={menuButton} variant="ghost" className="h-11 w-11 shrink-0 !p-0 lg:hidden" aria-label="Toggle navigation" aria-expanded={menuOpen} aria-controls="landing-mobile-menu" onClick={() => setMenuOpen(!menuOpen)}><Icon path={menuOpen ? ICON_PATHS.close : 'M4 6h16M4 12h16M4 18h16'} /></Button></div>
         </nav>
-        {menuOpen && <div id="landing-mobile-menu" className="absolute inset-x-0 top-full animate-fade-up border-b border-t border-rule bg-paper md:hidden"><div className={`${SHELL} py-3`}><a className="block py-3" href="#how-it-works" onClick={() => setMenuOpen(false)}>How it works</a><a className="block py-3" href="#possibilities" onClick={() => setMenuOpen(false)}>What you can build</a><a className="block py-3" href={GITHUB_URL} target="_blank" rel="noreferrer">GitHub ↗</a></div></div>}
+        {menuOpen && <div id="landing-mobile-menu" className="absolute inset-x-0 top-full animate-fade-up border-b border-t border-rule bg-paper lg:hidden"><div className={`${SHELL} py-3`}><a className="block py-3" href="#how-it-works" onClick={() => setMenuOpen(false)}>How it works</a><a className="block py-3" href="#possibilities" onClick={() => setMenuOpen(false)}>What you can build</a><a className="block py-3" href={GITHUB_URL} target="_blank" rel="noreferrer">GitHub ↗</a></div></div>}
       </header>
       <main>
         <section className="relative isolate overflow-hidden border-b border-rule">
           <HeroLandscape />
-          <div className={`${SHELL} flex min-h-[700px] items-start pb-24 pt-20 sm:min-h-[780px] sm:pt-24`}>
+          <div className={`${SHELL} flex min-h-[620px] items-start pb-24 pt-16 sm:min-h-[680px] sm:pt-20`}>
             <div className="landing-hero-copy max-w-[600px]">
               <p className="landing-hero-text label-caps text-image-ink">A little less busywork. A little more flow.</p>
-              <h1 className="landing-hero-text mt-6 font-serif text-[clamp(52px,6vw,84px)] leading-[1.06] tracking-[-0.035em] text-image-ink">Let your work<br />find its flow.</h1>
+              <h1 className="landing-hero-text mt-6 font-serif text-[44px] sm:text-[clamp(52px,6vw,84px)] leading-[1.06] tracking-[-0.035em] text-image-ink">Let your work<br />find its flow.</h1>
               <p className="landing-hero-text mt-6 max-w-[40ch] text-base leading-relaxed text-image-ink">Build workflows that turn triggers into ordered steps, with every run recorded.</p>
-              <div className="mt-7 flex flex-wrap items-center gap-5"><Link className={CTA} href="/login">Build your first workflow <span aria-hidden>↗</span></Link><a href="#how-it-works" className="rounded-[3px] bg-paper px-4 py-3 text-sm underline decoration-rule underline-offset-4 hover:decoration-ink">Take a look ↓</a></div>
-              <p className="landing-hero-text mt-6 font-mono text-[10px] uppercase tracking-wider text-image-ink">Open source · Self-hostable · Step-by-step history</p>
+              <div className="mt-7 flex flex-wrap items-center gap-5"><Link className={CTA} href="/login">Build your first workflow <span aria-hidden>↗</span></Link><a href="#workflow-example" className="landing-hero-text inline-flex min-h-11 items-center gap-2 rounded-md py-2.5 text-sm text-image-ink underline decoration-image-ink/60 underline-offset-4 hover:decoration-image-ink focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-image-ink">Watch an example <span aria-hidden>↓</span></a></div>
+              <p className="landing-hero-text mt-6 font-mono text-[11px] uppercase tracking-wider text-image-ink">Open source · Self-hostable · Step-by-step history</p>
             </div>
           </div>
-          <div className="absolute bottom-0 inset-x-0 flex justify-between gap-4 bg-image-shadow/85 px-6 py-4 font-mono text-[10px] uppercase tracking-widest text-image-ink sm:px-10"><span>From one small event to work, done.</span><span className="hidden sm:block">01 · Find your flow</span></div>
+          <div className="absolute bottom-0 inset-x-0 flex justify-between gap-4 bg-image-shadow/85 px-6 py-4 font-mono text-[11px] uppercase tracking-wider text-image-ink sm:px-10"><span>From one small event to work, done.</span><span className="hidden sm:block">01 · Find your flow</span></div>
         </section>
 
-        <div className={`${SHELL} flex flex-wrap justify-center gap-x-10 gap-y-4 border-b border-rule py-7 text-sm text-muted`}><span>Start with a webhook</span><span aria-hidden>→</span><span>Run your steps in order</span><span aria-hidden>→</span><span>See exactly what happened</span></div>
-
-        <section id="how-it-works" className={`${SHELL} scroll-mt-8 py-20 sm:py-28`}>
+        <section id="how-it-works" className={`${SHELL} scroll-mt-8 py-16 sm:py-20`}>
           <Reveal><div className="mx-auto max-w-[640px] text-center"><p className="label-caps text-muted">01 / The idea</p><h2 className="mt-5 font-serif text-4xl leading-tight sm:text-5xl">Something happens.<br />The right things follow.</h2><p className="mt-5 text-base leading-relaxed text-muted">A workflow is one trigger and a sequence of steps. You decide what starts it and what happens next. FlowState queues the work and runs each step in order.</p></div></Reveal>
           <Reveal><WorkflowDemo /></Reveal>
-          <Reveal><div className="mt-9 grid gap-8 sm:grid-cols-3">{[
+          <Reveal><div className="mt-8 grid gap-6 sm:grid-cols-3">{[
             ['01', 'Choose the starting point.', 'Receive a webhook, watch an API for changes on a schedule, or start a run manually.'],
             ['02', 'Give it the next steps.', 'Call an API, send an email or Telegram message, add a delay, or write a log. Put them in the order you need.'],
             ['03', 'Turn it on. Follow along.', 'Test with a payload, then turn your workflow on. Open any run to inspect what went in, what came out, and where it stopped.'],
           ].map(([n, title, body]) => <div key={n}><p className="font-mono text-xs text-faint">{n} -</p><h3 className="mt-3 text-base font-medium">{title}</h3><p className="mt-2 text-sm leading-relaxed text-muted">{body}</p></div>)}</div></Reveal>
         </section>
 
+        <Reveal><BuilderPreview /></Reveal>
+
         <section id="possibilities" className="scroll-mt-8 border-y border-rule bg-paper-2 py-20 sm:py-24"><div className={SHELL}>
-          <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p className="label-caps text-muted">02 / Small steps. Useful work.</p><h2 className="mt-5 max-w-[520px] font-serif text-4xl sm:text-5xl">Your tools, working<br />in the same direction.</h2></div><p className="max-w-[310px] text-sm leading-relaxed text-muted">Five focused step types. Combine them with your APIs to handle the tasks you keep doing by hand.</p></div>
+          <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><p className="label-caps text-muted">03 / Small steps. Useful work.</p><h2 className="mt-5 max-w-[520px] font-serif text-4xl sm:text-5xl">Your tools, working<br />in the same direction.</h2></div><p className="max-w-[310px] text-sm leading-relaxed text-muted">Five focused step types. Combine them with your APIs to handle the tasks you keep doing by hand.</p></div>
           <Reveal><div className="mt-12 grid gap-px overflow-hidden rounded-md border border-rule bg-rule sm:grid-cols-2 lg:grid-cols-5">{[
             [GLYPHS.request, 'HTTP request', 'Read or write to an API. Use its response in the steps that follow.'],
             [GLYPHS.email, 'Email', 'Send receipts, updates, or notifications through Resend.'],
@@ -138,7 +139,7 @@ export function LandingPage() {
         </div></section>
 
         <Reveal><section className={`${SHELL} grid items-center gap-12 py-20 sm:py-28 lg:grid-cols-2`}>
-          <div><p className="label-caps text-muted">03 / The handoff</p><h2 className="mt-5 font-serif text-4xl sm:text-5xl">The data comes<br />along for the ride.</h2><p className="mt-6 max-w-[440px] leading-relaxed text-muted">The trigger brings the starting data. Reference it in your steps with templates. An HTTP request adds its response to the payload, so the next step can use what it found.</p><p className="mt-5 text-sm leading-relaxed text-muted">An order ID becomes an API lookup. The lookup becomes a personalised email. No copying between tabs.</p></div>
+          <div><p className="label-caps text-muted">04 / The handoff</p><h2 className="mt-5 font-serif text-4xl sm:text-5xl">The data comes<br />along for the ride.</h2><p className="mt-6 max-w-[440px] leading-relaxed text-muted">The trigger brings the starting data. Reference it in your steps with templates. An HTTP request adds its response to the payload, so the next step can use what it found.</p><p className="mt-5 text-sm leading-relaxed text-muted">An order ID becomes an API lookup. The lookup becomes a personalised email. No copying between tabs.</p></div>
           <div className="overflow-hidden rounded-md border border-rule bg-card"><div className="border-b border-rule px-6 py-4 text-sm font-medium">One order, carried through</div>{[
             ['01 / Incoming webhook', 'orderId: "1042"'],
             ['02 / HTTP request URL', 'https://shop.example/orders/{{payload.orderId}}'],
@@ -148,7 +149,7 @@ export function LandingPage() {
 
         <Reveal><section className="border-y border-rule bg-card py-20 sm:py-24"><div className={`${SHELL} grid items-center gap-12 lg:grid-cols-2`}>
           <div className="order-2 overflow-hidden rounded-md border border-rule bg-paper lg:order-1"><div className="flex items-center justify-between border-b border-rule p-5"><span className="font-serif text-xl">Order updates</span><StateChip tone="fail">Failed</StateChip></div><div className="px-5">{[['Look up the order', 'Succeeded'], ['Email the receipt', 'Succeeded'], ['Notify the team', 'Failed']].map(([title, status], index) => <div key={title} className="flex items-center justify-between gap-3 border-b border-rule-soft py-5"><span className="text-sm"><span className="mr-3 font-mono text-xs text-muted">0{index + 1}</span>{title}</span><StateChip tone={status === 'Failed' ? 'fail' : 'ok'}>{status}</StateChip></div>)}</div><p className="p-5 font-mono text-xs leading-relaxed text-muted">Example run · Telegram request timed out<br />Completed steps remain recorded.</p></div>
-          <div className="order-1 lg:order-2"><p className="label-caps text-muted">04 / Clarity, even when things break</p><h2 className="mt-5 font-serif text-4xl sm:text-5xl">Less guessing.<br />More knowing.</h2><p className="mt-6 leading-relaxed text-muted">Every run has a history. Inspect each step’s status, input, and output to see where a problem started.</p><div className="mt-7 space-y-5"><div><h3 className="text-sm font-semibold">Retry from where it stopped</h3><p className="mt-2 text-sm leading-relaxed text-muted">Automatic retries skip steps that already succeeded. A failing step can run again, so external writes should be idempotent.</p></div><div><h3 className="text-sm font-semibold">Keep duplicate deliveries in check</h3><p className="mt-2 text-sm leading-relaxed text-muted">Signed webhooks verify the sender. Deduplication helps prevent repeated deliveries from starting the same work twice.</p></div></div></div>
+          <div className="order-1 lg:order-2"><p className="label-caps text-muted">05 / Clarity, even when things break</p><h2 className="mt-5 font-serif text-4xl sm:text-5xl">Less guessing.<br />More knowing.</h2><p className="mt-6 leading-relaxed text-muted">Every run has a history. Inspect each step’s status, input, and output to see where a problem started.</p><div className="mt-7 space-y-5"><div><h3 className="text-sm font-semibold">Retry from where it stopped</h3><p className="mt-2 text-sm leading-relaxed text-muted">Automatic retries skip steps that already succeeded. A failing step can run again, so external writes should be idempotent.</p></div><div><h3 className="text-sm font-semibold">Keep duplicate deliveries in check</h3><p className="mt-2 text-sm leading-relaxed text-muted">Signed webhooks verify the sender. Deduplication helps prevent repeated deliveries from starting the same work twice.</p></div></div></div>
         </div></section></Reveal>
 
         <Reveal><section className={`${SHELL} py-20 text-center sm:py-28`}><p className="label-caps text-muted">Make room for the work you care about.</p><h2 className="mt-6 font-serif text-5xl sm:text-6xl">Build once. Breathe easier.</h2><p className="mx-auto mt-5 max-w-[470px] leading-relaxed text-muted">Start with one task you repeat. Choose a trigger, add your steps, and see your first workflow run.</p><Link href="/login" className={`${CTA} mt-8`}>Get started with Google <span aria-hidden>↗</span></Link><p className="mt-5 text-xs text-muted">Prefer to run it yourself? <a href={GITHUB_URL} target="_blank" rel="noreferrer" className="underline underline-offset-4">Explore the source</a>.</p></section></Reveal>

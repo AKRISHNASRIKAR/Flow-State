@@ -5,7 +5,8 @@ import { useRef, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { actionsApi } from '../../lib/api';
 import { toast } from '../../lib/toast';
-import { Button, Drawer, FieldError, inputClass, labelClass } from '../../components/ui';
+import { ACTION_GLYPH } from '../../lib/glyphs';
+import { Button, Drawer, FieldError, Icon, inputClass, labelClass } from '../../components/ui';
 import {
   ACTION_META,
   ACTION_TYPES,
@@ -40,9 +41,7 @@ export function StepDrawer({ workflowId, action, onClose }: StepDrawerProps) {
               onClick={() => setType(meta.type)}
               className="flex w-full items-start gap-3 rounded-md bg-card p-4 text-left ring-1 ring-rule transition hover:bg-paper-2 hover:ring-signal/40"
             >
-              <span className="text-xl" aria-hidden>
-                {meta.icon}
-              </span>
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-[4px] bg-paper-2 text-graphite" aria-hidden><Icon path={ACTION_GLYPH[meta.type]} className="size-4" /></span>
               <span>
                 <span className="block text-sm font-medium text-ink">{meta.label}</span>
                 <span className="block text-xs text-muted">{meta.description}</span>
@@ -149,7 +148,7 @@ function ActionForm({ workflowId, type, action, onBack, onClose }: ActionFormPro
 
   return (
     <Drawer
-      title={`${meta.icon} ${meta.label}`}
+      title={meta.label}
       subtitle={meta.description}
       onClose={onClose}
       footer={
