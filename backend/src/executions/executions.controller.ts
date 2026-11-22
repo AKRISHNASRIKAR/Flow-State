@@ -77,9 +77,9 @@ export class ExecutionsController {
   @Post(':id/cancel')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Cancel a pending execution',
+    summary: 'Cancel a pending or running execution',
     description:
-      'Cancels an execution that has not started yet. Only works while status is PENDING.',
+      'Cancels an execution while its status is PENDING or RUNNING. A running one stops before its next step, or at once during a DELAY on the Cloudflare runtime; a step already in progress finishes.',
   })
   @ApiParam({ name: 'id', description: 'Execution ID (UUID)' })
   @ApiResponse({ status: 200, description: 'Execution cancelled' })

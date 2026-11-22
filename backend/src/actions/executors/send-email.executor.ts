@@ -3,6 +3,8 @@ import {
   ConfigReader,
   IActionExecutor,
 } from '../interfaces/action-executor.interface';
+import type { TemplateContexts } from '../../common/utils/template.util';
+import { isRetryableStatus } from './retryable-status';
 
 const RESEND_TIMEOUT_MS = 10_000;
 
@@ -17,6 +19,11 @@ interface SendEmailConfig {
 export class SendEmailExecutor implements IActionExecutor {
   constructor(private readonly configService: ConfigReader) {}
 
+  /** The body is sent as HTML: payload values mustn't add markup or links. */
+  templateContexts(): TemplateContexts {
+    return { body: 'html' };
+  }
+
   async execute(config: Record<string, unknown>): Promise<ActionResult> {
     const { to, subject, body, fromName, fromAddress } =
       config as unknown as SendEmailConfig;
@@ -27,7 +34,11 @@ export class SendEmailExecutor implements IActionExecutor {
       'noreply@example.com';
 
     if (!apiKey) {
-      return { success: false, error: 'RESEND_API_KEY is not configured' };
+      return {
+        success: false,
+        error: 'RESEND_API_KEY is not configured',
+        retryable: false,
+      };
     }
 
     const controller = new AbortController();
@@ -67,6 +78,7 @@ export class SendEmailExecutor implements IActionExecutor {
         return {
           success: false,
           error: errorMsg,
+          retryable: isRetryableStatus(response.status),
         };
       }
 

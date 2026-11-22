@@ -1,7 +1,17 @@
 import { create } from 'zustand';
 import type { AccessTokenPayload } from '@flowstate/api-types';
 
-const REFRESH_TOKEN_KEY = 'flowstate.refreshToken';
+/**
+ * Where the refresh token used to be kept, before it moved to an httpOnly
+ * cookie. Read once, to migrate a session started before the move.
+ */
+const LEGACY_REFRESH_TOKEN_KEY = 'flowstate.refreshToken';
+/**
+ * "This browser has a session": script can't see the httpOnly cookie, so
+ * without this flag every visit would pay a refresh request just to learn
+ * there is nothing to restore. Not a secret - it unlocks nothing.
+ */
+const SESSION_HINT_KEY = 'flowstate.session';
 const SIGN_IN_NONCE_KEY = 'flowstate.signInNonce';
 
 export interface AuthUser {
@@ -16,11 +26,12 @@ interface AuthState {
   /** True until the initial silent-refresh attempt on app boot settles. */
   bootstrapping: boolean;
   /**
-   * The boot-time restore couldn't reach the API. The refresh token is still
-   * stored, so this is "try again", not "sign in again".
+   * The boot-time restore couldn't reach the API. The refresh cookie is
+   * still there, so this is "try again", not "sign in again".
    */
   unreachable: boolean;
-  setTokens: (accessToken: string, refreshToken: string) => void;
+  /** The refresh token itself arrives as a cookie, not through here. */
+  setAccessToken: (accessToken: string) => void;
   setBootstrapping: (value: boolean) => void;
   setUnreachable: () => void;
   clear: () => void;
@@ -36,22 +47,27 @@ export function decodeAccessToken(token: string): AuthUser | null {
   }
 }
 
-export function getStoredRefreshToken(): string | null {
+/** A pre-cookie refresh token still in localStorage, if any. */
+export function getLegacyRefreshToken(): string | null {
   // Guard for Next.js prerendering - there is no localStorage on the server.
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem(REFRESH_TOKEN_KEY);
+  return localStorage.getItem(LEGACY_REFRESH_TOKEN_KEY);
 }
 
-// NOTE: refresh tokens in localStorage are a pragmatic SPA choice while the
-// API lives on a separate origin. A production deployment should move this
-// server-side (BFF) or to a same-site cookie once API and frontend share a
-// domain.
-function storeRefreshToken(token: string | null) {
+/** Whether a silent restore is worth attempting. */
+export function hasStoredSession(): boolean {
+  if (typeof window === 'undefined') return false;
+  return localStorage.getItem(SESSION_HINT_KEY) !== null || getLegacyRefreshToken() !== null;
+}
+
+function markSession(active: boolean) {
   if (typeof window === 'undefined') return;
-  if (token === null) {
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
+  // Either way the legacy token is done with: migrated, or signed out.
+  localStorage.removeItem(LEGACY_REFRESH_TOKEN_KEY);
+  if (active) {
+    localStorage.setItem(SESSION_HINT_KEY, '1');
   } else {
-    localStorage.setItem(REFRESH_TOKEN_KEY, token);
+    localStorage.removeItem(SESSION_HINT_KEY);
   }
 }
 
@@ -73,16 +89,16 @@ export function takeSignInNonce(): string | null {
 export const useAuthStore = create<AuthState>((set) => ({
   accessToken: null,
   user: null,
-  bootstrapping: getStoredRefreshToken() !== null,
+  bootstrapping: hasStoredSession(),
   unreachable: false,
-  setTokens: (accessToken, refreshToken) => {
-    storeRefreshToken(refreshToken);
+  setAccessToken: (accessToken) => {
+    markSession(true);
     set({ accessToken, user: decodeAccessToken(accessToken), bootstrapping: false, unreachable: false });
   },
   setBootstrapping: (value) => set({ bootstrapping: value, ...(value ? { unreachable: false } : {}) }),
   setUnreachable: () => set({ bootstrapping: false, unreachable: true }),
   clear: () => {
-    storeRefreshToken(null);
+    markSession(false);
     set({ accessToken: null, user: null, bootstrapping: false, unreachable: false });
   },
 }));

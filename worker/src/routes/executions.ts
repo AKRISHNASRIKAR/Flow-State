@@ -1,16 +1,15 @@
 import { Hono } from 'hono';
 import { MAX_EXECUTIONS_PER_USER_PER_HOUR } from '../../../backend/src/common/limits';
 import { pageMeta, pagination, requireUser, type AppEnv } from '../app-env';
-import { now } from '../db';
 import { rateLimiterFor } from '../durable/rate-limiter';
 import { badRequest, intQuery, isUuid, notFound } from '../http';
 import {
   EXECUTION_STATUSES,
+  cancelExecution,
   executionStats,
   findExecution,
   listExecutions,
   listSteps,
-  setExecution,
   type ExecutionStatus,
 } from '../repo/executions';
 
@@ -92,11 +91,14 @@ export const executionRoutes = new Hono<AppEnv>()
     const id = c.req.param('id');
     const execution = isUuid(id) ? await findExecution(c.get('db'), id) : undefined;
     if (!execution || execution.userId !== c.get('user').sub) throw notFound('Execution not found');
-    if (execution.status !== 'PENDING') throw badRequest('Only PENDING executions can be cancelled');
+    // Atomic, so a run that finished meanwhile isn't relabelled.
+    if (!(await cancelExecution(c.get('db'), id))) {
+      throw badRequest('Only PENDING or RUNNING executions can be cancelled');
+    }
 
-    await setExecution(c.get('db'), id, { status: 'CANCELLED', finishedAt: now() });
-    // Best effort: if the instance already started, its first step sees
-    // CANCELLED and stops (see RunWorkflow.load).
+    // Stops the instance at once, even mid-DELAY. Best effort: if this
+    // misses (or a retry instance holds the run), the next step sees
+    // CANCELLED and stops before its side effect (see startStep).
     try {
       await (await c.env.RUN_WORKFLOW.get(id)).terminate();
     } catch {

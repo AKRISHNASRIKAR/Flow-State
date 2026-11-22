@@ -1,10 +1,19 @@
 import type { ApiErrorResponse, RefreshResponse } from '@flowstate/api-types';
-import { getStoredRefreshToken, useAuthStore } from './auth-store';
+import { getLegacyRefreshToken, hasStoredSession, useAuthStore } from './auth-store';
 import { toast } from './toast';
 
 // Trailing slashes stripped: every path is appended with a leading `/`, and
 // `//auth/…` 404s on the API - an easy mistake to make in a hosting dashboard.
+// The API's own address: for what leaves the dashboard - webhook URLs shown
+// to users, and the Google sign-in navigation.
 export const API_URL: string = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000').replace(/\/+$/, '');
+
+/**
+ * Every XHR goes through the dashboard's own origin, which next.config.ts
+ * rewrites to API_URL. Same-origin is what lets the refresh token be an
+ * httpOnly SameSite=Strict cookie the browser attaches by itself.
+ */
+const API_PROXY_PATH = '/api';
 
 /** statusCode used when the request never got an HTTP response at all. */
 export const NETWORK_ERROR_STATUS = 0;
@@ -60,19 +69,21 @@ let refreshInFlight: Promise<RefreshOutcome> | null = null;
 
 async function refreshSession(): Promise<RefreshOutcome> {
   refreshInFlight ??= (async (): Promise<RefreshOutcome> => {
-    const refreshToken = getStoredRefreshToken();
-    if (refreshToken === null) return 'rejected';
+    // The cookie carries the token. A session from before the cookie still
+    // has it in localStorage: sent once, then the API sets the cookie and
+    // setAccessToken deletes the stored copy.
+    const legacyToken = getLegacyRefreshToken();
     try {
-      const res = await fetch(`${API_URL}/auth/refresh`, {
+      const res = await fetch(`${API_PROXY_PATH}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken }),
+        body: JSON.stringify(legacyToken === null ? {} : { refreshToken: legacyToken }),
       });
       if (res.status >= 500) return 'unreachable';
       if (!res.ok) return 'rejected';
       const tokens = (await res.json()) as RefreshResponse;
-      // The backend rotates refresh tokens - always store the NEW one.
-      useAuthStore.getState().setTokens(tokens.accessToken, tokens.refreshToken);
+      // The rotated refresh token arrived as a new cookie.
+      useAuthStore.getState().setAccessToken(tokens.accessToken);
       return 'ok';
     } catch {
       return 'unreachable';
@@ -83,10 +94,10 @@ async function refreshSession(): Promise<RefreshOutcome> {
   return refreshInFlight;
 }
 
-/** Attempt a silent session restore from the stored refresh token (app boot). */
+/** Attempt a silent session restore from the refresh cookie (app boot). */
 export async function bootstrapSession(): Promise<void> {
   const store = useAuthStore.getState();
-  if (getStoredRefreshToken() === null) {
+  if (!hasStoredSession()) {
     store.setBootstrapping(false);
     return;
   }
@@ -108,7 +119,7 @@ interface RequestOptions {
 async function request<T>(path: string, options: RequestOptions = {}, isRetry = false): Promise<T> {
   const { method = 'GET', body, headers = {}, params, auth = true } = options;
 
-  const url = new URL(`${API_URL}${path}`);
+  const url = new URL(`${API_PROXY_PATH}${path}`, window.location.origin);
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined) url.searchParams.set(key, String(value));

@@ -92,7 +92,7 @@ export function ExecutionDetailPage() {
           <span className="align-middle font-mono text-[13px] font-normal text-muted">run {execution.id.slice(0, 8)}</span>
         </h1>
         <ExecutionStatusBadge status={execution.status} />
-        {execution.status === 'PENDING' && (
+        {(execution.status === 'PENDING' || execution.status === 'RUNNING') && (
           <Button size="sm" variant="danger" onClick={() => cancel.mutate()} disabled={cancel.isPending}>
             Cancel run
           </Button>

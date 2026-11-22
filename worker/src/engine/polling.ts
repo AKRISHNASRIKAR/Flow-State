@@ -33,17 +33,36 @@ export async function pollOnce(env: Env, triggerId: string, store: PollStateStor
       return true;
     }
 
-    await store.write(outcome.state);
+    // Saved before any run starts: a crash after this can miss a change,
+    // but can't fire the same change again on every tick.
+    try {
+      await store.write(outcome.state);
+    } catch (error) {
+      await recordPollingEvent(db, trigger.id, false, undefined, `Couldn’t save poll state: ${errorMessage(error)}`);
+      return true;
+    }
 
     if (outcome.kind !== 'changed') {
       await recordPollingEvent(db, trigger.id, false);
       return true;
     }
 
+    const failures: string[] = [];
     for (const payload of outcome.payloads) {
-      await admit(env, db, { workflowId: trigger.workflowId, payload, source: 'poll' });
+      // One payload failing to start must not drop the ones after it.
+      try {
+        await admit(env, db, { workflowId: trigger.workflowId, payload, source: 'poll' });
+      } catch (error) {
+        failures.push(errorMessage(error));
+      }
     }
-    await recordPollingEvent(db, trigger.id, true, outcome.snapshot);
+    await recordPollingEvent(
+      db,
+      trigger.id,
+      true,
+      outcome.snapshot,
+      failures.length > 0 ? `${failures.length} run(s) couldn’t start: ${failures[0]}` : undefined,
+    );
     return true;
   });
 }

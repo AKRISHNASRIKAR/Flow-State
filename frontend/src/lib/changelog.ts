@@ -16,6 +16,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-11-22-safer-runs',
+    date: '2026-11-22',
+    title: 'Stop a running run, and safer templates',
+    body:
+      'You can now cancel a run that has already started, including one waiting on a Delay step: it stops before its next step. Values from a webhook or a polled API are now escaped for where they go - JSON bodies, URLs, email and Telegram messages - so they can’t break the request or add links. Use triple braces, {{{payload.x}}}, to insert a value exactly as it is. "New items in a list" triggers now notice new items even when the list stays the same length, and steps that can’t succeed on a retry (a 4xx, a missing key) fail at once instead of retrying.',
+    href: '/executions',
+  },
+  {
     id: '2026-09-28-watch-it-run',
     date: '2026-09-28',
     title: 'A new look and runs you can watch',

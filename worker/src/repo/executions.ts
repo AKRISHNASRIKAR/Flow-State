@@ -42,17 +42,77 @@ export async function findExecution(db: Db, id: string) {
   return row && toExecution(row);
 }
 
-export async function createExecution(
+/** Event statuses that mean "not admitted yet" - see admitExecution. */
+const UNADMITTED_EVENT_STATUSES = `('RECEIVED', 'MANUAL')`;
+
+/**
+ * Creates a PENDING execution only if the workflow has fewer than
+ * `maxInFlight` runs pending or running, and - for a webhook or manual
+ * fire - only if that event hasn't been admitted already, marking it
+ * PROCESSED in the same atomic batch. D1 runs each statement, and each
+ * batch, one at a time, so concurrent triggers can't both pass the count,
+ * and an event re-admitted by the recovery sweep can't start a second run.
+ * Returns the new id, or null when nothing was created.
+ */
+export async function admitExecution(
   db: Db,
-  input: { workflowId: string; triggerId: string | null; payload: unknown },
-) {
+  input: { workflowId: string; triggerId: string | null; payload: unknown; webhookEventId?: string; maxInFlight: number },
+): Promise<string | null> {
   const id = crypto.randomUUID();
-  await db.run(
-    `INSERT INTO workflow_executions (id, workflow_id, trigger_id, status, input, created_at)
-     VALUES (?1, ?2, ?3, 'PENDING', ?4, ?5)`,
-    [id, input.workflowId, input.triggerId, json(input.payload ?? {}), now()],
+  const eventId = input.webhookEventId ?? null;
+  const [inserted] = await db.batch([
+    db.statement(
+      `INSERT INTO workflow_executions (id, workflow_id, trigger_id, status, input, created_at)
+       SELECT ?1, ?2, ?3, 'PENDING', ?4, ?5
+       WHERE (SELECT count(*) FROM workflow_executions
+              WHERE workflow_id = ?2 AND status IN ('PENDING', 'RUNNING')) < ?6
+         AND (?7 IS NULL OR EXISTS (SELECT 1 FROM webhook_events
+              WHERE id = ?7 AND status IN ${UNADMITTED_EVENT_STATUSES}))`,
+      [id, input.workflowId, input.triggerId, json(input.payload ?? {}), now(), input.maxInFlight, eventId],
+    ),
+    db.statement(
+      `UPDATE webhook_events SET status = 'PROCESSED'
+       WHERE id = ?1 AND EXISTS (SELECT 1 FROM workflow_executions WHERE id = ?2)`,
+      [eventId, id],
+    ),
+  ]);
+  return inserted === 1 ? id : null;
+}
+
+export async function isEventAdmitted(db: Db, eventId: string) {
+  const row = await db.one<{ n: number }>(
+    `SELECT count(*) AS n FROM webhook_events WHERE id = ?1 AND status NOT IN ${UNADMITTED_EVENT_STATUSES}`,
+    [eventId],
   );
-  return id;
+  return (row?.n ?? 0) > 0;
+}
+
+/**
+ * Webhook deliveries that were acknowledged but never admitted - the
+ * process died, or admission threw, after the 200 went out. The sender
+ * won't redeliver (and the idempotency key would refuse it), so the
+ * recovery cron admits them. Older than `olderThan` so in-flight
+ * admissions aren't raced; newer than `newerThan` so a permanently broken
+ * one stops being retried after a day.
+ */
+export async function listStrandedEvents(db: Db, olderThan: string, newerThan: string, limit: number) {
+  const rows = await db.many<{ id: string; workflowId: string; payload: string | null }>(
+    `SELECT id, workflow_id AS workflowId, payload FROM webhook_events
+     WHERE status = 'RECEIVED' AND received_at < ?1 AND received_at > ?2
+     ORDER BY received_at ASC LIMIT ?3`,
+    [olderThan, newerThan, limit],
+  );
+  return rows.map((r) => ({ ...r, payload: parseJson(r.payload) }));
+}
+
+/** PENDING runs old enough that their Workflow instance should have started them. */
+export async function listStalePendingExecutions(db: Db, olderThan: string, limit: number) {
+  const rows = await db.many<{ id: string }>(
+    `SELECT id FROM workflow_executions WHERE status = 'PENDING' AND created_at < ?1
+     ORDER BY created_at ASC LIMIT ?2`,
+    [olderThan, limit],
+  );
+  return rows.map((r) => r.id);
 }
 
 export async function countInFlight(db: Db, workflowId: string) {
@@ -92,9 +152,11 @@ export interface ExecutionPatch {
 /**
  * Each column is only touched when the caller supplied it, so a partial
  * patch can't null out fields it didn't mention. A statement, so callers can
- * put it in a batch with other writes.
+ * put it in a batch with other writes. With `from`, the row only changes
+ * while its status is one of those - how a finishing run avoids overwriting
+ * a cancel that landed meanwhile.
  */
-export function setExecutionStatement(db: Db, id: string, patch: ExecutionPatch) {
+export function setExecutionStatement(db: Db, id: string, patch: ExecutionPatch, from?: ExecutionStatus[]) {
   return db.statement(
     `UPDATE workflow_executions SET
        status = CASE WHEN ?2 THEN ?3 ELSE status END,
@@ -102,7 +164,7 @@ export function setExecutionStatement(db: Db, id: string, patch: ExecutionPatch)
        error = CASE WHEN ?6 THEN ?7 ELSE error END,
        started_at = CASE WHEN ?8 THEN ?9 ELSE started_at END,
        finished_at = CASE WHEN ?10 THEN ?11 ELSE finished_at END
-     WHERE id = ?1`,
+     WHERE id = ?1 AND (?12 IS NULL OR status IN (SELECT value FROM json_each(?12)))`,
     [
       id,
       patch.status !== undefined ? 1 : 0,
@@ -115,12 +177,38 @@ export function setExecutionStatement(db: Db, id: string, patch: ExecutionPatch)
       patch.startedAt,
       patch.finishedAt !== undefined ? 1 : 0,
       patch.finishedAt,
+      from ? JSON.stringify(from) : null,
     ],
   );
 }
 
 export async function setExecution(db: Db, id: string, patch: ExecutionPatch) {
   await db.batch([setExecutionStatement(db, id, patch)]);
+}
+
+/** Applies `patch` only while the status is in `from`. True if it applied. */
+export async function transitionExecution(db: Db, id: string, from: ExecutionStatus[], patch: ExecutionPatch) {
+  const [changed] = await db.batch([setExecutionStatement(db, id, patch, from)]);
+  return changed === 1;
+}
+
+/**
+ * Cancels a pending or running execution, and closes any step that was
+ * mid-flight so the run's history doesn't show it running forever. False
+ * when the execution was in neither state.
+ */
+export async function cancelExecution(db: Db, id: string) {
+  const at = now();
+  const [changed] = await db.batch([
+    setExecutionStatement(db, id, { status: 'CANCELLED', finishedAt: at }, ['PENDING', 'RUNNING']),
+    db.statement(
+      `UPDATE action_executions SET status = 'CANCELLED', finished_at = ?2
+       WHERE workflow_execution_id = ?1 AND status = 'RUNNING'
+         AND EXISTS (SELECT 1 FROM workflow_executions WHERE id = ?1 AND status = 'CANCELLED')`,
+      [id, at],
+    ),
+  ]);
+  return changed === 1;
 }
 
 export async function executionStats(db: Db, userId: string) {
@@ -187,15 +275,21 @@ export async function succeededActionIds(db: Db, executionId: string) {
   return rows.map((r) => r.actionId);
 }
 
+/**
+ * Records the start of a step - only while the execution is RUNNING, so a
+ * cancel that landed between steps stops the run before its next side
+ * effect. Returns null when the execution is no longer running.
+ */
 export async function startStep(db: Db, executionId: string, actionId: string, input: unknown) {
   const id = crypto.randomUUID();
   const at = now();
-  await db.run(
+  const inserted = await db.run(
     `INSERT INTO action_executions (id, workflow_execution_id, action_id, status, input, started_at, created_at)
-     VALUES (?1, ?2, ?3, 'RUNNING', ?4, ?5, ?5)`,
+     SELECT ?1, ?2, ?3, 'RUNNING', ?4, ?5, ?5
+     WHERE EXISTS (SELECT 1 FROM workflow_executions WHERE id = ?2 AND status = 'RUNNING')`,
     [id, executionId, actionId, json(input), at],
   );
-  return id;
+  return inserted === 1 ? id : null;
 }
 
 export function finishStepStatement(
@@ -260,8 +354,15 @@ export async function createEvent(
   return id;
 }
 
+/**
+ * Records an admission outcome. Only an event not yet admitted changes, so
+ * a late skip can't overwrite the PROCESSED of the admission that won.
+ */
 export function setEventStatus(db: Db, id: string, status: string) {
-  return db.run('UPDATE webhook_events SET status = ?2 WHERE id = ?1', [id, status]);
+  return db.run(`UPDATE webhook_events SET status = ?2 WHERE id = ?1 AND status IN ${UNADMITTED_EVENT_STATUSES}`, [
+    id,
+    status,
+  ]);
 }
 
 export async function listEvents(

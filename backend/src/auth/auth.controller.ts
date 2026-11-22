@@ -8,6 +8,7 @@ import {
   Query,
   Req,
   Res,
+  UnauthorizedException,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -16,20 +17,33 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import { Public } from './decorators/public.decorator';
 import { GoogleExchangeDto } from './dto/google-exchange.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { GoogleAuthService } from './google/google-auth.service';
+import {
+  clearedRefreshCookie,
+  pickRefreshToken,
+  refreshCookie,
+} from './refresh-cookie';
 import { AuthenticatedRequest } from './types/authenticated-request';
 
-const TOKEN_PAIR_EXAMPLE = {
+// The refresh token goes out only as an httpOnly cookie (see
+// refresh-cookie.ts); response bodies carry the access token alone.
+const SESSION_EXAMPLE = {
   accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-  refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
   tokenType: 'Bearer',
   expiresIn: 900,
 };
+const COOKIE_NOTE =
+  'The refresh token is set as the httpOnly flowstate_rt cookie (Path=/api/auth), never returned in the body.';
+
+/** Render terminates TLS in front of the app, so trust its forwarded proto. */
+function isHttps(request: Request) {
+  return request.secure || request.headers['x-forwarded-proto'] === 'https';
+}
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -92,20 +106,28 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Exchange a sign-in handoff code for a session',
-    description:
-      'Single-use: the code is deleted on first exchange, and the nonce must match the one passed to /auth/google/start.',
+    description: `Single-use: the code is deleted on first exchange, and the nonce must match the one passed to /auth/google/start. ${COOKIE_NOTE}`,
   })
   @ApiResponse({
     status: 200,
     description: 'Signed in',
-    schema: { example: TOKEN_PAIR_EXAMPLE },
+    schema: { example: SESSION_EXAMPLE },
   })
   @ApiResponse({
     status: 401,
     description: 'Code invalid, expired, already used, or nonce mismatch',
   })
-  googleExchange(@Body() dto: GoogleExchangeDto) {
-    return this.googleAuth.exchangeHandoff(dto.code, dto.nonce);
+  async googleExchange(
+    @Body() dto: GoogleExchangeDto,
+    @Req() request: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const { refreshToken, ...session } = await this.googleAuth.exchangeHandoff(
+      dto.code,
+      dto.nonce,
+    );
+    res.setHeader('Set-Cookie', refreshCookie(refreshToken, isHttps(request)));
+    return session;
   }
 
   @Public()
@@ -113,22 +135,42 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: 'Refresh access token',
-    description:
-      'Issues a new access token and refresh token by validating the provided refresh token. The old refresh token is rotated (invalidated).',
+    description: `Issues a new access token from the refresh-token cookie (or, for a session started before the cookie, a refreshToken in the body), rotating the refresh token. ${COOKIE_NOTE}`,
   })
   @ApiResponse({
     status: 200,
     description: 'Tokens refreshed successfully',
     schema: {
-      example: {
-        accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-        refreshToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...',
-      },
+      example: { accessToken: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
     },
   })
   @ApiResponse({ status: 401, description: 'Invalid or expired refresh token' })
-  refresh(@Body() dto: RefreshTokenDto) {
-    return this.authService.refresh(dto.refreshToken);
+  async refresh(
+    @Body() dto: RefreshTokenDto,
+    @Req() request: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const presented = pickRefreshToken(
+      request.headers.cookie,
+      dto.refreshToken,
+    );
+    if (!presented) throw new UnauthorizedException('Invalid refresh token');
+    try {
+      const { refreshToken, ...session } =
+        await this.authService.refresh(presented);
+      res.setHeader(
+        'Set-Cookie',
+        refreshCookie(refreshToken, isHttps(request)),
+      );
+      return session;
+    } catch (error) {
+      // A rejected token is useless - drop the cookie with the 401. Anything
+      // else (database down) leaves it: the session may still be good.
+      if (error instanceof UnauthorizedException) {
+        res.setHeader('Set-Cookie', clearedRefreshCookie(isHttps(request)));
+      }
+      throw error;
+    }
   }
 
   @Post('logout')
@@ -137,7 +179,7 @@ export class AuthController {
   @ApiOperation({
     summary: 'Log out',
     description:
-      'Revokes the provided refresh token. Requires a valid Bearer access token in the Authorization header.',
+      'Revokes the refresh token (cookie, or body for a pre-cookie session) and clears the cookie. Requires a valid Bearer access token in the Authorization header.',
   })
   @ApiResponse({
     status: 200,
@@ -148,7 +190,24 @@ export class AuthController {
     status: 401,
     description: 'Unauthorized - missing or invalid access token',
   })
-  logout(@Req() request: AuthenticatedRequest, @Body() dto: RefreshTokenDto) {
-    return this.authService.logout(request.user.sub, dto.refreshToken);
+  async logout(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: RefreshTokenDto,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    res.setHeader('Set-Cookie', clearedRefreshCookie(isHttps(request)));
+    const presented = pickRefreshToken(
+      request.headers.cookie,
+      dto.refreshToken,
+    );
+    // No token, or one already spent or expired: nothing left to revoke,
+    // and the browser is signed out either way.
+    if (!presented) return { success: true };
+    try {
+      return await this.authService.logout(request.user.sub, presented);
+    } catch (error) {
+      if (error instanceof UnauthorizedException) return { success: true };
+      throw error;
+    }
   }
 }

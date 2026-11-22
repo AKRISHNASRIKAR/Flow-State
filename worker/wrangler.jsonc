@@ -43,8 +43,10 @@
     { "tag": "v1", "new_sqlite_classes": ["Poller", "RateLimiter", "OneTimeStore"] }
   ],
 
-  // Safety net: re-arms every active poller in case an alarm was ever lost.
-  "triggers": { "crons": ["*/15 * * * *"] },
+  // Safety nets: every 15 min re-arm every active poller in case an alarm was
+  // ever lost; every 5 min admit webhooks acknowledged but never admitted
+  // (RECOVERY_CRON in src/index.ts - keep the two in step).
+  "triggers": { "crons": ["*/15 * * * *", "*/5 * * * *"] },
 
   // Non-secret config. Secrets (JWT_*, GOOGLE_CLIENT_*, CREDENTIALS_ENCRYPTION_KEY,
   // RESEND_*, TELEGRAM_*, ADMIN_SECRET) go in via `wrangler secret put` -

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import { AuditAction, ExecutionStatus, Prisma } from '@prisma/client';
-import { Job } from 'bullmq';
+import { Job, UnrecoverableError } from 'bullmq';
 import { ActionExecutorService } from '../actions/action-executor.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditLogService } from '../shared/audit-log.service';
@@ -48,10 +48,18 @@ export class WorkflowProcessor extends WorkerHost {
       orderBy: { position: 'asc' },
     });
 
-    await this.prisma.workflowExecution.update({
-      where: { id: execution.id },
+    // Guarded: a run cancelled while queued (or between the read above and
+    // here) stays cancelled instead of being flipped back to RUNNING.
+    const started = await this.prisma.workflowExecution.updateMany({
+      where: {
+        id: execution.id,
+        status: { not: ExecutionStatus.CANCELLED },
+      },
       data: { status: ExecutionStatus.RUNNING, startedAt: new Date() },
     });
+    if (started.count === 0) {
+      return;
+    }
 
     // A retry resumes after the steps that already succeeded instead of
     // re-running from action #1, so their side effects (an email sent, a row
@@ -62,11 +70,18 @@ export class WorkflowProcessor extends WorkerHost {
     let currentPayload = ((succeededActionIds.size > 0
       ? (execution.output ?? execution.input)
       : execution.input) ?? {}) as Record<string, unknown>;
-    let failure: { actionId: string; error: string } | undefined;
+    let failure:
+      { actionId: string; error: string; retryable: boolean } | undefined;
 
     for (const action of actions) {
       if (succeededActionIds.has(action.id)) {
         continue;
+      }
+
+      // Cancelled mid-run: stop before the next side effect. The cancel
+      // already wrote the final status and closed the open step.
+      if (await this.isCancelled(execution.id)) {
+        return;
       }
 
       const actionExecution = await this.prisma.actionExecution.create({
@@ -88,6 +103,11 @@ export class WorkflowProcessor extends WorkerHost {
           (action.config as Record<string, unknown> | null)?.seconds ?? 0,
         );
         await sleep(seconds * 1000);
+        // A cancel during the wait would otherwise only take effect after
+        // the step that follows it.
+        if (await this.isCancelled(execution.id)) {
+          return;
+        }
       }
 
       const result = await this.actionExecutor.execute(
@@ -113,6 +133,7 @@ export class WorkflowProcessor extends WorkerHost {
         failure = {
           actionId: action.id,
           error: result.error ?? 'Unknown action failure',
+          retryable: result.retryable !== false,
         };
         break;
       }
@@ -138,14 +159,18 @@ export class WorkflowProcessor extends WorkerHost {
     }
 
     if (!failure) {
-      await this.prisma.workflowExecution.update({
-        where: { id: execution.id },
+      // Only from RUNNING: a cancel during the last step wins.
+      const finished = await this.prisma.workflowExecution.updateMany({
+        where: { id: execution.id, status: ExecutionStatus.RUNNING },
         data: {
           status: ExecutionStatus.SUCCEEDED,
           output: currentPayload as Prisma.InputJsonValue,
           finishedAt: new Date(),
         },
       });
+      if (finished.count === 0) {
+        return;
+      }
 
       this.auditLog.log(execution.workflow.userId, AuditAction.WORKFLOW_RUN, {
         entityType: 'workflow_executions',
@@ -158,14 +183,17 @@ export class WorkflowProcessor extends WorkerHost {
       return;
     }
 
-    await this.prisma.workflowExecution.update({
-      where: { id: execution.id },
+    const failed = await this.prisma.workflowExecution.updateMany({
+      where: { id: execution.id, status: ExecutionStatus.RUNNING },
       data: {
         status: ExecutionStatus.FAILED,
         error: failure.error,
         finishedAt: new Date(),
       },
     });
+    if (failed.count === 0) {
+      return; // cancelled meanwhile - nothing to retry
+    }
 
     this.auditLog.log(execution.workflow.userId, AuditAction.WORKFLOW_RUN, {
       entityType: 'workflow_executions',
@@ -178,8 +206,20 @@ export class WorkflowProcessor extends WorkerHost {
 
     // Throwing signals BullMQ to retry per the job's attempts/backoff opts.
     // The @OnWorkerEvent('failed') hook below only fires the DLQ bookkeeping
-    // once every retry attempt has been exhausted.
-    throw new Error(failure.error);
+    // once every retry attempt has been exhausted - or at once for an
+    // UnrecoverableError, which BullMQ never retries (the executor said
+    // trying again can't help: bad config, a missing key, a 4xx).
+    throw failure.retryable
+      ? new Error(failure.error)
+      : new UnrecoverableError(failure.error);
+  }
+
+  private async isCancelled(executionId: string): Promise<boolean> {
+    const row = await this.prisma.workflowExecution.findUnique({
+      where: { id: executionId },
+      select: { status: true },
+    });
+    return row?.status === ExecutionStatus.CANCELLED;
   }
 
   private async findSucceededActionIds(
@@ -211,8 +251,10 @@ export class WorkflowProcessor extends WorkerHost {
     const attemptsMade = job.attemptsMade;
     const maxAttempts = job.opts.attempts ?? 1;
 
-    if (attemptsMade < maxAttempts) {
-      return; // more retries scheduled - not dead yet
+    // More retries scheduled - not dead yet. An UnrecoverableError is
+    // dead on its first attempt.
+    if (attemptsMade < maxAttempts && !(error instanceof UnrecoverableError)) {
+      return;
     }
 
     const execution = await this.prisma.workflowExecution.findUnique({
@@ -228,7 +270,10 @@ export class WorkflowProcessor extends WorkerHost {
       return;
     }
 
-    if (execution.status !== ExecutionStatus.FAILED) {
+    if (
+      execution.status !== ExecutionStatus.FAILED &&
+      execution.status !== ExecutionStatus.CANCELLED
+    ) {
       await this.prisma.workflowExecution.update({
         where: { id: execution.id },
         data: {

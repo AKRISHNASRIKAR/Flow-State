@@ -21,7 +21,7 @@ import type {
   Workflow,
 } from '@flowstate/api-types';
 import { API_URL, api } from './api-client';
-import { createSignInNonce, getStoredRefreshToken, takeSignInNonce, useAuthStore } from './auth-store';
+import { createSignInNonce, getLegacyRefreshToken, takeSignInNonce, useAuthStore } from './auth-store';
 
 export const authApi = {
   /**
@@ -42,16 +42,16 @@ export const authApi = {
       throw new Error('This sign-in was started in a different tab or has already been used.');
     }
     const body: GoogleExchangeRequest = { code, nonce };
+    // The refresh token comes back as an httpOnly cookie, out of script's reach.
     const tokens = await api.public.post<AuthTokensResponse>('/auth/google/exchange', body);
-    useAuthStore.getState().setTokens(tokens.accessToken, tokens.refreshToken);
+    useAuthStore.getState().setAccessToken(tokens.accessToken);
     return tokens;
   },
   async logout() {
-    const refreshToken = getStoredRefreshToken();
+    // The API revokes the token in the cookie and clears it.
+    const legacyToken = getLegacyRefreshToken();
     try {
-      if (refreshToken !== null) {
-        await api.post<{ success: boolean }>('/auth/logout', { refreshToken });
-      }
+      await api.post<{ success: boolean }>('/auth/logout', legacyToken === null ? {} : { refreshToken: legacyToken });
     } finally {
       useAuthStore.getState().clear();
     }

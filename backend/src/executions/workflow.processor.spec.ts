@@ -1,5 +1,5 @@
 import { ExecutionStatus } from '@prisma/client';
-import { Job } from 'bullmq';
+import { Job, UnrecoverableError } from 'bullmq';
 import { ActionExecutorService } from '../actions/action-executor.service';
 import { ActionResult } from '../actions/interfaces/action-executor.interface';
 import { PrismaService } from '../prisma/prisma.service';
@@ -16,6 +16,8 @@ const ACTIONS = [
 
 interface Scenario {
   input?: Record<string, unknown>;
+  /** Status reads (isCancelled) after the initial load return this. */
+  statusAfterStart?: ExecutionStatus;
   checkpoint?: Record<string, unknown> | null;
   succeededActionIds?: string[];
   results: Record<string, ActionResult>;
@@ -29,6 +31,7 @@ interface RecordedUpdate {
 
 function setup({
   input = { order: 1 },
+  statusAfterStart = ExecutionStatus.RUNNING,
   checkpoint = null,
   succeededActionIds = [],
   results,
@@ -41,13 +44,17 @@ function setup({
 
   const prisma = {
     workflowExecution: {
-      findUnique: jest.fn().mockResolvedValue({
-        id: EXECUTION_ID,
-        workflowId: 'wf-1',
-        input,
-        output: checkpoint,
-        workflow: { userId: 'user-1' },
-      }),
+      findUnique: jest
+        .fn()
+        .mockResolvedValueOnce({
+          id: EXECUTION_ID,
+          workflowId: 'wf-1',
+          status: ExecutionStatus.PENDING,
+          input,
+          output: checkpoint,
+          workflow: { userId: 'user-1' },
+        })
+        .mockResolvedValue({ status: statusAfterStart }),
       update: jest.fn((args: { data: RecordedUpdate }) => {
         executionUpdates.push(args.data);
         // A checkpoint is an output write that doesn't also finish the run.
@@ -56,6 +63,21 @@ function setup({
         }
         return Promise.resolve({});
       }),
+      // Guarded status writes. A cancelled run matches none but the start.
+      updateMany: jest.fn(
+        (args: { where: { status?: unknown }; data: RecordedUpdate }) => {
+          const guardedOnRunning =
+            args.where.status === ExecutionStatus.RUNNING;
+          if (
+            guardedOnRunning &&
+            statusAfterStart === ExecutionStatus.CANCELLED
+          ) {
+            return Promise.resolve({ count: 0 });
+          }
+          executionUpdates.push(args.data);
+          return Promise.resolve({ count: 1 });
+        },
+      ),
     },
     action: { findMany: jest.fn().mockResolvedValue(ACTIONS) },
     actionExecution: {
@@ -187,5 +209,30 @@ describe('WorkflowProcessor', () => {
       status: ExecutionStatus.FAILED,
       error: 'boom',
     });
+  });
+
+  it('throws UnrecoverableError when the executor says retrying cannot help', async () => {
+    const { processor, job } = setup({
+      results: { a1: { success: false, error: 'HTTP 404', retryable: false } },
+    });
+
+    const error: unknown = await processor
+      .process(job)
+      .catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(UnrecoverableError);
+  });
+
+  it('stops before the next step once the run is cancelled, and never overwrites it', async () => {
+    const { processor, job, executed, executionUpdates } = setup({
+      statusAfterStart: ExecutionStatus.CANCELLED,
+      results: {},
+    });
+
+    await processor.process(job);
+
+    expect(executed).toHaveLength(0);
+    expect(executionUpdates.map((u) => u.status)).toEqual([
+      ExecutionStatus.RUNNING,
+    ]);
   });
 });

@@ -1,3 +1,5 @@
+import type { TemplateContexts } from '../../common/utils/template.util';
+
 export interface ExecutionContext {
   userId: string;
   workflowId: string;
@@ -10,6 +12,12 @@ export interface ActionResult {
   error?: string;
   /** Merged into the running payload so downstream actions can read it. */
   enrichedPayload?: Record<string, unknown>;
+  /**
+   * `false` when trying again can't help - bad config, a missing API key, a
+   * 4xx the remote won't change its mind about. The engines then fail the
+   * run at once instead of spending their retries on it. Defaults to true.
+   */
+  retryable?: boolean;
 }
 
 /**
@@ -29,6 +37,12 @@ export interface StepLogger {
 }
 
 export interface IActionExecutor {
+  /**
+   * How each config field's {{payload.*}} values are escaped (see
+   * TemplateContext). Fields not listed are plain text.
+   */
+  templateContexts?(config: Record<string, unknown>): TemplateContexts;
+
   execute(
     config: Record<string, unknown>,
     payload: Record<string, unknown>,

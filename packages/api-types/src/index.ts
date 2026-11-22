@@ -74,9 +74,13 @@ export type GoogleSignInError =
   | 'account_conflict'
   | 'google_failed';
 
+/**
+ * The refresh token is never in a body: both endpoints below set it as the
+ * httpOnly `flowstate_rt` cookie, which only the dashboard's same-origin
+ * `/api` proxy can carry (backend/src/auth/refresh-cookie.ts).
+ */
 export interface AuthTokensResponse {
   accessToken: string;
-  refreshToken: string;
   tokenType: 'Bearer';
   /** Access-token lifetime in seconds (900 = 15 min). */
   expiresIn: number;
@@ -84,7 +88,6 @@ export interface AuthTokensResponse {
 
 export interface RefreshResponse {
   accessToken: string;
-  refreshToken: string;
 }
 
 /** Decoded JWT access-token payload (client-side decode; no /auth/me yet). */

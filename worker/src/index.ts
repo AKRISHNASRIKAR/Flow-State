@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import type { AppEnv } from './app-env';
 import { dbFor } from './db';
+import { recoverStranded } from './engine/admission';
 import { reconcilePollers } from './engine/polling';
 import type { Env } from './env';
 import { HttpError, errorBody } from './http';
@@ -15,6 +16,9 @@ export { OneTimeStore } from './durable/one-time-store';
 export { Poller } from './durable/poller';
 export { RateLimiter } from './durable/rate-limiter';
 export { RunWorkflow } from './engine/run-workflow';
+
+/** Must match the second entry of `triggers.crons` in wrangler.jsonc. */
+const RECOVERY_CRON = '*/5 * * * *';
 
 const app = new Hono<AppEnv>();
 
@@ -55,8 +59,15 @@ app.notFound((c) => c.json(errorBody(404, `Cannot ${c.req.method} ${c.req.path}`
 
 export default {
   fetch: app.fetch,
-  // Cron (wrangler.jsonc): re-arm pollers in case an alarm was ever lost.
-  async scheduled(_controller, env, ctx) {
-    ctx.waitUntil(reconcilePollers(env));
+  // Crons (wrangler.jsonc). Each schedule is its own invocation, so each
+  // job gets the full per-invocation subrequest budget.
+  async scheduled(controller, env, ctx) {
+    if (controller.cron === RECOVERY_CRON) {
+      // Admit acknowledged-but-stranded webhooks, start lost run instances.
+      ctx.waitUntil(recoverStranded(env));
+    } else {
+      // Re-arm pollers in case an alarm was ever lost.
+      ctx.waitUntil(reconcilePollers(env));
+    }
   },
 } satisfies ExportedHandler<Env>;

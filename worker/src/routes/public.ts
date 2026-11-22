@@ -11,12 +11,13 @@ import {
   isValidTelegramSecret,
 } from '../../../backend/src/telegram/telegram-bot';
 import type { AppEnv } from '../app-env';
-import { isUniqueViolation, withDb } from '../db';
+import { MAX_TRIGGER_PAYLOAD_BYTES } from '../../../backend/src/common/utils/response-body';
+import { isUniqueViolation, now, withDb } from '../db';
 import { admitInBackground } from '../engine/admission';
 import type { Env } from '../env';
 import { HttpError, badRequest, isUuid, notFound, unauthorized } from '../http';
 import { upsertTelegramUser } from '../repo/auth';
-import { createEvent, findEventByKey, findExecution, listFailedExecutions, setExecution } from '../repo/executions';
+import { createEvent, findEventByKey, findExecution, listFailedExecutions, transitionExecution } from '../repo/executions';
 import { findTrigger, findWorkflow } from '../repo/workflows';
 
 /**
@@ -31,6 +32,11 @@ export const webhookRoutes = new Hono<AppEnv>().post('/:workflowId', async (c) =
   // The exact bytes the sender signed. Hono doesn't pre-parse bodies, so
   // there is no raw-body middleware to break here (unlike main.ts).
   const rawBody = new Uint8Array(await c.req.arrayBuffer());
+  // Refused up front, while the sender can still act on it: a payload this
+  // big would otherwise fail every step of the run it starts.
+  if (rawBody.length > MAX_TRIGGER_PAYLOAD_BYTES) {
+    throw new HttpError(413, `Payload exceeds ${MAX_TRIGGER_PAYLOAD_BYTES / 1024} KB`);
+  }
 
   let payload: unknown = {};
   if (rawBody.length > 0) {
@@ -150,9 +156,19 @@ export const adminRoutes = new Hono<AppEnv>()
     const execution = isUuid(id) ? await findExecution(db, id) : undefined;
     if (!execution) throw notFound('Job not found');
 
-    await setExecution(db, id, { status: 'PENDING', error: null, finishedAt: null });
+    // Only a FAILED run, and atomically: retrying a running or finished one
+    // would start a second instance alongside it and repeat its side effects.
+    // (BullMQ's job.retry() enforces the same on the backend.)
+    const requeued = await transitionExecution(db, id, ['FAILED'], { status: 'PENDING', error: null, finishedAt: null });
+    if (!requeued) throw new HttpError(409, `Only FAILED executions can be retried (this one is ${execution.status})`);
     // A fresh instance for the same execution. Its first step skips the
     // steps that already succeeded and resumes from the saved payload.
-    await c.env.RUN_WORKFLOW.create({ id: `${id}-retry-${Date.now()}`, params: { executionId: id } });
+    try {
+      await c.env.RUN_WORKFLOW.create({ id: `${id}-retry-${Date.now()}`, params: { executionId: id } });
+    } catch (error) {
+      // Back to FAILED, or it would sit PENDING with no instance to run it.
+      await transitionExecution(db, id, ['PENDING'], { status: 'FAILED', error: execution.error, finishedAt: now() });
+      throw error;
+    }
     return c.json({ requeued: true });
   });

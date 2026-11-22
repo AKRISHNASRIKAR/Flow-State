@@ -67,3 +67,91 @@ describe('interpolateConfig', () => {
     ).toEqual({ url: '/orders/ord_1' });
   });
 });
+
+describe('escaping by context', () => {
+  const payload = {
+    quote: 'say "hi"\n',
+    html: '<a href="x">click</a>',
+    id: 'a/b?c=1&d',
+    n: 5,
+    obj: { a: 1 },
+    url: 'https://example.com/x',
+    md: 'a_b*c',
+  };
+
+  it('json: escapes inside strings, inserts JSON literals outside them', () => {
+    const out = interpolate(
+      '{"text": "{{payload.quote}}", "n": {{payload.n}}, "o": {{payload.obj}}, "s": {{payload.id}}}',
+      payload,
+      'json',
+    );
+    expect(JSON.parse(out)).toEqual({
+      text: payload.quote,
+      n: 5,
+      o: { a: 1 },
+      s: payload.id,
+    });
+  });
+
+  it('json: a value cannot close its string and add a field', () => {
+    const out = interpolate(
+      '{"note": "{{payload.x}}"}',
+      { x: '", "admin": true, "y": "' },
+      'json',
+    );
+    expect(Object.keys(JSON.parse(out) as object)).toEqual(['note']);
+  });
+
+  it('json: escaped quotes in the literal text do not flip the string state', () => {
+    const out = interpolate('{"a": "x\\"{{payload.quote}}"}', payload, 'json');
+    expect((JSON.parse(out) as { a: string }).a).toBe(`x"${payload.quote}`);
+  });
+
+  it('url: encodes path and query values, leaves the host position raw', () => {
+    expect(
+      interpolate(
+        'https://api.test/items/{{payload.id}}?q={{payload.id}}',
+        payload,
+        'url',
+      ),
+    ).toBe('https://api.test/items/a%2Fb%3Fc%3D1%26d?q=a%2Fb%3Fc%3D1%26d');
+    expect(interpolate('{{payload.url}}', payload, 'url')).toBe(payload.url);
+    expect(
+      interpolate('{{payload.url}}/more/{{payload.id}}', payload, 'url'),
+    ).toBe('https://example.com/x/more/a%2Fb%3Fc%3D1%26d');
+  });
+
+  it('html and markdown escape their specials', () => {
+    expect(interpolate('<p>{{payload.html}}</p>', payload, 'html')).toBe(
+      '<p>&lt;a href=&quot;x&quot;&gt;click&lt;/a&gt;</p>',
+    );
+    expect(interpolate('{{payload.md}}', payload, 'markdown')).toBe(
+      'a\\_b\\*c',
+    );
+  });
+
+  it('triple braces insert the value raw, in any context', () => {
+    expect(interpolate('{{{payload.html}}}', payload, 'html')).toBe(
+      payload.html,
+    );
+  });
+
+  it('interpolateConfig applies a field’s context to everything under it', () => {
+    expect(
+      interpolateConfig(
+        { body: '<b>{{payload.html}}</b>', subject: '{{payload.html}}' },
+        payload,
+        { body: 'html' },
+      ),
+    ).toEqual({
+      body: '<b>&lt;a href=&quot;x&quot;&gt;click&lt;/a&gt;</b>',
+      subject: payload.html,
+    });
+  });
+
+  it('does not resolve through the prototype chain', () => {
+    expect(interpolate('{{payload.constructor}}', {})).toBe(
+      '{{payload.constructor}}',
+    );
+  });
+});

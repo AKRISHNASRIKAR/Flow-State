@@ -146,11 +146,13 @@ describe('worker SQL against the D1 schema', () => {
   it('executions and steps: partial patches, atomic checkpoint, stats', async () => {
     const w = await wf.createWorkflow(db, { userId, name: 'Runs', status: 'ACTIVE' });
     const action = await wf.createAction(db, w.id, { type: 'LOG_MESSAGE', configuration: {} });
-    const id = await exec.createExecution(db, { workflowId: w.id, triggerId: null, payload: { order: 1 } });
+    const id = (await exec.admitExecution(db, { workflowId: w.id, triggerId: null, payload: { order: 1 }, maxInFlight: 3 }))!;
     expect(await exec.countInFlight(db, w.id)).toBe(1);
 
+    // No step may start before the run is RUNNING (that's how a cancel stops it).
+    expect(await exec.startStep(db, id, action.id, {})).toBeNull();
     await exec.setExecution(db, id, { status: 'RUNNING', startedAt: now() });
-    const step = await exec.startStep(db, id, action.id, { order: 1 });
+    const step = (await exec.startStep(db, id, action.id, { order: 1 }))!;
     await db.batch([
       exec.finishStepStatement(db, step, { status: 'SUCCEEDED', output: { logged: true } }),
       exec.setExecutionStatement(db, id, { output: { order: 1, http: { status: 200 } } }),
@@ -160,7 +162,7 @@ describe('worker SQL against the D1 schema', () => {
     expect(mid).toMatchObject({ status: 'RUNNING', input: { order: 1 }, output: { order: 1, http: { status: 200 } } });
     closeToNow(mid!.startedAt);
 
-    const failed = await exec.startStep(db, id, action.id, { order: 1 });
+    const failed = (await exec.startStep(db, id, action.id, { order: 1 }))!;
     await exec.finishStep(db, failed, { status: 'FAILED', error: 'boom' });
     expect(await exec.succeededActionIds(db, id)).toEqual([action.id]);
     // Both rows can land in the same millisecond here, so created_at may tie.
@@ -177,6 +179,60 @@ describe('worker SQL against the D1 schema', () => {
     expect(stats.avgDurationMs).toBeGreaterThanOrEqual(0);
 
     await exec.audit(db, userId, 'WORKFLOW_RUN', { entityType: 'workflow_executions', entityId: id, status: 'FAILED' });
+
+    // Guarded transitions: an admin retry only takes a FAILED run, once.
+    expect(await exec.transitionExecution(db, id, ['FAILED'], { status: 'PENDING' })).toBe(true);
+    expect(await exec.transitionExecution(db, id, ['FAILED'], { status: 'PENDING' })).toBe(false);
+    expect((await exec.findExecution(db, id))?.status).toBe('PENDING');
+  });
+
+  it('admission: the concurrency cap and one run per event hold atomically', async () => {
+    const w = await wf.createWorkflow(db, { userId, name: 'Admit', status: 'ACTIVE' });
+    const event = await exec.createEvent(db, { workflowId: w.id, payload: {}, status: 'RECEIVED', idempotencyKey: 'adm' });
+
+    const first = await exec.admitExecution(db, { workflowId: w.id, triggerId: null, payload: {}, webhookEventId: event, maxInFlight: 2 });
+    expect(first).not.toBeNull();
+    // The same event again (the recovery sweep racing the original): refused.
+    expect(await exec.admitExecution(db, { workflowId: w.id, triggerId: null, payload: {}, webhookEventId: event, maxInFlight: 2 })).toBeNull();
+    expect(await exec.isEventAdmitted(db, event)).toBe(true);
+    // A late skip can't overwrite PROCESSED.
+    await exec.setEventStatus(db, event, 'SKIPPED_RATE_LIMIT');
+    expect((await exec.listEvents(db, { workflowId: w.id, status: 'PROCESSED', limit: 5, offset: 0 })).total).toBe(1);
+
+    // Fill the cap concurrently: only one of these can fit.
+    const racing = await Promise.all(
+      [1, 2, 3].map(() => exec.admitExecution(db, { workflowId: w.id, triggerId: null, payload: {}, maxInFlight: 2 })),
+    );
+    expect(racing.filter(Boolean)).toHaveLength(1);
+    expect(await exec.countInFlight(db, w.id)).toBe(2);
+  });
+
+  it('cancel: pending or running only, and it closes the open step', async () => {
+    const w = await wf.createWorkflow(db, { userId, name: 'Cancel', status: 'ACTIVE' });
+    const action = await wf.createAction(db, w.id, { type: 'DELAY', configuration: { seconds: 60 } });
+    const id = (await exec.admitExecution(db, { workflowId: w.id, triggerId: null, payload: {}, maxInFlight: 3 }))!;
+    await exec.setExecution(db, id, { status: 'RUNNING', startedAt: now() });
+    await exec.startStep(db, id, action.id, {});
+
+    expect(await exec.cancelExecution(db, id)).toBe(true);
+    expect((await exec.listSteps(db, id)).map((s) => s.status)).toEqual(['CANCELLED']);
+    expect(await exec.startStep(db, id, action.id, {})).toBeNull();
+    // A step finishing after the cancel can't make the run SUCCEEDED.
+    expect(await exec.transitionExecution(db, id, ['RUNNING'], { status: 'SUCCEEDED' })).toBe(false);
+    expect(await exec.cancelExecution(db, id)).toBe(false);
+  });
+
+  it('recovery: finds acknowledged-but-unadmitted webhooks and stale pending runs', async () => {
+    const w = await wf.createWorkflow(db, { userId, name: 'Recover', status: 'ACTIVE' });
+    const event = await exec.createEvent(db, { workflowId: w.id, payload: { a: 1 }, status: 'RECEIVED', idempotencyKey: 'rec' });
+    const run = (await exec.admitExecution(db, { workflowId: w.id, triggerId: null, payload: {}, maxInFlight: 3 }))!;
+    const later = new Date(Date.now() + 60_000).toISOString();
+    const dayAgo = new Date(Date.now() - 86_400_000).toISOString();
+
+    const stranded = await exec.listStrandedEvents(db, later, dayAgo, 50);
+    expect(stranded.find((e) => e.id === event)).toMatchObject({ workflowId: w.id, payload: { a: 1 } });
+    expect(await exec.listStrandedEvents(db, dayAgo, dayAgo, 50)).toEqual([]);
+    expect(await exec.listStalePendingExecutions(db, later, 50)).toContain(run);
   });
 
   it('auth: a refresh token is spent once, and the chain links old to new', async () => {
@@ -245,7 +301,7 @@ describe('worker SQL against the D1 schema', () => {
   it('deleting a workflow cascades to its steps and runs (foreign keys are enforced)', async () => {
     const w = await wf.createWorkflow(db, { userId, name: 'Cascade', status: 'ACTIVE' });
     await wf.createAction(db, w.id, { type: 'LOG_MESSAGE', configuration: {} });
-    await exec.createExecution(db, { workflowId: w.id, triggerId: null, payload: {} });
+    await exec.admitExecution(db, { workflowId: w.id, triggerId: null, payload: {}, maxInFlight: 3 });
     await db.run('DELETE FROM workflows WHERE id = ?1', [w.id]);
     const left = await db.one<{ n: number }>(
       'SELECT (SELECT count(*) FROM actions WHERE workflow_id = ?1) + (SELECT count(*) FROM workflow_executions WHERE workflow_id = ?1) AS n',

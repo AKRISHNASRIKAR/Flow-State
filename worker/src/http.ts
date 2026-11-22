@@ -14,6 +14,7 @@ const STATUS_TEXT: Record<number, string> = {
   403: 'Forbidden',
   404: 'Not Found',
   409: 'Conflict',
+  413: 'Payload Too Large',
   500: 'Internal Server Error',
   503: 'Service Unavailable',
 };
@@ -131,6 +132,7 @@ export const schemas = {
     .strict(),
   // No DTO on the backend for manual fire - any object is accepted.
   manualFire: z.object({ payload: configuration.optional() }).passthrough(),
-  refreshToken: z.object({ refreshToken: z.string() }).strict(),
+  // Optional: the cookie carries it. A body token is a pre-cookie session migrating.
+  refreshToken: z.object({ refreshToken: z.string().optional() }).strict(),
   googleExchange: z.object({ code: z.string().min(16).max(128), nonce: z.string().min(16).max(128) }).strict(),
 };

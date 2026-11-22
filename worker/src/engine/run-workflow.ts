@@ -1,4 +1,5 @@
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from 'cloudflare:workers';
+import { NonRetryableError } from 'cloudflare:workflows';
 import { createExecutorRegistry, runAction } from '../../../backend/src/actions/run-action';
 import { now, withDb } from '../db';
 import { configReader, type Env } from '../env';
@@ -7,10 +8,10 @@ import {
   findExecution,
   finishStep,
   finishStepStatement,
-  setExecution,
   setExecutionStatement,
   startStep,
   succeededActionIds,
+  transitionExecution,
 } from '../repo/executions';
 import { listActions } from '../repo/workflows';
 
@@ -66,14 +67,19 @@ export class RunWorkflow extends WorkflowEntrypoint<Env, RunParams> {
         if (seconds > 0) await step.sleep(`wait-${action.id}`, seconds * 1000);
       }
 
+      let next: string | null;
       try {
-        payload = await step.do(`step-${action.id}`, { retries: STEP_RETRIES, timeout: STEP_TIMEOUT }, () =>
+        next = await step.do(`step-${action.id}`, { retries: STEP_RETRIES, timeout: STEP_TIMEOUT }, () =>
           this.runStep(executionId, plan, action, payload),
         );
       } catch (error) {
         await step.do('fail', () => this.fail(executionId, plan, action.id, error));
         return;
       }
+      // Cancelled between steps (or while a DELAY slept): stop before the
+      // next side effect. The cancel already wrote the final status.
+      if (next === null) return;
+      payload = next;
     }
 
     await step.do('finish', () => this.finish(executionId, plan, payload));
@@ -87,7 +93,15 @@ export class RunWorkflow extends WorkflowEntrypoint<Env, RunParams> {
 
       const actions = await listActions(db, execution.workflowId);
       const succeeded = await succeededActionIds(db, executionId);
-      await setExecution(db, executionId, { status: 'RUNNING', startedAt: now(), error: null, finishedAt: null });
+      // Guarded: a cancel landing between the read above and this write must
+      // win, not be overwritten with RUNNING.
+      const started = await transitionExecution(db, executionId, ['PENDING', 'RUNNING'], {
+        status: 'RUNNING',
+        startedAt: now(),
+        error: null,
+        finishedAt: null,
+      });
+      if (!started) return null;
 
       // `output` is checkpointed after every successful step, so on a retry
       // it's exactly the payload the next unfinished step should see.
@@ -103,11 +117,21 @@ export class RunWorkflow extends WorkflowEntrypoint<Env, RunParams> {
     });
   }
 
-  /** One attempt of one step. Throws on failure so Workflows retries it. */
-  private runStep(executionId: string, plan: Plan, action: Plan['actions'][number], payloadJson: string) {
+  /**
+   * One attempt of one step. Throws on failure so Workflows retries it -
+   * a NonRetryableError when the executor says retrying can't help. Returns
+   * the next payload, or null when the run was cancelled before this step.
+   */
+  private runStep(
+    executionId: string,
+    plan: Plan,
+    action: Plan['actions'][number],
+    payloadJson: string,
+  ): Promise<string | null> {
     return withDb(this.env, async (db) => {
       const payload = JSON.parse(payloadJson) as Record<string, unknown>;
       const stepId = await startStep(db, executionId, action.id, payload);
+      if (!stepId) return null;
       const result = await runAction(
         createExecutorRegistry(configReader(this.env), console),
         action.type,
@@ -117,8 +141,9 @@ export class RunWorkflow extends WorkflowEntrypoint<Env, RunParams> {
       );
 
       if (!result.success) {
-        await finishStep(db, stepId, { status: 'FAILED', error: result.error ?? 'Unknown action failure' });
-        throw new Error(result.error ?? 'Unknown action failure');
+        const message = result.error ?? 'Unknown action failure';
+        await finishStep(db, stepId, { status: 'FAILED', error: message });
+        throw result.retryable === false ? new NonRetryableError(message) : new Error(message);
       }
 
       const next = result.enrichedPayload ? { ...payload, ...result.enrichedPayload } : payload;
@@ -136,7 +161,13 @@ export class RunWorkflow extends WorkflowEntrypoint<Env, RunParams> {
   private fail(executionId: string, plan: Plan, actionId: string, error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
     return withDb(this.env, async (db) => {
-      await setExecution(db, executionId, { status: 'FAILED', error: message, finishedAt: now() });
+      // Not over a cancel that landed while the step was retrying.
+      const failed = await transitionExecution(db, executionId, ['RUNNING'], {
+        status: 'FAILED',
+        error: message,
+        finishedAt: now(),
+      });
+      if (!failed) return;
       await audit(db, plan.userId, 'WORKFLOW_RUN', {
         entityType: 'workflow_executions',
         entityId: executionId,
@@ -150,11 +181,12 @@ export class RunWorkflow extends WorkflowEntrypoint<Env, RunParams> {
 
   private finish(executionId: string, plan: Plan, payloadJson: string) {
     return withDb(this.env, async (db) => {
-      await setExecution(db, executionId, {
+      const finished = await transitionExecution(db, executionId, ['RUNNING'], {
         status: 'SUCCEEDED',
         output: JSON.parse(payloadJson) as unknown,
         finishedAt: now(),
       });
+      if (!finished) return;
       await audit(db, plan.userId, 'WORKFLOW_RUN', {
         entityType: 'workflow_executions',
         entityId: executionId,

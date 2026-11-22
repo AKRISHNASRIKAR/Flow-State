@@ -1,5 +1,11 @@
+import { createHash } from 'node:crypto';
 import { JSONPath } from 'jsonpath-plus';
 import { isRecord, PollingChangeMode, PollingConfig } from './polling-config';
+import {
+  MAX_TRIGGER_PAYLOAD_BYTES,
+  capForStorage,
+  readBodyCapped,
+} from '../common/utils/response-body';
 
 /**
  * Change detection for SCHEDULED (polling) triggers: fetch the endpoint,
@@ -11,11 +17,29 @@ import { isRecord, PollingChangeMode, PollingConfig } from './polling-config';
 
 const POLLING_TIMEOUT_MS = 15_000;
 
+/**
+ * State holds digests, never the response itself: the Cloudflare poller
+ * keeps it in Durable Object storage, where one value can be at most
+ * 128 KiB. 4,000 16-character digests is about 80 KB.
+ */
+export const MAX_TRACKED_ITEMS = 4_000;
+const DIGEST_CHARS = 16;
+
 type JsonPathJson = null | boolean | number | string | object | unknown[];
 
 export interface PollState {
   mode: PollingChangeMode;
+  /**
+   * 2 = digests. States written before it (no `version`) held the raw
+   * comparison value and, for array_length, every item; they're converted
+   * on read so an upgrade doesn't fire or miss anything.
+   */
+  version?: 2;
+  /** A digest of the compared value; for array_length, the item count. */
   comparison: unknown;
+  /** array_length: digests of the items in the last response. */
+  seen?: string[];
+  /** Legacy (pre-version-2) array_length state only. */
   items?: unknown[];
 }
 
@@ -45,20 +69,17 @@ export async function fetchPollEndpoint(
     });
 
     if (!response.ok) {
+      await response.body?.cancel();
       throw new Error(`HTTP ${response.status} ${response.statusText}`);
     }
 
-    const contentType = response.headers.get('content-type') ?? '';
-    if (contentType.includes('application/json')) {
-      return (await response.json()) as unknown;
-    }
-
-    return await response.text();
+    return (await readBodyCapped(response)).body;
   } finally {
     clearTimeout(timeout);
   }
 }
 
+/** Throws when an array_length response has more items than can be tracked. */
 export function evaluatePoll(
   config: PollingConfig,
   responseBody: unknown,
@@ -66,50 +87,100 @@ export function evaluatePoll(
 ): PollOutcome {
   const state = buildState(config, responseBody);
 
-  if (!lastState) return { kind: 'baseline', state };
-  if (statesEqual(config.changeMode, lastState, state))
-    return { kind: 'unchanged', state };
+  // A changed mode compares unlike things: start again from a baseline.
+  if (!lastState || lastState.mode !== config.changeMode) {
+    return { kind: 'baseline', state };
+  }
+  const previous = upgradeState(lastState);
 
-  // array_length fires once per *new* item; the other modes fire once with
-  // the whole response.
-  const payloads =
-    config.changeMode === 'array_length'
-      ? getNewItems(lastState.items ?? [], state.items ?? [])
-      : [responseBody];
+  // array_length fires once per item not in the last response. Comparing
+  // the set rather than the count matters: a feed that always returns its
+  // latest 20 never changes length, yet has new items.
+  let payloads: unknown[];
+  if (config.changeMode === 'array_length') {
+    const seen = new Set(previous.seen ?? []);
+    const items = extractArray(responseBody, config.stateKey);
+    payloads = items.filter((_, i) => !seen.has(state.seen?.[i] ?? ''));
+  } else {
+    payloads = previous.comparison === state.comparison ? [] : [responseBody];
+  }
 
-  return { kind: 'changed', state, payloads, snapshot: responseBody };
+  if (payloads.length === 0) return { kind: 'unchanged', state };
+
+  return {
+    kind: 'changed',
+    state,
+    payloads: payloads.map(capPayload),
+    snapshot: capForStorage(responseBody).value,
+  };
 }
 
 function buildState(config: PollingConfig, responseBody: unknown): PollState {
   if (config.changeMode === 'array_length') {
     const items = extractArray(responseBody, config.stateKey);
-    return { mode: config.changeMode, comparison: items.length, items };
+    if (items.length > MAX_TRACKED_ITEMS) {
+      throw new Error(
+        `The array has ${items.length} items; at most ${MAX_TRACKED_ITEMS} can be tracked. Point stateKey at a smaller list.`,
+      );
+    }
+    return {
+      mode: config.changeMode,
+      version: 2,
+      comparison: items.length,
+      seen: items.map(digestValue),
+    };
   }
 
-  const comparison =
+  const compared =
     config.changeMode === 'specific_field'
       ? extractStateValue(responseBody, config.stateKey)
-      : JSON.stringify(responseBody);
+      : responseBody;
 
-  return { mode: config.changeMode, comparison };
+  return {
+    mode: config.changeMode,
+    version: 2,
+    comparison: digestValue(compared),
+  };
 }
 
-function statesEqual(
-  changeMode: PollingChangeMode,
-  lastState: PollState,
-  newState: PollState,
-) {
-  if (changeMode === 'array_length') {
-    return lastState.comparison === newState.comparison;
+/**
+ * Converts a pre-version-2 state to digests computed exactly as
+ * `buildState` now would, so the first poll after an upgrade compares like
+ * with like.
+ */
+function upgradeState(state: PollState): PollState {
+  if (state.version === 2) return state;
+
+  if (state.mode === 'array_length') {
+    return {
+      ...state,
+      version: 2,
+      seen: (state.items ?? []).map(digestValue),
+    };
   }
-  return (
-    JSON.stringify(lastState.comparison) === JSON.stringify(newState.comparison)
-  );
+
+  // `any` stored JSON.stringify(body) itself; specific_field the raw value.
+  const comparison =
+    state.mode === 'any' && typeof state.comparison === 'string'
+      ? digest(state.comparison)
+      : digestValue(state.comparison);
+  return { ...state, version: 2, comparison };
 }
 
-function getNewItems(previousItems: unknown[], currentItems: unknown[]) {
-  const previous = new Set(previousItems.map((item) => JSON.stringify(item)));
-  return currentItems.filter((item) => !previous.has(JSON.stringify(item)));
+/** A run's input must stay small enough to persist and carry through steps. */
+function capPayload(payload: unknown): unknown {
+  const capped = capForStorage(payload, MAX_TRIGGER_PAYLOAD_BYTES);
+  return capped.truncated
+    ? { truncated: true, bytes: capped.bytes, preview: capped.value }
+    : payload;
+}
+
+function digestValue(value: unknown) {
+  return digest(JSON.stringify(value) ?? 'undefined');
+}
+
+function digest(text: string) {
+  return createHash('sha256').update(text).digest('hex').slice(0, DIGEST_CHARS);
 }
 
 function extractArray(responseBody: unknown, stateKey?: string): unknown[] {

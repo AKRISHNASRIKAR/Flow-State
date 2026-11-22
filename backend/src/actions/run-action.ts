@@ -32,7 +32,8 @@ export function createExecutorRegistry(
 }
 
 /**
- * Interpolates {{payload.x}} templates centrally, then runs the executor.
+ * Interpolates {{payload.x}} templates centrally - escaped for each field's
+ * context, which the executor declares - then runs the executor.
  * Never throws: an executor that throws anyway is turned into a failed
  * ActionResult, so the engine only ever deals with results.
  */
@@ -45,12 +46,16 @@ export async function runAction(
 ): Promise<ActionResult> {
   const executor = registry.get(type);
   if (!executor) {
-    return { success: false, error: `Unknown action type: ${type}` };
+    return {
+      success: false,
+      error: `Unknown action type: ${type}`,
+      retryable: false,
+    };
   }
 
   try {
     return await executor.execute(
-      interpolateConfig(config, payload),
+      interpolateConfig(config, payload, executor.templateContexts?.(config)),
       payload,
       context,
     );

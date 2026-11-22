@@ -3,6 +3,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  PayloadTooLargeException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
@@ -12,6 +13,7 @@ import {
   isValidWebhookSignature,
   webhookFingerprint,
 } from './webhook-signature';
+import { MAX_TRIGGER_PAYLOAD_BYTES } from '../common/utils/response-body';
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
@@ -42,6 +44,14 @@ export class WebhooksService {
     idempotencyKeyHeader: string | undefined,
     parsedBody: Record<string, unknown>,
   ) {
+    // Refused up front, while the sender can still act on it: a payload this
+    // big would otherwise fail every step of the run it starts.
+    if (rawBody.length > MAX_TRIGGER_PAYLOAD_BYTES) {
+      throw new PayloadTooLargeException(
+        `Payload exceeds ${MAX_TRIGGER_PAYLOAD_BYTES / 1024} KB`,
+      );
+    }
+
     // Step 1: Load workflow + its trigger
     const workflow = await this.prisma.workflow.findUnique({
       where: { id: workflowId },

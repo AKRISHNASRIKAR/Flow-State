@@ -109,7 +109,7 @@ export function ScheduledConfigForm({ trigger, saving, onSave }: ScheduledConfig
           <select id="sc-changeMode" className={inputClass} {...register('changeMode')}>
             <option value="any">Anything in the response changes</option>
             <option value="specific_field">A specific field changes</option>
-            <option value="array_length">The array length changes</option>
+            <option value="array_length">New items appear in a list</option>
           </select>
         </div>
         <div className="flex-1">

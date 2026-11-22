@@ -13,6 +13,9 @@ import {
 } from '../executions/execution-queue.module';
 import { WorkflowTriggeredEvent } from './workflow-triggered.event';
 
+/** Webhook-event statuses that mean "not admitted yet". */
+export const UNADMITTED_EVENT_STATUSES = ['RECEIVED', 'MANUAL'];
+
 import {
   MAX_CONCURRENT_EXECUTIONS_PER_WORKFLOW,
   MAX_EXECUTIONS_PER_USER_PER_HOUR,
@@ -63,12 +66,9 @@ export class TriggeredListener {
     // Concurrency ceiling: a runaway or misconfigured workflow (e.g. a
     // webhook sender retrying in a tight loop) should not be able to queue
     // unbounded work for itself and starve every other workflow's jobs.
-    const inFlight = await this.prisma.workflowExecution.count({
-      where: {
-        workflowId: workflow.id,
-        status: { in: [ExecutionStatus.PENDING, ExecutionStatus.RUNNING] },
-      },
-    });
+    // This read is only a fast path that spares the rate-limit budget; the
+    // authoritative check is inside admitExecution's lock.
+    const inFlight = await this.countInFlight(this.prisma, workflow.id);
 
     if (inFlight >= MAX_CONCURRENT_EXECUTIONS_PER_WORKFLOW) {
       this.logger.warn(
@@ -102,28 +102,104 @@ export class TriggeredListener {
       select: { id: true },
     });
 
-    const execution = await this.prisma.workflowExecution.create({
-      data: {
-        workflowId: workflow.id,
-        triggerId: trigger?.id,
-        status: ExecutionStatus.PENDING,
-        input: event.executionPayload ?? {},
+    const outcome = await this.admitExecution(workflow.id, trigger?.id, event);
+    if (outcome === 'already-admitted') {
+      return;
+    }
+    if (outcome === 'full') {
+      await this.markWebhookEvent(
+        event.webhookEventId,
+        'SKIPPED_CONCURRENCY_LIMIT',
+      );
+      return;
+    }
+
+    try {
+      await this.executionQueue.add(
+        'execute',
+        { executionId: outcome.id },
+        {
+          jobId: outcome.id,
+          attempts: 3,
+          backoff: { type: 'exponential', delay: 2000 },
+          removeOnComplete: 100,
+          removeOnFail: false, // keep failed jobs around for the DLQ endpoints
+        },
+      );
+    } catch (error) {
+      // Without a job nothing would ever move this run out of PENDING -
+      // fail it visibly instead.
+      await this.prisma.workflowExecution.update({
+        where: { id: outcome.id },
+        data: {
+          status: ExecutionStatus.FAILED,
+          error: `Couldn’t start the run: ${error instanceof Error ? error.message : String(error)}`,
+          finishedAt: new Date(),
+        },
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Creates the PENDING execution under a per-workflow advisory lock, so
+   * concurrent triggers can't all pass the concurrency count, and - for a
+   * webhook or manual fire - claims the event in the same transaction, so
+   * an event re-admitted by StrandedEventsSweeper can't start a second run.
+   */
+  private admitExecution(
+    workflowId: string,
+    triggerId: string | undefined,
+    event: WorkflowTriggeredEvent,
+  ): Promise<{ id: string } | 'full' | 'already-admitted'> {
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${workflowId}))`;
+
+      if (event.webhookEventId) {
+        const pending = await tx.webhookEvent.count({
+          where: {
+            id: event.webhookEventId,
+            status: { in: UNADMITTED_EVENT_STATUSES },
+          },
+        });
+        if (pending === 0) return 'already-admitted';
+      }
+
+      if (
+        (await this.countInFlight(tx, workflowId)) >=
+        MAX_CONCURRENT_EXECUTIONS_PER_WORKFLOW
+      ) {
+        return 'full';
+      }
+
+      const execution = await tx.workflowExecution.create({
+        data: {
+          workflowId,
+          triggerId,
+          status: ExecutionStatus.PENDING,
+          input: event.executionPayload ?? {},
+        },
+      });
+      if (event.webhookEventId) {
+        await tx.webhookEvent.update({
+          where: { id: event.webhookEventId },
+          data: { status: 'PROCESSED' },
+        });
+      }
+      return { id: execution.id };
+    });
+  }
+
+  private countInFlight(
+    db: Pick<PrismaService, 'workflowExecution'>,
+    workflowId: string,
+  ) {
+    return db.workflowExecution.count({
+      where: {
+        workflowId,
+        status: { in: [ExecutionStatus.PENDING, ExecutionStatus.RUNNING] },
       },
     });
-
-    await this.executionQueue.add(
-      'execute',
-      { executionId: execution.id },
-      {
-        jobId: execution.id,
-        attempts: 3,
-        backoff: { type: 'exponential', delay: 2000 },
-        removeOnComplete: 100,
-        removeOnFail: false, // keep failed jobs around for the DLQ endpoints
-      },
-    );
-
-    await this.markWebhookEvent(event.webhookEventId, 'PROCESSED');
   }
 
   private rateLimitKey(userId: string) {
@@ -138,9 +214,14 @@ export class TriggeredListener {
       return;
     }
 
+    // Only an event not yet admitted changes, so a late skip can't
+    // overwrite the PROCESSED of the admission that won.
     await this.prisma.webhookEvent
-      .update({
-        where: { id: webhookEventId },
+      .updateMany({
+        where: {
+          id: webhookEventId,
+          status: { in: UNADMITTED_EVENT_STATUSES },
+        },
         data: { status },
       })
       .catch((err: unknown) => {

@@ -130,18 +130,36 @@ export class ExecutionsService {
       throw new NotFoundException('Execution not found');
     }
 
-    if (execution.status !== ExecutionStatus.PENDING) {
-      throw new BadRequestException('Only PENDING executions can be cancelled');
+    // Atomic, so a run that finished meanwhile isn't relabelled. The open
+    // step is closed too, or the run's history would show it running
+    // forever.
+    const now = new Date();
+    const [cancelled] = await this.prisma.$transaction([
+      this.prisma.workflowExecution.updateMany({
+        where: {
+          id,
+          status: { in: [ExecutionStatus.PENDING, ExecutionStatus.RUNNING] },
+        },
+        data: { status: ExecutionStatus.CANCELLED, finishedAt: now },
+      }),
+      this.prisma.actionExecution.updateMany({
+        where: {
+          workflowExecutionId: id,
+          status: ExecutionStatus.RUNNING,
+          workflowExecution: { status: ExecutionStatus.CANCELLED },
+        },
+        data: { status: ExecutionStatus.CANCELLED, finishedAt: now },
+      }),
+    ]);
+    if (cancelled.count === 0) {
+      throw new BadRequestException(
+        'Only PENDING or RUNNING executions can be cancelled',
+      );
     }
 
-    await this.prisma.workflowExecution.update({
-      where: { id },
-      data: { status: ExecutionStatus.CANCELLED, finishedAt: new Date() },
-    });
-
-    // Best effort: the job may already have been picked up by a worker by
-    // the time this runs, in which case removal is a no-op and the
-    // processor will simply run to completion.
+    // Best effort: a queued job is removed. A running one can't be - the
+    // processor checks for CANCELLED before each step (and after a DELAY)
+    // and stops there.
     try {
       const job = await this.executionQueue.getJob(id);
       await job?.remove();

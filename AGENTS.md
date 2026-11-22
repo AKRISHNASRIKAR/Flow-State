@@ -246,7 +246,7 @@ Every new endpoint needs all six of these:
 ```
 Google sign-in  → /auth/google/start → Google → /auth/google/callback → dashboard /auth/callback?code
                  (state + PKCE verifier + handoff code: Redis on NestJS, OneTimeStore DO on the Worker)
-                 → POST /auth/google/exchange { code, nonce } → { accessToken (15m, in memory), refreshToken (7d, localStorage) }
+                 → POST /auth/google/exchange { code, nonce } → { accessToken (15m, in memory) } + Set-Cookie flowstate_rt (7d, httpOnly, via the /api proxy)
 Every request  → Authorization: Bearer <accessToken>
 On 401         → single-flight POST /auth/refresh → retry once
 Refresh        → old token revoked, replacedByTokenId set, new pair issued
@@ -254,7 +254,7 @@ On reload      → bootstrapSession() silently refreshes before rendering
 ```
 
 **Rules:**
-- The access token is **never** persisted. Only the refresh token goes to `localStorage`.
+- The access token is **never** persisted. The refresh token is an httpOnly cookie, never in a response body or `localStorage`; dashboard XHRs must go through the same-origin `/api` rewrite for it to be sent.
 - Refresh tokens are **one-time-use**. Anything that could fire concurrent refreshes must share the in-flight promise (`api-client.ts:35-58`). Breaking this logs users out at random.
 - There are no passwords. Refresh tokens are stored as a **SHA-256** digest (`auth/refresh-token-hash.ts`, compared with `timingSafeEqual`). Fine because they're high-entropy random JWT ids - never use a fast hash for anything a human chose.
 - Google OAuth tokens are **encrypted** (not hashed - they must be usable) with `TokenCipher` (AES-256-GCM) before touching the DB. Never store or log them raw.

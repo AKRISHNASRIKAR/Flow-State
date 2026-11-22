@@ -278,9 +278,9 @@ For a fully interactive reference, open the Swagger UI at `/api/docs` after star
 |---|---|---|---|
 | `GET` | `/auth/google/start?nonce=&returnTo=` | Public | Browser navigation - redirects to Google (PKCE) |
 | `GET` | `/auth/google/callback` | Public | Google's redirect target - redirects to the dashboard with a one-time code, or to `/login?error=` |
-| `POST` | `/auth/google/exchange` | Public | Trade `{ code, nonce }` for an access + refresh token pair (single-use, 60 s) |
-| `POST` | `/auth/refresh` | Public | Rotate a refresh token |
-| `POST` | `/auth/logout` | 🔒 | Revoke the current refresh token |
+| `POST` | `/auth/google/exchange` | Public | Trade `{ code, nonce }` for an access token; the refresh token is set as an httpOnly cookie (single-use, 60 s) |
+| `POST` | `/auth/refresh` | Public | Rotate the refresh-token cookie, return a new access token |
+| `POST` | `/auth/logout` | 🔒 | Revoke the refresh-token cookie and clear it |
 
 ### Workflows
 
@@ -379,7 +379,7 @@ FlowState polls an external HTTP endpoint on a configurable interval (minimum 30
 |---|---|
 | `any` | Any part of the JSON response changes |
 | `specific_field` | The value at the dot-notation `stateKey` path changes |
-| `array_length` | The number of items in a top-level array changes |
+| `array_length` | New items appear in an array (compared as a set, so a fixed-size "latest N" feed still fires) - one run per new item |
 
 ---
 
@@ -585,7 +585,7 @@ These are intentional simplifications. They are documented here rather than pape
 | **`DELAY` blocks the worker (NestJS only)** | The processor sleeps inline, holding a BullMQ worker slot for the full duration. The Cloudflare Worker uses a durable `step.sleep` instead. |
 | **Cloudflare Free plan limits** | 100,000 requests/day, 10 ms CPU per request or step, 50 D1 queries or subrequests per invocation - so the 15-minute poller safety net re-arms up to ~49 polling workflows per run. The $5/month Paid plan lifts these with no code change. |
 | **One runtime at a time** | The NestJS backend and the Worker each poll scheduled triggers; running both in production doubles every polled run. |
-| **SPA token storage** | The dashboard keeps the refresh token in `localStorage` (access token stays in memory). Fine for local/dev; a production deployment should move refresh-token storage behind a BFF or a same-site cookie once API and frontend share a domain. |
+| **SPA token storage** | The access token stays in memory; the refresh token is an httpOnly `SameSite=Strict` cookie `flowstate_rt` (`Path=/api/auth`), first-party because the dashboard proxies the API at `/api` (Next.js rewrite). Script can't read it, though an XSS could still mint access tokens while the page is open. |
 | **No per-endpoint rate limiting** | Runs are capped per user per hour, but there are no request-rate guards on the API itself (e.g. `/auth/google/start`). |
 | **SSRF surface** | `HTTP_REQUEST` and polling fetch any user-supplied URL; there's no allowlist. |
 | **Shared credentials** | One Resend key and one Telegram bot serve every user. |

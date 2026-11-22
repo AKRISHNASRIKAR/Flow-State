@@ -3,6 +3,8 @@ import {
   ConfigReader,
   IActionExecutor,
 } from '../interfaces/action-executor.interface';
+import type { TemplateContexts } from '../../common/utils/template.util';
+import { isRetryableStatus } from './retryable-status';
 
 const TELEGRAM_TIMEOUT_MS = 10_000;
 
@@ -21,13 +23,25 @@ interface TelegramApiResponse {
 export class TelegramNotifyExecutor implements IActionExecutor {
   constructor(private readonly configService: ConfigReader) {}
 
+  /**
+   * Telegram parses the message as HTML unless told otherwise: an unescaped
+   * `<` in a payload value would make it reject the message outright.
+   */
+  templateContexts(config: Record<string, unknown>): TemplateContexts {
+    return { message: config.parseMode === 'Markdown' ? 'markdown' : 'html' };
+  }
+
   async execute(config: Record<string, unknown>): Promise<ActionResult> {
     const { chatId, message, parseMode } =
       config as unknown as TelegramNotifyConfig;
     const token = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
 
     if (!token) {
-      return { success: false, error: 'TELEGRAM_BOT_TOKEN is not configured' };
+      return {
+        success: false,
+        error: 'TELEGRAM_BOT_TOKEN is not configured',
+        retryable: false,
+      };
     }
 
     const controller = new AbortController();
@@ -54,6 +68,7 @@ export class TelegramNotifyExecutor implements IActionExecutor {
         return {
           success: false,
           error: `Telegram API error: ${result.description ?? response.status}`,
+          retryable: isRetryableStatus(response.status),
         };
       }
 
